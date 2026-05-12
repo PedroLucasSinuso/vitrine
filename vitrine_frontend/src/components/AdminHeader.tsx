@@ -126,6 +126,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
               {'\u2190'} Admin
             </button>
           )}
+          <img src="/vitrine_logo.png" alt="Vitrine" className="h-6 w-auto shrink-0" />
           {logoUrl ? (
             <img src={logoUrl} alt={marketName ?? 'Logo'} className="h-8 w-auto rounded shrink-0" />
           ) : (

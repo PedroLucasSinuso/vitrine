@@ -26,7 +26,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex items-center justify-center px-4">
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8 w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">Vitrine</h1>
+        <img src="/vitrine_logo.png" alt="Vitrine" className="h-14 mx-auto mb-6" />
 
         <div className="flex flex-col gap-4">
           <input

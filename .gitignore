@@ -26,6 +26,9 @@ logs/
 # Segredos
 .env
 
+# Uploads (logo do mercado)
+vitrine_backend/app/static/
+
 # Build
 *.exe
 *.pem
