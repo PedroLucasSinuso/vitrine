@@ -45,7 +45,7 @@ export default function Home() {
         <div className="flex justify-between items-center">
           <div>
             <div className="flex items-center gap-2">
-              <img src="/vitrine_logo.png" alt="Vitrine" className="h-7 w-auto" />
+              <img src="/vitrine_logo.svg" alt="Vitrine" className="h-7 w-auto" />
               <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Vitrine</h1>
             </div>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{getNomeExibicao()}</p>
