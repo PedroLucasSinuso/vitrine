@@ -23,3 +23,6 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["app"]
+
+[project.scripts]
+create-admin = "app.cli:main"

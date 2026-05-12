@@ -1,10 +1,11 @@
 # Python
 __pycache__
 *.pyc
+*.egg-info
+*.egg
 .venv
 venv
 .uv-cache
-.pytest_cache
 .pytest_cache
 
 # Node
@@ -33,3 +34,15 @@ vitrine_backend/app/static/
 *.exe
 *.pem
 scripts/
+
+# Cobertura de teste
+.coverage
+htmlcov/
+coverage/
+
+# Cache de ferramentas
+.ruff_cache/
+
+# Lixo de SO
+.DS_Store
+Thumbs.db
