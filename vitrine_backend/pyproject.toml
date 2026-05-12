@@ -1,0 +1,25 @@
+[project]
+name = "vitrine-backend"
+version = "0.1.0"
+description = "Backend do sistema Vitrine"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "sqlalchemy",
+    "uvicorn[standard]",
+    "pydantic-settings",
+    "PyJWT",
+    "bcrypt",
+    "psycopg2>=2.9.11",
+    "pytest>=9.0.3",
+    "python-multipart",
+    "pandas>=3.0.2",
+    "openpyxl>=3.1.5",
+    "apscheduler>=3.10",
+    "cachetools>=5.5",
+    "python-dotenv",
+    "httpx",
+]
+
+[tool.setuptools]
+packages = ["app"]

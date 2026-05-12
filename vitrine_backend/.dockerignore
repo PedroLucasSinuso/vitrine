@@ -1,0 +1,16 @@
+__pycache__
+*.pyc
+.venv
+venv
+.env
+.git
+.gitignore
+README.md
+.vscode
+.uv-cache
+.pytest_cache
+tests/
+logs/
+data/
+static/
+app/static/

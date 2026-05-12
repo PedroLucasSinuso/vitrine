@@ -1,0 +1,32 @@
+# Python
+__pycache__
+*.pyc
+.venv
+venv
+.uv-cache
+.pytest_cache
+.pytest_cache
+
+# Node
+node_modules
+dist
+dist-ssr
+*.local
+
+# IDE
+.vscode
+.idea
+
+# Dados locais
+data/
+logs/
+*.log
+*.db
+
+# Segredos
+.env
+
+# Build
+*.exe
+*.pem
+scripts/
