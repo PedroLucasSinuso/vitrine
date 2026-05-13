@@ -11,6 +11,7 @@ import { formatCurrency } from '../../utils/formatters'
 import { useBiCache } from '../../stores/biCache'
 import { useToast } from '../../hooks/useToast'
 import { useCountUp } from '../../hooks/useCountUp'
+import { Clock } from 'lucide-react'
 import Skeleton from '../../components/ui/Skeleton'
 
 function periodoInicial(): PeriodoBi {
@@ -124,7 +125,7 @@ export default function Dashboard() {
             </label>
             {kpisComp?.dados_parciais_ate && (
               <span className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 rounded-full ml-auto">
-                ⏳ Dados parciais — atualizados até {kpisComp.dados_parciais_ate}
+                <Clock size={14} className="inline mr-1" /> Dados parciais — atualizados até {kpisComp.dados_parciais_ate}
               </span>
             )}
           </div>

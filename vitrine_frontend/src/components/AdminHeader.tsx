@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { getConfigsCache } from '../stores/configStore'
+import { RefreshCw, Tags, ClipboardList, Users, Settings, Search, BarChart3, Sun, Moon, ArrowLeft } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
 interface Breadcrumb {
   label: string
@@ -18,22 +20,22 @@ interface Props {
 
 interface Link {
   label: string
-  icon: string
+  icon: LucideIcon
   pagina: string
   path: string
 }
 
 const ADMIN_LINKS: Link[] = [
-  { label: 'Sync', icon: '\u{1F504}', pagina: 'sync', path: '/admin' },
-  { label: 'Etiquetas', icon: '\u{1F3F7}\uFE0F', pagina: 'etiquetas', path: '/admin/etiquetas' },
-  { label: 'Inventário', icon: '\u{1F4CB}', pagina: 'inventario', path: '/admin/inventario' },
-  { label: 'Usuários', icon: '\u{1F465}', pagina: 'usuarios', path: '/admin/usuarios' },
-  { label: 'Configurações', icon: '\u2699\uFE0F', pagina: 'configuracoes', path: '/admin/configuracoes' },
+  { label: 'Sync', icon: RefreshCw, pagina: 'sync', path: '/admin' },
+  { label: 'Etiquetas', icon: Tags, pagina: 'etiquetas', path: '/admin/etiquetas' },
+  { label: 'Inventário', icon: ClipboardList, pagina: 'inventario', path: '/admin/inventario' },
+  { label: 'Usuários', icon: Users, pagina: 'usuarios', path: '/admin/usuarios' },
+  { label: 'Configurações', icon: Settings, pagina: 'configuracoes', path: '/admin/configuracoes' },
 ]
 
 const COMMON_LINKS: Link[] = [
-  { label: 'Busca', icon: '\u{1F50D}', pagina: 'busca', path: '/busca' },
-  { label: 'BI', icon: '\u{1F4CA}', pagina: 'bi', path: '/bi' },
+  { label: 'Busca', icon: Search, pagina: 'busca', path: '/busca' },
+  { label: 'BI', icon: BarChart3, pagina: 'bi', path: '/bi' },
 ]
 
 export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, onLogout }: Props) {
@@ -100,7 +102,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
         <nav className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex gap-1 flex-wrap">
           {breadcrumb.map((b, i) => (
             <span key={i}>
-              {i > 0 && <span className="mx-1">/</span>}
+              {i > 0 && <ArrowLeft className="mx-1 opacity-30 inline" size={10} />}
               {b.path
                 ? <button onClick={() => navigate(b.path!)} className="hover:text-primary dark:hover:text-primary-light transition">{b.label}</button>
                 : <span className="text-gray-600 dark:text-gray-300">{b.label}</span>
@@ -117,7 +119,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
               className="flex items-center gap-1 text-xs font-semibold text-primary dark:text-primary-light bg-white dark:bg-gray-800 rounded-xl px-3 py-2 shadow-sm hover:bg-primary-lighter dark:hover:bg-gray-700 transition whitespace-nowrap shrink-0"
               aria-label="Abrir navegação admin"
             >
-              {'\u2190'} Admin
+              <ArrowLeft size={14} /> Admin
             </button>
           )}
           <img src="/vitrine_logo.svg" alt="Vitrine" className="h-7 w-auto shrink-0" />
@@ -147,7 +149,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
             aria-label="Alternar tema"
             title={dark ? 'Modo claro' : 'Modo escuro'}
           >
-            {dark ? '\u2600' : '\u263E'}
+            {dark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
           <span className="text-xs text-gray-400 dark:text-gray-500">
             {getNomeExibicao()}
@@ -164,7 +166,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
             : 'opacity-100 max-h-56 mb-6'
         }`}
       >
-        {links.map(({ label, icon, pagina, path }) => {
+        {links.map(({ label, icon: Icon, pagina, path }) => {
           const ativo = paginaAtual === pagina
           return (
             <button
@@ -176,7 +178,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
                   : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-primary-lighter dark:hover:bg-gray-700 hover:text-primary shadow-sm'
               }`}
             >
-              <span className="text-base leading-none">{icon}</span>
+              <Icon size={16} />
               <span className="truncate">{label}</span>
             </button>
           )
@@ -191,7 +193,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
                   Administração
                 </div>
                 <div className="grid grid-cols-2 gap-1">
-                  {adminLinksToShow.map(({ label, icon, pagina, path }) => {
+                  {adminLinksToShow.map(({ label, icon: Icon, pagina, path }) => {
                     const ativo = paginaAtual === pagina
                     return (
                       <button
@@ -203,7 +205,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
                             : 'text-gray-600 dark:text-gray-300 hover:bg-primary-lighter dark:hover:bg-gray-700 hover:text-primary'
                         }`}
                       >
-                        <span className="text-base">{icon}</span>
+                        <Icon size={16} />
                         <span>{label}</span>
                       </button>
                     )
@@ -216,7 +218,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
               Geral
             </div>
             <div className="grid grid-cols-2 gap-1">
-              {COMMON_LINKS.map(({ label, icon, pagina, path }) => {
+              {COMMON_LINKS.map(({ label, icon: Icon, pagina, path }) => {
                 const ativo = paginaAtual === pagina
                 return (
                   <button
@@ -228,7 +230,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
                         : 'text-gray-600 dark:text-gray-300 hover:bg-primary-lighter dark:hover:bg-gray-700 hover:text-primary'
                     }`}
                   >
-                    <span className="text-base">{icon}</span>
+                    <Icon size={16} />
                     <span>{label}</span>
                   </button>
                 )

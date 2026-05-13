@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Trash2 } from 'lucide-react'
 import AdminHeader from '../components/AdminHeader'
 import {
   listarUsuarios,
@@ -8,6 +9,8 @@ import {
   type Usuario,
 } from '../api/usuarios'
 import { useAuth } from '../hooks/useAuth'
+import Button from '../components/ui/Button'
+import Modal from '../components/ui/Modal'
 import type { Role } from '../types'
 
 const ROLES: Role[] = ['operador', 'supervisor', 'admin']
@@ -28,9 +31,12 @@ interface ModalEdicao {
 
 export default function Usuarios() {
   const { getUsername } = useAuth()
+
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [carregando, setCarregando] = useState(true)
   const [erroGeral, setErroGeral] = useState('')
+
+  const [modal, setModal] = useState<ModalEdicao | null>(null)
 
   const [novoUsername, setNovoUsername] = useState('')
   const [novoNome, setNovoNome] = useState('')
@@ -39,22 +45,25 @@ export default function Usuarios() {
   const [criando, setCriando] = useState(false)
   const [erroCriacao, setErroCriacao] = useState('')
 
-  const [modal, setModal] = useState<ModalEdicao | null>(null)
+  const [excluirUsuarioObj, setExcluirUsuarioObj] = useState<Usuario | null>(null)
 
   const meuUsername = getUsername()
 
-  useEffect(() => { carregar() }, [])
   async function carregar() {
-    setCarregando(true)
     try {
       const data = await listarUsuarios()
       setUsuarios(data)
+      setCarregando(false)
     } catch {
       setErroGeral('Erro ao carregar usuários.')
-    } finally {
       setCarregando(false)
     }
   }
+
+  useEffect(() => {
+    carregar()
+  }, [])
+
   async function handleCriar() {
     setErroCriacao('')
     if (!novoUsername.trim() || !novoNome.trim() || !novoPassword.trim()) {
@@ -63,21 +72,11 @@ export default function Usuarios() {
     }
     setCriando(true)
     try {
-      await criarUsuario({
-        username: novoUsername.trim(),
-        nome_exibicao: novoNome.trim(),
-        password: novoPassword.trim(),
-        role: novoRole,
-      })
-      setNovoUsername('')
-      setNovoNome('')
-      setNovoPassword('')
-      setNovoRole('operador')
-      setCarregando(true)
+      await criarUsuario({ username: novoUsername.trim(), nome_exibicao: novoNome.trim(), password: novoPassword, role: novoRole })
+      setNovoUsername(''); setNovoNome(''); setNovoPassword(''); setNovoRole('operador')
       await carregar()
-    } catch (e: unknown) {
-      if (e instanceof Error && 'response' in e && typeof e.response === 'object' && e.response && 'status' in e.response && e.response.status === 409) setErroCriacao('Username já existe.')
-      else setErroCriacao('Erro ao criar usuário.')
+    } catch {
+      setErroCriacao('Erro ao criar usuário.')
     } finally {
       setCriando(false)
     }
@@ -85,16 +84,9 @@ export default function Usuarios() {
 
   async function handleAtualizar() {
     if (!modal) return
-    const dados: { password?: string; role?: Role } = {}
-    if (modal.password.trim()) dados.password = modal.password.trim()
-    if (modal.role !== modal.usuario.role) dados.role = modal.role
-    if (!dados.password && !dados.role) {
-      setModal(m => m ? { ...m, erro: 'Nenhuma alteração fornecida.' } : null)
-      return
-    }
     setModal(m => m ? { ...m, loading: true, erro: '' } : null)
     try {
-      await atualizarUsuario(modal.usuario.id, dados)
+      await atualizarUsuario(modal.usuario.id, { role: modal.role, ...(modal.password ? { password: modal.password } : {}) })
       setModal(null)
       await carregar()
     } catch {
@@ -102,14 +94,16 @@ export default function Usuarios() {
     }
   }
 
-  async function handleExcluir(usuario: Usuario) {
-    if (!confirm(`Excluir o usuário "${usuario.nome_exibicao}"?`)) return
+  async function handleConfirmarExcluir() {
+    if (!excluirUsuarioObj) return
     try {
-      await excluirUsuario(usuario.id)
+      await excluirUsuario(excluirUsuarioObj.id)
+      setExcluirUsuarioObj(null)
       setCarregando(true)
       await carregar()
     } catch {
       setErroGeral('Erro ao excluir usuário.')
+      setExcluirUsuarioObj(null)
     }
   }
 
@@ -151,19 +145,8 @@ export default function Usuarios() {
             {modal.erro && <p className="text-red-500 text-sm">{modal.erro}</p>}
 
             <div className="flex gap-2">
-              <button
-                onClick={() => setModal(null)}
-                className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 font-semibold py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleAtualizar}
-                disabled={modal.loading}
-                className="flex-1 bg-primary hover:bg-primary-hover text-white font-semibold py-2 rounded-lg transition disabled:opacity-50"
-              >
-                {modal.loading ? 'Salvando...' : 'Salvar'}
-              </button>
+              <Button variant="ghost" onClick={() => setModal(null)} fullWidth>Cancelar</Button>
+              <Button onClick={handleAtualizar} loading={modal.loading} fullWidth>Salvar</Button>
             </div>
           </div>
         </div>
@@ -207,13 +190,9 @@ export default function Usuarios() {
               >
                 {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
-              <button
-                onClick={handleCriar}
-                disabled={criando}
-                className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-white font-semibold px-4 py-2 rounded-lg transition disabled:opacity-50 whitespace-nowrap"
-              >
-                {criando ? '...' : 'Criar'}
-              </button>
+              <Button onClick={handleCriar} loading={criando}>
+                Criar
+              </Button>
             </div>
             {erroCriacao && <p className="text-red-500 text-sm">{erroCriacao}</p>}
           </div>
@@ -258,7 +237,7 @@ export default function Usuarios() {
                       Editar
                     </button>
                     <button
-                      onClick={() => handleExcluir(usuario)}
+                      onClick={() => setExcluirUsuarioObj(usuario)}
                       disabled={usuario.username === meuUsername}
                       className="text-sm text-gray-300 hover:text-red-500 transition disabled:opacity-30 disabled:cursor-not-allowed"
                     >
@@ -271,6 +250,25 @@ export default function Usuarios() {
           )}
         </div>
       </div>
+
+      {/* Modal Confirmar Exclusão */}
+      <Modal
+        open={!!excluirUsuarioObj}
+        onClose={() => setExcluirUsuarioObj(null)}
+        title={`Excluir "${excluirUsuarioObj?.nome_exibicao}"?`}
+        variant="danger"
+        actions={
+          <>
+            <Button variant="ghost" onClick={() => setExcluirUsuarioObj(null)}>Cancelar</Button>
+            <Button variant="danger" onClick={handleConfirmarExcluir}>
+              <Trash2 size={14} /> Excluir
+            </Button>
+          </>
+        }
+      >
+        <p>Esta ação não pode ser desfeita. O usuário perderá acesso ao sistema.</p>
+      </Modal>
+
     </div>
   )
 }

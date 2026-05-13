@@ -1,9 +1,16 @@
 import { useToasts } from '../hooks/useToast'
+import { CheckCircle, XCircle, Info, X } from 'lucide-react'
 
-const STYLES = {
-  success: 'bg-green-600 text-white',
-  error: 'bg-red-600 text-white',
-  info: 'bg-primary text-white',
+const icons: Record<string, React.ReactNode> = {
+  success: <CheckCircle size={16} className="text-green-600 dark:text-green-400" />,
+  error: <XCircle size={16} className="text-red-600 dark:text-red-400" />,
+  info: <Info size={16} className="text-blue-600 dark:text-blue-400" />,
+}
+
+const bgColors: Record<string, string> = {
+  success: 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-900',
+  error: 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-900',
+  info: 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-900',
 }
 
 export default function ToastContainer() {
@@ -12,20 +19,16 @@ export default function ToastContainer() {
   if (toasts.length === 0) return null
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-full max-w-sm px-4">
-      {toasts.map((t) => (
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-[90vw] max-w-sm">
+      {toasts.map((toast) => (
         <div
-          key={t.id}
-          role="alert"
-          className={`${STYLES[t.type]} px-4 py-3 rounded-xl shadow-lg text-sm font-semibold flex items-center justify-between gap-3 animate-[slideUp_0.3s_ease-out]`}
+          key={toast.id}
+          className={`flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border ${bgColors[toast.type]} animate-fade-in-up`}
         >
-          <span>{t.message}</span>
-          <button
-            onClick={() => remove(t.id)}
-            className="text-white/70 hover:text-white transition text-lg leading-none"
-            aria-label="Fechar"
-          >
-            ×
+          {icons[toast.type]}
+          <p className="text-sm font-medium text-gray-800 dark:text-gray-100 flex-1">{toast.message}</p>
+          <button onClick={() => remove(toast.id)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition">
+            <X size={14} />
           </button>
         </div>
       ))}

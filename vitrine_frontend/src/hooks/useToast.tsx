@@ -1,9 +1,8 @@
-/* eslint-disable react-refresh/only-export-components -- Hook + Context + Provider + useToast export must coexist */
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
 
-export type ToastType = 'success' | 'error' | 'info'
+type ToastType = 'success' | 'error' | 'info'
 
-export interface ToastMessage {
+interface ToastMessage {
   id: number
   type: ToastType
   message: string
@@ -11,7 +10,7 @@ export interface ToastMessage {
 
 interface ToastContextType {
   toasts: ToastMessage[]
-  toast: (msg: { type: ToastType; message: string }) => void
+  toast: (msg: Omit<ToastMessage, 'id'>) => void
   remove: (id: number) => void
 }
 
@@ -19,33 +18,41 @@ const ToastContext = createContext<ToastContextType | null>(null)
 
 let nextId = 0
 
+const durations: Record<ToastType, number> = {
+  success: 3000,
+  error: 6000,
+  info: 4000,
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([])
 
-  const remove = useCallback((id: number) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id))
+  const toastFn = useCallback((msg: Omit<ToastMessage, 'id'>) => {
+    const id = nextId++
+    setToasts(prev => [...prev, { ...msg, id }])
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id))
+    }, durations[msg.type])
   }, [])
 
-  const toast = useCallback((msg: { type: ToastType; message: string }) => {
-    const id = nextId++
-    setToasts((prev) => [...prev, { id, type: msg.type, message: msg.message }])
-    setTimeout(() => remove(id), 4000)
-  }, [remove])
+  const remove = useCallback((id: number) => {
+    setToasts(prev => prev.filter(t => t.id !== id))
+  }, [])
 
   return (
-    <ToastContext.Provider value={{ toasts, toast, remove }}>
+    <ToastContext.Provider value={{ toasts, toast: toastFn, remove }}>
       {children}
     </ToastContext.Provider>
   )
 }
 
-export function useToast(): { toast: (msg: { type: ToastType; message: string }) => void } {
+export function useToast() {
   const ctx = useContext(ToastContext)
   if (!ctx) throw new Error('useToast must be used within ToastProvider')
   return { toast: ctx.toast }
 }
 
-export function useToasts(): ToastContextType {
+export function useToasts() {
   const ctx = useContext(ToastContext)
   if (!ctx) throw new Error('useToasts must be used within ToastProvider')
   return ctx

@@ -3,6 +3,7 @@ import { buscarProduto } from '../api/produtos'
 import AdminHeader from '../components/AdminHeader'
 import LeitorCodigo from '../components/LeitorCodigo'
 import { gerarCSV, baixarCSV, type CsvRow } from '../utils/csv'
+import { Camera } from 'lucide-react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 
 interface ItemEtiqueta {
@@ -85,7 +86,7 @@ export default function Etiquetas() {
               className="md:hidden bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-lg transition"
               aria-label="Ler código de barras"
             >
-              📷
+              <Camera size={18} />
             </button>
           </div>
           {erro && <p className="text-red-500 text-sm mt-2" role="alert">{erro}</p>}

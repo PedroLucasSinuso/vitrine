@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Sun, Moon, Camera, Loader2 } from 'lucide-react'
+import { formatCurrency } from '../utils/formatters'
 import { buscarProduto, buscarProdutosPorNome, registrarNaoEncontrado } from '../api/produtos'
 import type { ProdutoBasico, ProdutoCompleto } from '../types'
 import { useAuth } from '../hooks/useAuth'
 import LeitorCodigo from '../components/LeitorCodigo'
 import AdminHeader from '../components/AdminHeader'
-import { formatCurrency } from '../utils/formatters'
 
 function isCompleto(p: ProdutoBasico | ProdutoCompleto): p is ProdutoCompleto {
   return 'preco_custo' in p
@@ -157,7 +158,7 @@ export default function Busca() {
               aria-label="Alternar tema"
               title={dark ? 'Modo claro' : 'Modo escuro'}
             >
-              {dark ? '\u2600' : '\u263E'}
+              {dark ? <Sun size={16} /> : <Moon size={16} />}
             </button>
             <button
               onClick={() => { logout(); navigate('/login') }}
@@ -186,14 +187,15 @@ export default function Busca() {
           aria-label="Ler código de barras"
           title="Ler código de barras"
         >
-          📷
+          <Camera size={18} />
         </button>
         <button
           onClick={() => handleBuscar()}
           disabled={loading}
-          className="bg-primary hover:bg-primary-hover text-white font-semibold px-4 py-2 rounded-lg transition disabled:opacity-50"
+          className="bg-primary hover:bg-primary-hover text-white font-semibold px-4 py-2 rounded-lg transition disabled:opacity-50 flex items-center gap-2"
         >
-          {loading ? '...' : 'Buscar'}
+          {loading && <Loader2 size={14} className="animate-spin" />}
+          Buscar
         </button>
       </div>
 

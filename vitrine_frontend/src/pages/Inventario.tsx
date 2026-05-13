@@ -1,10 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import * as XLSX from 'xlsx'
+import { Camera, Plus, Minus, Download, Trash2, LogOut } from 'lucide-react'
 import { buscarProduto } from '../api/produtos'
 import AdminHeader from '../components/AdminHeader'
 import LeitorCodigo from '../components/LeitorCodigo'
 import { useAuth } from '../hooks/useAuth'
 import { useToast } from '../hooks/useToast'
+import Button from '../components/ui/Button'
+import Modal from '../components/ui/Modal'
+import Skeleton from '../components/ui/Skeleton'
 import {
   getSessoesInventario,
   criarSessaoInventario,
@@ -32,6 +36,11 @@ export default function Inventario() {
   const [camera, setCamera] = useState(false)
   const [loadingSessoes, setLoadingSessoes] = useState(true)
   const [editando, setEditando] = useState<Record<string, string>>({})
+  const [novaSessaoModal, setNovaSessaoModal] = useState(false)
+  const [novaSessaoNome, setNovaSessaoNome] = useState('')
+  const [criandoSessao, setCriandoSessao] = useState(false)
+  const [confirmarEncerrar, setConfirmarEncerrar] = useState(false)
+  const [confirmarLimpar, setConfirmarLimpar] = useState(false)
   const processando = useRef<Set<string>>(new Set())
   const inputRef = useRef<HTMLInputElement>(null)
   const conviteRef = useRef<HTMLInputElement>(null)
@@ -55,6 +64,10 @@ export default function Inventario() {
       .catch(() => setErro('Erro ao carregar itens'))
   }, [sessaoAtiva])
 
+  function haptico() {
+    try { navigator.vibrate?.(20) } catch {}
+  }
+
   function handleVoltar() {
     setSessaoAtiva(null)
     setItens([])
@@ -77,7 +90,7 @@ export default function Inventario() {
       link.download = `consolidado_geral_${new Date().toISOString().slice(0, 10)}.txt`
       link.click()
       URL.revokeObjectURL(url)
-      toast({ type: 'success', message: 'TXT consolidado baixado com sucesso!' })
+      toast({ type: 'success', message: 'TXT consolidado baixado!' })
     } catch {
       setErro('Erro ao gerar relatório consolidado')
     }
@@ -93,21 +106,25 @@ export default function Inventario() {
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, 'Consolidado Geral')
       XLSX.writeFile(wb, `consolidado_geral_${new Date().toISOString().slice(0, 10)}.xlsx`)
-      toast({ type: 'success', message: 'Excel consolidado baixado com sucesso!' })
+      toast({ type: 'success', message: 'Excel consolidado baixado!' })
     } catch {
       setErro('Erro ao gerar relatório consolidado')
     }
   }
 
-  async function handleNovaSessao() {
-    const nome = prompt('Nome da sessão:')
-    if (!nome || !nome.trim()) return
+  async function handleCriarSessao() {
+    if (!novaSessaoNome.trim()) return
+    setCriandoSessao(true)
     try {
-      const s = await criarSessaoInventario(nome.trim())
+      const s = await criarSessaoInventario(novaSessaoNome.trim())
       setSessoes(prev => [s, ...prev])
       setSessaoAtiva(s)
+      setNovaSessaoModal(false)
+      setNovaSessaoNome('')
     } catch {
       setErro('Erro ao criar sessão')
+    } finally {
+      setCriandoSessao(false)
     }
   }
 
@@ -124,9 +141,9 @@ export default function Inventario() {
 
   async function handleEncerrarSessao() {
     if (!sessaoAtiva) return
-    if (!confirm(`Tem certeza que deseja fechar o chunk "${sessaoAtiva.nome}"?`)) return
     try {
       await encerrarSessaoInventario(sessaoAtiva.id)
+      setConfirmarEncerrar(false)
       handleVoltar()
     } catch {
       setErro('Erro ao encerrar sessão')
@@ -150,6 +167,7 @@ export default function Inventario() {
         ))
         await adicionarItemInventario(sessaoAtiva.id, { codigo: codigoLimpo, nome: existente.nome, grupo: existente.grupo, familia: existente.familia })
         if (inputRef.current) inputRef.current.value = ''
+        haptico()
         return
       }
 
@@ -166,6 +184,7 @@ export default function Inventario() {
 
       await adicionarItemInventario(sessaoAtiva.id, { codigo: internalCode, nome: produto.nome, grupo: produto.grupo, familia: produto.familia })
       if (inputRef.current) inputRef.current.value = ''
+      haptico()
     } catch (e: unknown) {
       const error = e as { response?: { status?: number } }
       if (error.response?.status === 404) setErro('Produto não encontrado.')
@@ -211,10 +230,10 @@ export default function Inventario() {
 
   async function handleLimpar() {
     if (!sessaoAtiva) return
-    if (!confirm('Limpar todos os itens desta sessão?')) return
     try {
       await limparItensInventario(sessaoAtiva.id)
       setItens([])
+      setConfirmarLimpar(false)
     } catch {
       setErro('Erro ao limpar itens')
     }
@@ -271,7 +290,10 @@ export default function Inventario() {
           {erro && <p className="text-red-500 text-sm" role="alert">{erro}</p>}
 
           {loadingSessoes ? (
-            <p className="text-sm text-gray-400 dark:text-gray-500">Carregando sessões...</p>
+            <div className="flex flex-col gap-3">
+              <Skeleton variant="card" />
+              <Skeleton variant="card" />
+            </div>
           ) : (
             <>
               {sessoes.length > 0 && (
@@ -300,9 +322,9 @@ export default function Inventario() {
 
               <div className="flex flex-col sm:flex-row gap-3">
                 {isSupervisor && (
-                  <button onClick={handleNovaSessao} className="bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-5 py-3 rounded-xl transition flex-1">
-                    Nova Sessão
-                  </button>
+                  <Button onClick={() => setNovaSessaoModal(true)} fullWidth>
+                    <Plus size={16} /> Nova Sessão
+                  </Button>
                 )}
                 <div className="flex gap-2 flex-1">
                   <input
@@ -311,24 +333,51 @@ export default function Inventario() {
                     className="flex-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary uppercase"
                     onKeyDown={(e) => e.key === 'Enter' && handleEntrarSessao()}
                   />
-                  <button onClick={handleEntrarSessao} className="bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-5 py-3 rounded-xl transition">
+                  <Button onClick={handleEntrarSessao}>
                     Entrar
-                  </button>
+                  </Button>
                 </div>
               </div>
 
               {isSupervisor && (
                 <div className="flex gap-2">
-                  <button onClick={handleConsolidadoTxt} className="flex-1 border border-primary text-primary hover:bg-primary hover:text-white text-sm font-semibold px-4 py-3 rounded-xl transition">
-                    TXT Consolidado
-                  </button>
-                  <button onClick={handleConsolidadoExcel} className="flex-1 bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-4 py-3 rounded-xl transition">
-                    Excel Consolidado
-                  </button>
+                  <Button variant="outline" onClick={handleConsolidadoTxt} fullWidth>
+                    <Download size={14} /> TXT Consolidado
+                  </Button>
+                  <Button onClick={handleConsolidadoExcel} fullWidth>
+                    <Download size={14} /> Excel Consolidado
+                  </Button>
                 </div>
               )}
             </>
           )}
+
+          {/* Modal Nova Sessão */}
+          <Modal
+            open={novaSessaoModal}
+            onClose={() => { setNovaSessaoModal(false); setNovaSessaoNome('') }}
+            title="Nova Sessão"
+            actions={
+              <>
+                <Button variant="ghost" onClick={() => { setNovaSessaoModal(false); setNovaSessaoNome('') }}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleCriarSessao} loading={criandoSessao}>
+                  Criar
+                </Button>
+              </>
+            }
+          >
+            <input
+              autoFocus
+              value={novaSessaoNome}
+              onChange={(e) => setNovaSessaoNome(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleCriarSessao()}
+              placeholder="Nome da sessão"
+              className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </Modal>
+
         </div>
       </div>
     )
@@ -369,8 +418,8 @@ export default function Inventario() {
               </button>
             )}
             {isSupervisor && (
-              <button onClick={handleEncerrarSessao} className="text-xs text-red-500 hover:text-red-700 transition">
-                Encerrar
+              <button onClick={() => setConfirmarEncerrar(true)} className="text-xs text-red-500 hover:text-red-700 transition flex items-center gap-1">
+                <LogOut size={12} /> Encerrar
               </button>
             )}
           </div>
@@ -394,7 +443,7 @@ export default function Inventario() {
                 className="md:hidden bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-lg transition"
                 aria-label="Ler código de barras"
               >
-                📷
+                <Camera size={18} />
               </button>
             </div>
             {erro && <p className="text-red-500 text-sm mt-2" role="alert">{erro}</p>}
@@ -413,16 +462,16 @@ export default function Inventario() {
               </h2>
               <div className="flex gap-2">
                 {!consolidado && (
-                  <button onClick={handleLimpar} className="text-sm text-gray-400 hover:text-red-500 transition">
-                    Limpar
+                  <button onClick={() => setConfirmarLimpar(true)} className="text-sm text-gray-400 hover:text-red-500 transition flex items-center gap-1">
+                    <Trash2 size={14} /> Limpar
                   </button>
                 )}
-                <button onClick={handleExportarTxt} className="text-sm text-gray-500 hover:text-primary transition">
-                  TXT
+                <button onClick={handleExportarTxt} className="text-sm text-gray-500 hover:text-primary transition flex items-center gap-1">
+                  <Download size={14} /> TXT
                 </button>
-                <button onClick={handleExportarExcel} className="bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition">
-                  Excel
-                </button>
+                <Button size="sm" onClick={handleExportarExcel}>
+                  <Download size={14} /> Excel
+                </Button>
               </div>
             </div>
 
@@ -441,9 +490,9 @@ export default function Inventario() {
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         onClick={() => ajustarQuantidade(item.codigo, -1)}
-                        className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-bold transition"
+                        className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-bold transition flex items-center justify-center"
                       >
-                        −
+                        <Minus size={14} />
                       </button>
                       <input
                         type="number"
@@ -458,9 +507,9 @@ export default function Inventario() {
                       />
                       <button
                         onClick={() => ajustarQuantidade(item.codigo, 1)}
-                        className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-bold transition"
+                        className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-bold transition flex items-center justify-center"
                       >
-                        +
+                        <Plus size={14} />
                       </button>
                     </div>
                   )}
@@ -473,6 +522,43 @@ export default function Inventario() {
         {!consolidado && itens.length === 0 && (
           <p className="text-sm text-gray-400 dark:text-gray-500 text-center">Nenhum item bipado ainda</p>
         )}
+
+        {/* Modal Confirmar Encerrar */}
+        <Modal
+          open={confirmarEncerrar}
+          onClose={() => setConfirmarEncerrar(false)}
+          title={`Encerrar "${sessaoAtiva.nome}"?`}
+          variant="danger"
+          actions={
+            <>
+              <Button variant="ghost" onClick={() => setConfirmarEncerrar(false)}>Cancelar</Button>
+              <Button variant="danger" onClick={handleEncerrarSessao}>
+                <LogOut size={14} /> Encerrar
+              </Button>
+            </>
+          }
+        >
+          <p>Tem certeza? Os operadores não poderão mais bipar itens nesta sessão.</p>
+        </Modal>
+
+        {/* Modal Confirmar Limpar */}
+        <Modal
+          open={confirmarLimpar}
+          onClose={() => setConfirmarLimpar(false)}
+          title="Limpar todos os itens?"
+          variant="danger"
+          actions={
+            <>
+              <Button variant="ghost" onClick={() => setConfirmarLimpar(false)}>Cancelar</Button>
+              <Button variant="danger" onClick={handleLimpar}>
+                <Trash2 size={14} /> Limpar
+              </Button>
+            </>
+          }
+        >
+          <p>Todos os itens desta sessão serão removidos permanentemente.</p>
+        </Modal>
+
       </div>
     </div>
   )
