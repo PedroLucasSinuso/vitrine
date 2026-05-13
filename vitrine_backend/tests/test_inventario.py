@@ -1,4 +1,4 @@
-﻿"""Testes para os endpoints de inventÃ¡rio multi-usuÃ¡rio."""
+﻿"""Testes para os endpoints de inventário multi-usuário."""
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -93,10 +93,10 @@ def client(app):
 
 class TestInventario:
     def test_criar_sessao(self, client):
-        resp = client.post("/admin/inventario/sessoes", json={"nome": "InventÃ¡rio 01"})
+        resp = client.post("/admin/inventario/sessoes", json={"nome": "Inventário 01"})
         assert resp.status_code == 201
         data = resp.json()
-        assert data["nome"] == "InventÃ¡rio 01"
+        assert data["nome"] == "Inventário 01"
         assert data["status"] == "ativa"
         assert len(data["codigo_convite"]) == 6
 
@@ -106,15 +106,15 @@ class TestInventario:
         assert resp.json()["nome"] == ""
 
     def test_listar_sessoes(self, client):
-        client.post("/admin/inventario/sessoes", json={"nome": "SessÃ£o A"})
-        client.post("/admin/inventario/sessoes", json={"nome": "SessÃ£o B"})
+        client.post("/admin/inventario/sessoes", json={"nome": "Sessão A"})
+        client.post("/admin/inventario/sessoes", json={"nome": "Sessão B"})
         resp = client.get("/admin/inventario/sessoes")
         assert resp.status_code == 200
         data = resp.json()
         assert len(data) == 2
 
     def test_entrar_sessao_por_codigo(self, client):
-        criar = client.post("/admin/inventario/sessoes", json={"nome": "Minha SessÃ£o"}).json()
+        criar = client.post("/admin/inventario/sessoes", json={"nome": "Minha Sessão"}).json()
         codigo = criar["codigo_convite"]
         resp = client.post("/admin/inventario/sessoes/entrar", json={"codigo_convite": codigo})
         assert resp.status_code == 201

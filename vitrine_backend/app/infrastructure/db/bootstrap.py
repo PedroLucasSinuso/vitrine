@@ -5,5 +5,7 @@ import app.domain.models.cache_status
 import app.domain.models.usuario
 import app.domain.models.configuracao
 import app.domain.models.inventario
+import app.domain.models.whatsapp_contato
+import app.domain.models.email_contato
 def init_db():
     Base.metadata.create_all(bind=sqlite_engine)

@@ -32,6 +32,9 @@ export default function Home() {
 
   const [dark, setDark] = useState(() => localStorage.getItem('darkMode') === 'true')
 
+  const logoUrl = localStorage.getItem('marketLogoUrl')
+  const marketName = localStorage.getItem('marketName')
+
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
     localStorage.setItem('darkMode', String(dark))
@@ -43,10 +46,19 @@ export default function Home() {
 
         {/* Header */}
         <div className="flex justify-between items-center">
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <img src="/vitrine_logo.svg" alt="Vitrine" className="h-7 w-auto" />
-              <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Vitrine</h1>
+              <img src="/vitrine_logo.svg" alt="Vitrine" className="h-7 w-auto shrink-0" />
+              {logoUrl ? (
+                <img src={logoUrl} alt={marketName ?? 'Logo'} className="h-12 w-auto rounded shrink-0" />
+              ) : (
+                <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center text-white font-bold shrink-0">
+                  {marketName ? marketName.charAt(0).toUpperCase() : 'M'}
+                </div>
+              )}
+              {marketName && (
+                <h1 className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{marketName}</h1>
+              )}
             </div>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{getNomeExibicao()}</p>
           </div>

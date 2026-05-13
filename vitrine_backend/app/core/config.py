@@ -19,6 +19,16 @@ class Settings(BaseSettings):
     jwt_secret: str = ""
     access_token_expire_minutes: int = 60 # em minutos
 
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
+    twilio_from_number: str = ""
+
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    email_from: str = ""
+
     @model_validator(mode="after")
     def validar_jwt_secret(self):
         if not self.jwt_secret:

@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 _scheduler = BackgroundScheduler()
 
 
-def iniciar_scheduler(intervalo_horas: int = 1):
+def iniciar_scheduler(intervalo_horas: int = 1) -> BackgroundScheduler:
     _scheduler.add_job(
         run_etl,
         "interval",
@@ -16,6 +16,7 @@ def iniciar_scheduler(intervalo_horas: int = 1):
     )
     _scheduler.start()
     logger.info("Scheduler ETL iniciado | intervalo=%sh", intervalo_horas)
+    return _scheduler
 
 
 def parar_scheduler():

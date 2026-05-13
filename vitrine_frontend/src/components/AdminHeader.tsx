@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { getConfiguracoes } from '../api/admin'
+import { getConfigsCache } from '../stores/configStore'
 
 interface Breadcrumb {
   label: string
@@ -72,13 +72,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
   }, [menuOpen])
 
   useEffect(() => {
-    getConfiguracoes()
-      .then((data) => {
-        const c = data.configuracoes
-        if (c.market_name) localStorage.setItem('marketName', c.market_name)
-        if (c.logo_url) localStorage.setItem('marketLogoUrl', c.logo_url)
-      })
-      .catch(() => {})
+    getConfigsCache().catch(() => {})
   }, [])
 
   function handleLogout() {
@@ -115,8 +109,8 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
           ))}
         </nav>
       )}
-      <div className="flex justify-between items-center mb-4 gap-2">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="flex justify-between items-start mb-4 gap-2">
+        <div className="flex items-center gap-3 min-w-0 flex-wrap">
           {hideNav && (
             <button
               onClick={() => setMenuOpen((prev) => !prev)}
@@ -126,15 +120,20 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
               {'\u2190'} Admin
             </button>
           )}
-          <img src="/vitrine_logo.svg" alt="Vitrine" className="h-6 w-auto shrink-0" />
+          <img src="/vitrine_logo.svg" alt="Vitrine" className="h-7 w-auto shrink-0" />
           {logoUrl ? (
-            <img src={logoUrl} alt={marketName ?? 'Logo'} className="h-8 w-auto rounded shrink-0" />
+            <img src={logoUrl} alt={marketName ?? 'Logo'} className="h-12 w-auto rounded shrink-0" />
           ) : (
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold text-sm shrink-0">
+            <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center text-white font-bold shrink-0">
               {logoFallback}
             </div>
           )}
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100 truncate">{titulo}</h1>
+          <div className="min-w-0">
+            {marketName && (
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate leading-tight">{marketName}</p>
+            )}
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{titulo}</p>
+          </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
           {expiringBadge && (

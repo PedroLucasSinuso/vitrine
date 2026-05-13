@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+</head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:Helvetica Neue,Helvetica,Arial,sans-serif">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f4f6">
+<tr><td align="center" style="padding:20px 10px">
+
+  <!-- Container -->
+  <table role="presentation" width="100%" style="max-width:560px" cellpadding="0" cellspacing="0" border="0">
+
+    <!-- Header -->
+    <tr>
+      <td align="center" style="background:#1e2937;border-radius:12px 12px 0 0;padding:34px 24px 20px">
+        {% if logo_cid %}
+        <img src="cid:{{ logo_cid }}" alt="" height="56" style="display:block;margin:0 auto;height:56px;width:auto;border:0;outline:none">
+        {% endif %}
+        <h1 style="margin:14px 0 0;font-size:24px;font-weight:700;color:#ffffff;letter-spacing:-0.5px">{{ nome_loja }}</h1>
+        <!-- Accent bar -->
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:10px auto 0">
+          <tr><td width="40" height="3" style="background-color:#10b981;font-size:0;line-height:0">&nbsp;</td></tr>
+        </table>
+        <p style="margin:10px 0 0;font-size:12px;color:#9ca3af;letter-spacing:0.5px">Relatório {{ mes_atual }} &mdash; {{ data_inicio_mes }} a {{ data_fim_mes }}</p>
+      </td>
+    </tr>
+
+    <!-- ===== WEEKLY SECTION ===== -->
+    <tr>
+      <td style="background-color:#ffffff;padding:20px 24px 16px">
+        <h2 style="margin:0 0 12px;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.8px;font-weight:700;text-align:center">Semana &mdash; {{ data_inicio_semana }} a {{ data_fim_semana }}</h2>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <!-- KPI: Faturamento (green) -->
+            <td width="33%" style="padding:0 5px 0 0">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f9fafb;border-radius:8px">
+                <tr><td align="center" style="padding:12px 8px">
+                  <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px">Faturamento</div>
+                  <div style="font-size:18px;font-weight:700;color:#059669;margin-top:4px">R$ {{ faturamento_bruto_semana | fmt_money }}</div>
+                  {% set up = "▲" in variacao_semana %}
+                  {% set dn = "▼" in variacao_semana %}
+                  <div style="font-size:11px;font-weight:600;margin-top:2px;color:{{ '#16a34a' if up else ('#ef4444' if dn else '#9ca3af') }}">{{ variacao_semana }}</div>
+                  <div style="font-size:10px;color:#9ca3af;margin-top:1px">vs. semana anterior</div>
+                </td></tr>
+              </table>
+            </td>
+            <!-- KPI: Ticket Medio -->
+            <td width="33%" style="padding:0 2.5px">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f9fafb;border-radius:8px">
+                <tr><td align="center" style="padding:12px 8px">
+                  <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px">Ticket Médio</div>
+                  <div style="font-size:18px;font-weight:700;color:#1f2937;margin-top:4px">R$ {{ ticket_medio_semana | fmt_money }}</div>
+                </td></tr>
+              </table>
+            </td>
+            <!-- KPI: Tickets -->
+            <td width="33%" style="padding:0 0 0 5px">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f9fafb;border-radius:8px">
+                <tr><td align="center" style="padding:12px 8px">
+                  <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px">Tickets</div>
+                  <div style="font-size:18px;font-weight:700;color:#1f2937;margin-top:4px">{{ qtd_tickets_semana }}</div>
+                </td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- ===== MONTHLY SECTION ===== -->
+    <tr>
+      <td style="background-color:#ffffff;padding:0 24px 20px">
+        <hr style="border:none;border-top:1.5px solid #d1d5db;margin:0 0 16px">
+        <h2 style="margin:0 0 12px;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.8px;font-weight:700;text-align:center">Mês &mdash; {{ mes_atual }}</h2>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <!-- KPI: Faturamento -->
+            <td width="25%" style="padding:0 4px 0 0">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f9fafb;border-radius:8px">
+                <tr><td align="center" style="padding:10px 6px">
+                  <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px">Faturamento</div>
+                  <div style="font-size:15px;font-weight:700;color:#2563eb;margin-top:3px">R$ {{ faturamento_bruto_mes | fmt_money }}</div>
+                </td></tr>
+              </table>
+            </td>
+            <!-- KPI: Fat Liq -->
+            <td width="25%" style="padding:0 2px">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f9fafb;border-radius:8px">
+                <tr><td align="center" style="padding:10px 6px">
+                  <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px">Faturamento Líq.</div>
+                  <div style="font-size:15px;font-weight:700;color:#2563eb;margin-top:3px">R$ {{ faturamento_liquido_mes | fmt_money }}</div>
+                </td></tr>
+              </table>
+            </td>
+            <!-- KPI: Ticket Medio -->
+            <td width="25%" style="padding:0 2px">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f9fafb;border-radius:8px">
+                <tr><td align="center" style="padding:10px 6px">
+                  <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px">Ticket Médio</div>
+                  <div style="font-size:15px;font-weight:700;color:#1f2937;margin-top:3px">R$ {{ ticket_medio_mes | fmt_money }}</div>
+                </td></tr>
+              </table>
+            </td>
+            <!-- KPI: Tickets -->
+            <td width="25%" style="padding:0 0 0 4px">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f9fafb;border-radius:8px">
+                <tr><td align="center" style="padding:10px 6px">
+                  <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px">Tickets</div>
+                  <div style="font-size:15px;font-weight:700;color:#1f2937;margin-top:3px">{{ qtd_tickets_mes }}</div>
+                </td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        {% if yoy %}
+        <!-- YoY -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f0fdf4;border-radius:8px;margin-top:10px">
+          <tr><td style="padding:12px 14px">
+            <div style="font-size:10px;color:#16a34a;text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin-bottom:6px;text-align:center">Comparativo &mdash; {{ mes_atual_ref }} x {{ mes_anterior_ref }}</div>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              <tr>
+                {% set fb_pct = yoy.faturamento_bruto.variacao_pct %}
+                {% set tm_pct = yoy.ticket_medio.variacao_pct %}
+                {% set qt_pct = yoy.qtd_tickets.variacao_pct %}
+                <td style="padding:0 6px;font-size:12px;color:#374151;text-align:center">
+                  Faturamento: <strong style="color:{{ '#059669' if (fb_pct or 0) > 0 else '#ef4444' if (fb_pct or 0) < 0 else '#9ca3af' }}">{{ fb_pct | fmt_variacao }}</strong>
+                </td>
+                <td style="padding:0 6px;font-size:12px;color:#374151;text-align:center">
+                  Ticket Médio: <strong style="color:{{ '#059669' if (tm_pct or 0) > 0 else '#ef4444' if (tm_pct or 0) < 0 else '#9ca3af' }}">{{ tm_pct | fmt_variacao }}</strong>
+                </td>
+                <td style="padding:0 6px;font-size:12px;color:#374151;text-align:center">
+                  Tickets: <strong style="color:{{ '#059669' if (qt_pct or 0) > 0 else '#ef4444' if (qt_pct or 0) < 0 else '#9ca3af' }}">{{ qt_pct | fmt_variacao }}</strong>
+                </td>
+              </tr>
+            </table>
+          </td></tr>
+        </table>
+        {% endif %}
+      </td>
+    </tr>
+
+    {% if ranking %}
+    <!-- ===== RANKING SECTION ===== -->
+    <tr>
+      <td style="background-color:#ffffff;padding:0 24px 20px">
+        <hr style="border:none;border-top:1.5px solid #d1d5db;margin:0 0 12px">
+        <h2 style="margin:0 0 10px;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.8px;font-weight:700;text-align:center">Top 5 Produtos &mdash; {{ mes_atual }}</h2>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse">
+          <thead>
+            <tr>
+              <th style="text-align:left;font-size:10px;color:#9ca3af;padding:6px 4px;border-bottom:1px solid #e5e7eb;text-transform:uppercase;letter-spacing:0.5px;width:24px"></th>
+              <th style="text-align:left;font-size:10px;color:#9ca3af;padding:6px 4px;border-bottom:1px solid #e5e7eb;text-transform:uppercase;letter-spacing:0.5px">Produto</th>
+              <th style="text-align:right;font-size:10px;color:#9ca3af;padding:6px 4px;border-bottom:1px solid #e5e7eb;text-transform:uppercase;letter-spacing:0.5px">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in ranking %}
+            <tr>
+              <td style="color:#9ca3af;padding:7px 4px;border-bottom:1px solid #f3f4f6;font-size:13px">{{ loop.index }}</td>
+              <td style="color:#374151;padding:7px 4px;border-bottom:1px solid #f3f4f6;font-size:13px">{{ item.produto }}</td>
+              <td style="text-align:right;font-weight:600;color:#374151;padding:7px 4px;border-bottom:1px solid #f3f4f6;font-size:13px;white-space:nowrap">R$ {{ item.valor | fmt_money }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </td>
+    </tr>
+    {% endif %}
+
+    <!-- ===== FOOTER ===== -->
+    <tr>
+      <td align="center" style="background-color:#f9fafb;border-radius:0 0 12px 12px;padding:20px 24px 24px">
+        {% if vitrine_logo_cid %}
+        <img src="cid:{{ vitrine_logo_cid }}" alt="Vitrine" height="22" style="display:block;margin:0 auto 8px;height:22px;width:auto;border:0;outline:none">
+        {% endif %}
+        <p style="margin:10px 0 0;font-size:11px;color:#9ca3af">Relatório Automático &mdash; Gerado em {{ data_geracao }}</p>
+      </td>
+    </tr>
+
+  </table>
+
+</td></tr>
+</table>
+</body>
+</html>

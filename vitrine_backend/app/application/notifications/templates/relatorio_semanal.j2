@@ -1,0 +1,19 @@
+📊 *Relatório Semanal — {{ nome_loja }}*
+{{ data_inicio }} a {{ data_fim }}
+
+💰 *Faturamento Bruto:* R$ {{ "%.2f"|format(faturamento_bruto) }} {{ variacao }}
+💵 *Faturamento Líquido:* R$ {{ "%.2f"|format(faturamento_liquido) }}
+🔄 *Ticket Médio:* R$ {{ "%.2f"|format(ticket_medio) }}
+🎟️ *Total de Tickets:* {{ qtd_tickets }}
+
+🏆 *Top 5 Produtos*
+{% for item in ranking %}
+  {{ loop.index }}. {{ item.produto }} — R$ {{ "%.2f"|format(item.valor) }}
+{%- endfor %}
+
+{% if variacao_texto %}
+📈 *Comparativo vs Semana Anterior*
+  {{ variacao_texto }}
+{% endif %}
+
+_Vitrine · Gerado automaticamente em {{ data_geracao }}_

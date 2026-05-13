@@ -19,6 +19,9 @@ dependencies = [
     "cachetools>=5.5",
     "python-dotenv",
     "httpx",
+    "jinja2>=3.1.6",
+    "twilio>=9.10.9",
+    "pillow>=12.2.0",
 ]
 
 [tool.setuptools]

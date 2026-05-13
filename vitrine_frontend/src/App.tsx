@@ -27,7 +27,8 @@ import ScrollToTop from './components/ui/ScrollToTop'
 function HomeRouter() {
   const { getRole } = useAuth()
   const role = getRole()
-  if (role === 'admin' || role === 'supervisor') return <Navigate to="/home" replace />
+  if (role === 'admin') return <Navigate to="/admin" replace />
+  if (role === 'supervisor') return <Navigate to="/home" replace />
   return <Busca />
 }
 
@@ -51,7 +52,6 @@ function App() {
             <Route path="/admin/inventario" element={<ProtectedRoute allowedRoles={['admin', 'supervisor', 'operador']}><Inventario /></ProtectedRoute>} />
             <Route path="/admin/usuarios" element={<ProtectedRoute allowedRoles={['admin']}><Usuarios /></ProtectedRoute>} />
             <Route path="/admin/configuracoes" element={<ProtectedRoute allowedRoles={['admin']}><Configuracoes /></ProtectedRoute>} />
-            <Route path="*" element={<NotFound />} />
             <Route path="/bi" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiDashboard /></ProtectedRoute>} />
             <Route path="/bi/receita" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiReceita /></ProtectedRoute>} />
             <Route path="/bi/curva-abc" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiCurvaAbc /></ProtectedRoute>} />
@@ -60,6 +60,7 @@ function App() {
             <Route path="/bi/perdas-consumo" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiPerdasConsumo /></ProtectedRoute>} />
             <Route path="/bi/temporal" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiTemporal /></ProtectedRoute>} />
             <Route path="/bi/sku" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiSku /></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
           <ScrollToTop />
           <ToastContainer />

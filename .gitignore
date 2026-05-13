@@ -28,7 +28,9 @@ logs/
 .env
 
 # Uploads (logo do mercado)
-vitrine_backend/app/static/
+vitrine_backend/app/static/logo.*
+iniciar.ps1
+nginx.conf
 
 # Build
 *.exe

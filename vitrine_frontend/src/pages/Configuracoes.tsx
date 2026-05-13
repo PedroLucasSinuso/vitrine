@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import AdminHeader from '../components/AdminHeader'
+import ListaContatosWhatsApp from '../components/ListaContatosWhatsApp'
+import ListaContatosEmail from '../components/ListaContatosEmail'
 import { getConfiguracoes, atualizarConfiguracoes, uploadLogo } from '../api/admin'
+import { invalidateConfigCache } from '../stores/configStore'
 import { useToast } from '../hooks/useToast'
 
 const REPORT_DAYS = [
@@ -34,7 +37,6 @@ export default function Configuracoes() {
     etl_interval_hours: '1',
     report_time: '18:00',
     report_day: 'friday',
-    whatsapp_numbers: '',
   })
 
   useEffect(() => {
@@ -46,7 +48,6 @@ export default function Configuracoes() {
           etl_interval_hours: c.etl_interval_hours ?? prev.etl_interval_hours,
           report_time: c.report_time ?? prev.report_time,
           report_day: c.report_day ?? prev.report_day,
-          whatsapp_numbers: c.whatsapp_numbers ?? prev.whatsapp_numbers,
         }))
         if (c.logo_url) setLogoPreview(c.logo_url)
         if (c.market_name) localStorage.setItem('marketName', c.market_name)
@@ -64,10 +65,10 @@ export default function Configuracoes() {
         etl_interval_hours: form.etl_interval_hours,
         report_time: form.report_time,
         report_day: form.report_day,
-        whatsapp_numbers: form.whatsapp_numbers,
       }
       const resp = await atualizarConfiguracoes(valores)
       const c = resp.configuracoes
+      invalidateConfigCache()
       if (c.market_name) localStorage.setItem('marketName', c.market_name)
       if (c.logo_url) { localStorage.setItem('marketLogoUrl', c.logo_url); setLogoPreview(c.logo_url) }
       toast({ type: 'success', message: 'Configurações salvas' })
@@ -81,6 +82,7 @@ export default function Configuracoes() {
   async function handleLogoUpload(file: File) {
     try {
       const result = await uploadLogo(file)
+      invalidateConfigCache()
       setLogoPreview(result.logo_url)
       localStorage.setItem('marketLogoUrl', result.logo_url)
       toast({ type: 'success', message: 'Logo atualizada' })
@@ -194,16 +196,18 @@ export default function Configuracoes() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500 dark:text-gray-400">
-              Números WhatsApp <span className="text-gray-400 font-normal">(um por linha, com DDD)</span>
-            </label>
-            <textarea
-              className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-              rows={3}
-              value={form.whatsapp_numbers}
-              onChange={(e) => setForm((prev) => ({ ...prev, whatsapp_numbers: e.target.value }))}
-              placeholder="5511999999999&#10;5521988888888"
-            />
+            <label className="text-xs text-gray-500 dark:text-gray-400">Contatos</label>
+            <ListaContatosWhatsApp />
+          </div>
+        </div>
+
+        {/* Relatório Email */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5 flex flex-col gap-4">
+          <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200">Relatório Semanal por Email</h2>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500 dark:text-gray-400">Contatos</label>
+            <ListaContatosEmail />
           </div>
         </div>
 
