@@ -1,21 +1,14 @@
-﻿from apscheduler.schedulers.background import BackgroundScheduler
-from app.application.etl.pipeline import run_etl
+﻿from zoneinfo import ZoneInfo
+from apscheduler.schedulers.background import BackgroundScheduler
 import logging
 
 logger = logging.getLogger(__name__)
-_scheduler = BackgroundScheduler()
+_scheduler = BackgroundScheduler(timezone=ZoneInfo("America/Sao_Paulo"))
 
 
-def iniciar_scheduler(intervalo_horas: int = 1) -> BackgroundScheduler:
-    _scheduler.add_job(
-        run_etl,
-        "interval",
-        hours=intervalo_horas,
-        id="etl_sync",
-        replace_existing=True,
-    )
+def iniciar_scheduler() -> BackgroundScheduler:
     _scheduler.start()
-    logger.info("Scheduler ETL iniciado | intervalo=%sh", intervalo_horas)
+    logger.info("Scheduler iniciado")
     return _scheduler
 
 

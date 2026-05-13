@@ -1,6 +1,6 @@
 SELECT  
     d.cdprincipal       as codigo_chamada,
-    g.nmgrupo           as grupo,
+    COALESCE(g.nmgrupo, 'SEM GRUPO') as grupo,
     COALESCE(f.dsfamilia, 'SEM FAMILIA') as familia,
     d.dsdetalhe         as nome,
     d.vlprecovenda      as preco_venda,

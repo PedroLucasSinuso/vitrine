@@ -15,6 +15,15 @@ from app.schemas.configuracao_schema import (
 from app.domain.models.configuracao import Configuracao
 from app.domain.models.usuario import Usuario
 from app.infrastructure.db.bootstrap import init_db
+from app.application.scheduler_manager import (
+    reagendar_etl,
+    reagendar_relatorio_whatsapp,
+    reagendar_relatorio_email,
+)
+from app.application.notifications.scheduler_notifications import (
+    _enviar_relatorio_whatsapp,
+    _enviar_relatorio_email,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,11 +66,44 @@ def atualizar_configuracoes(
 
     db.commit()
 
+    valores = body.valores
+
+    if "etl_interval_minutes" in valores:
+        try:
+            reagendar_etl(max(10, int(valores["etl_interval_minutes"])))
+        except Exception as e:
+            logger.error("Erro ao reagendar ETL: %s", e)
+
+    if "report_day" in valores or "report_time" in valores:
+        try:
+            dia = _read_or_default(db, "report_day", "fri")
+            time_str = _read_or_default(db, "report_time", "18:00")
+            hora, minuto = map(int, time_str.split(":"))
+            reagendar_relatorio_whatsapp(dia, hora, minuto, _enviar_relatorio_whatsapp)
+        except Exception as e:
+            logger.error("Erro ao reagendar WhatsApp: %s", e)
+
+    if "report_email_day" in valores or "report_email_time" in valores:
+        try:
+            dia = _read_or_default(db, "report_email_day", "fri")
+            time_str = _read_or_default(db, "report_email_time", "18:00")
+            hora, minuto = map(int, time_str.split(":"))
+            reagendar_relatorio_email(dia, hora, minuto, _enviar_relatorio_email)
+        except Exception as e:
+            logger.error("Erro ao reagendar Email: %s", e)
+
     stmt = select(Configuracao)
     results = db.execute(stmt).scalars().all()
     return ConfiguracaoResponse(
         configuracoes={r.chave: r.valor for r in results}
     )
+
+
+def _read_or_default(db: Session, key: str, default: str) -> str:
+    r = db.execute(
+        select(Configuracao).where(Configuracao.chave == key)
+    ).scalar_one_or_none()
+    return r.valor.strip() if r and r.valor else default
 
 
 @router.post("/configuracoes/logo", response_model=LogoUploadResponse, status_code=201)

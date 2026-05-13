@@ -1,7 +1,17 @@
-﻿from pathlib import Path
+﻿import sys
+from pathlib import Path
 import logging
 from logging.config import dictConfig
 from logging.handlers import TimedRotatingFileHandler
+
+
+class _Utf8StreamHandler(logging.StreamHandler):
+    def __init__(self, stream=None):
+        super().__init__(stream)
+        if hasattr(self.stream, 'buffer'):
+            import io
+            self.stream = io.TextIOWrapper(self.stream.buffer, encoding='utf-8')
+
 
 def setup_logging():
     Path("logs").mkdir(exist_ok=True)
@@ -20,7 +30,7 @@ def setup_logging():
 
         "handlers": {
             "console": {
-                "class": "logging.StreamHandler",
+                "class": "app.core.logging_config._Utf8StreamHandler",
                 "formatter": "default",
             },
             "file_app": {

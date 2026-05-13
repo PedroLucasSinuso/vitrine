@@ -111,6 +111,7 @@ app/
 │   │   └── query_loader.py
 │   ├── loaders/
 │   │   └── query_loader.py  # BaseQueryLoader
+│   ├── scheduler_manager.py # Agendamento dinâmico (ETL + relatórios)
 │   └── utils/
 │       ├── jwt_handler.py
 │       └── security.py
@@ -245,6 +246,7 @@ Usuário (câmera / input)
 | `POST` | `/admin/sync` | Dispara sync em background | Admin |
 | `GET` | `/admin/sync/{job_id}` | Verifica status de um job | Admin |
 | `GET` | `/admin/sync/` | Lista histórico de jobs | Admin |
+| `GET` | `/admin/scheduler/jobs` | Lista jobs do scheduler com próxima execução | Admin |
 | `GET` | `/bi/kpis` | KPIs financeiros do período | Supervisor/Admin |
 | `GET` | `/bi/kpis/comparativo` | KPIs com comparação YoY (ano anterior) | Supervisor/Admin |
 | `GET` | `/bi/receita` | Receita por dimensão | Supervisor/Admin |
@@ -313,7 +315,7 @@ Usuário (câmera / input)
 | `/busca` | Busca | Consulta de produtos por código/nome | Autenticado |
 | `/etiquetas` | Etiquetas | Geração de etiquetas | Supervisor/Admin |
 | `/inventario` | Inventário | Sessões de contagem multi-usuário | Autenticado |
-| `/configuracoes` | Configurações | Upload de logo, nome do mercado, tema | Admin |
+| `/configuracoes` | Configurações | Upload de logo, nome do mercado, ETL (min), schedule WhatsApp/Email | Admin |
 | `/admin` | Admin | Sync ETL manual | Admin |
 | `/usuarios` | Usuários | CRUD de usuários | Admin |
 | `/bi/dashboard` | Dashboard | KPIs financeiros com toggle YoY | Supervisor/Admin |
@@ -418,7 +420,7 @@ ALLOW_ORIGIN_REGEX=https://.*\.trycloudflare\.com
 |---|---|---|
 | `POSTGRES_URL` | Sim (para ETL) | Connection string do banco de origem |
 | `SQLITE_URL` | Sim | Caminho do banco SQLite local |
-| `CACHE_REFRESH_INTERVAL` | Não | Intervalo de refresh do cache em segundos (padrão: 3600) |
+| `CACHE_REFRESH_INTERVAL` | Não | Intervalo de refresh do cache em segundos (padrão: 3600). **Nota:** substituído pelo valor configurado na UI (`etl_interval_minutes`) |
 | `JWT_SECRET` | Sim | Chave secreta para assinar tokens JWT |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Não | Tempo de expiração do token (padrão: 60) |
 | `ALLOWED_ORIGINS` | Sim | Lista de origens permitidas para CORS |
@@ -582,7 +584,7 @@ app/application/bi/
 
 ## ETL
 
-O pipeline ETL sincroniza dados do PostgreSQL para o SQLite local. Por padrão é executado manualmente; a configuração `cache_refresh_interval` (em segundos) está disponível para agendamento externo.
+O pipeline ETL sincroniza dados do PostgreSQL para o SQLite local. Pode ser executado manualmente ou via scheduler interno com intervalo configurável (mín. 10 minutos) pela interface de configurações — sem necessidade de restart.
 
 ```bash
 cd vitrine_backend
@@ -652,13 +654,15 @@ uv run python -m app.etl.run_etl
 - [x] Endpoint de busca por nome (`GET /produtos/busca?q=`)
 - [x] Endpoints de BI (receita, ranking, curva-abc, sku, trocas, perdas, consumo, temporal, exportação Excel)
 - [x] Comparação YoY (ano contra ano) no dashboard
-- [ ] Relatórios agendados via WhatsApp
+- [x] Relatórios agendados via WhatsApp e Email (agendas individuais)
+- [x] Agendamento dinâmico — alterações na UI têm efeito imediato (sem restart)
+- [x] Leitor de código de barras contínuo (não fecha após cada leitura)
+- [x] ETL configurável em minutos (mín. 10) via interface
 - [ ] Filtros por grupo e família em `GET /produtos/`
-- [ ] Frontend mobile (PWA) com leitura de código de barras pela câmera
-- [ ] Agendamento automático do ETL via scheduler interno
+- [ ] Frontend mobile (PWA)
 - [ ] Endpoint para cancelar job em andamento
 - [ ] Notificação (WebSocket) ao completar sync
-- [ ] Cache distributed (Redis) para múltiplas instâncias
+- [ ] Cache distribuído (Redis) para múltiplas instâncias
 
 ---
 

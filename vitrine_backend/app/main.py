@@ -14,15 +14,27 @@ from app.api.routes import email as email_routes
 from app.core.logging_config import setup_logging
 from app.core.config import settings
 from app.application.etl.scheduler import iniciar_scheduler, parar_scheduler
-from app.application.notifications.scheduler_notifications import iniciar_scheduler_notificacoes
+from app.application.scheduler_manager import (
+    init_scheduler_manager,
+    reagendar_etl,
+)
+from app.application.notifications.scheduler_notifications import (
+    iniciar_scheduler_notificacoes,
+    ler_config_etl_interval,
+)
+from app.application.etl.pipeline import run_etl
 
 setup_logging()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    intervalo = max(1, settings.cache_refresh_interval // 3600)
-    scheduler = iniciar_scheduler(intervalo_horas=intervalo)
+    scheduler = iniciar_scheduler()
+    init_scheduler_manager(scheduler)
+
+    etl_min = ler_config_etl_interval()
+    reagendar_etl(etl_min, run_etl)
+
     iniciar_scheduler_notificacoes(scheduler)
     yield
     parar_scheduler()

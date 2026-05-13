@@ -25,14 +25,14 @@ def run_etl() -> EtlResult:
 
         data = extractor.extract()
 
-        logger.info("Extract concluÃ­do | produtos=%s codigos=%s", len(data.produtos), len(data.codigos))
+        logger.info("Extract concluído | produtos=%s codigos=%s", len(data.produtos), len(data.codigos))
 
         produtos = transformar_produtos(
             data.produtos,
             data.codigos
         )
 
-        logger.info("Transform concluÃ­do | total=%s", len(produtos))
+        logger.info("Transform concluído | total=%s", len(produtos))
 
         with SqliteSession() as session:
             try:
@@ -40,7 +40,7 @@ def run_etl() -> EtlResult:
                     produtos_count, codigos_count = carregar_produtos(session, produtos)
                     atualizar_cache(session)
 
-                logger.info("Load concluÃ­do com sucesso | produtos=%s codigos=%s", produtos_count, codigos_count)
+                logger.info("Load concluído com sucesso | produtos=%s codigos=%s", produtos_count, codigos_count)
 
                 limpar_cache_bi()
 

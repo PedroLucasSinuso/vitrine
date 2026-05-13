@@ -1,4 +1,5 @@
-﻿from datetime import datetime, timezone
+﻿from datetime import datetime
+from zoneinfo import ZoneInfo
 from sqlalchemy import delete, func
 from sqlalchemy.orm import Session
 
@@ -50,7 +51,7 @@ def carregar_produtos(session: Session, produtos_dto: list[ProdutoDTO]) -> tuple
 
 def atualizar_cache(session: Session, status: str = "sucesso", erro: str | None = None):
     session.add(CacheStatus(
-        last_updated=datetime.now(timezone.utc),
+        last_updated=datetime.now(ZoneInfo("America/Sao_Paulo")),
         status=status,
         erro=erro
     ))

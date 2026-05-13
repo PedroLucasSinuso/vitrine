@@ -17,12 +17,14 @@ const REPORT_DAYS = [
 ]
 
 const ETL_INTERVALS = [
-  { value: '0.5', label: '30 minutos' },
-  { value: '1', label: '1 hora' },
-  { value: '2', label: '2 horas' },
-  { value: '6', label: '6 horas' },
-  { value: '12', label: '12 horas' },
-  { value: '24', label: '24 horas' },
+  { value: '10', label: '10 minutos' },
+  { value: '15', label: '15 minutos' },
+  { value: '30', label: '30 minutos' },
+  { value: '60', label: '1 hora' },
+  { value: '120', label: '2 horas' },
+  { value: '360', label: '6 horas' },
+  { value: '720', label: '12 horas' },
+  { value: '1440', label: '24 horas' },
 ]
 
 export default function Configuracoes() {
@@ -34,9 +36,11 @@ export default function Configuracoes() {
 
   const [form, setForm] = useState({
     market_name: '',
-    etl_interval_hours: '1',
+    etl_interval_minutes: '60',
     report_time: '18:00',
     report_day: 'friday',
+    report_email_time: '18:00',
+    report_email_day: 'friday',
   })
 
   useEffect(() => {
@@ -45,9 +49,11 @@ export default function Configuracoes() {
         const c = data.configuracoes
         setForm((prev) => ({
           market_name: c.market_name ?? prev.market_name,
-          etl_interval_hours: c.etl_interval_hours ?? prev.etl_interval_hours,
+          etl_interval_minutes: c.etl_interval_minutes ?? prev.etl_interval_minutes,
           report_time: c.report_time ?? prev.report_time,
           report_day: c.report_day ?? prev.report_day,
+          report_email_time: c.report_email_time ?? prev.report_email_time,
+          report_email_day: c.report_email_day ?? prev.report_email_day,
         }))
         if (c.logo_url) setLogoPreview(c.logo_url)
         if (c.market_name) localStorage.setItem('marketName', c.market_name)
@@ -62,9 +68,11 @@ export default function Configuracoes() {
     try {
       const valores: Record<string, string> = {
         market_name: form.market_name,
-        etl_interval_hours: form.etl_interval_hours,
+        etl_interval_minutes: form.etl_interval_minutes,
         report_time: form.report_time,
         report_day: form.report_day,
+        report_email_time: form.report_email_time,
+        report_email_day: form.report_email_day,
       }
       const resp = await atualizarConfiguracoes(valores)
       const c = resp.configuracoes
@@ -157,8 +165,8 @@ export default function Configuracoes() {
             <label className="text-xs text-gray-500 dark:text-gray-400">Intervalo automático</label>
             <select
               className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-48"
-              value={form.etl_interval_hours}
-              onChange={(e) => setForm((prev) => ({ ...prev, etl_interval_hours: e.target.value }))}
+              value={form.etl_interval_minutes}
+              onChange={(e) => setForm((prev) => ({ ...prev, etl_interval_minutes: e.target.value }))}
             >
               {ETL_INTERVALS.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -204,6 +212,30 @@ export default function Configuracoes() {
         {/* Relatório Email */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5 flex flex-col gap-4">
           <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200">Relatório Semanal por Email</h2>
+
+          <div className="flex gap-4 flex-wrap">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-gray-500 dark:text-gray-400">Dia da semana</label>
+              <select
+                className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                value={form.report_email_day}
+                onChange={(e) => setForm((prev) => ({ ...prev, report_email_day: e.target.value }))}
+              >
+                {REPORT_DAYS.map((d) => (
+                  <option key={d.value} value={d.value}>{d.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-gray-500 dark:text-gray-400">Horário</label>
+              <input
+                type="time"
+                className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                value={form.report_email_time}
+                onChange={(e) => setForm((prev) => ({ ...prev, report_email_time: e.target.value }))}
+              />
+            </div>
+          </div>
 
           <div className="flex flex-col gap-1">
             <label className="text-xs text-gray-500 dark:text-gray-400">Contatos</label>

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import * as XLSX from 'xlsx'
-import { Camera, Plus, Minus, Download, Trash2, LogOut } from 'lucide-react'
+import { Camera, Plus, Minus, Download, Trash2, LogOut, Check } from 'lucide-react'
 import { buscarProduto } from '../api/produtos'
 import AdminHeader from '../components/AdminHeader'
 import LeitorCodigo from '../components/LeitorCodigo'
@@ -41,9 +41,13 @@ export default function Inventario() {
   const [criandoSessao, setCriandoSessao] = useState(false)
   const [confirmarEncerrar, setConfirmarEncerrar] = useState(false)
   const [confirmarLimpar, setConfirmarLimpar] = useState(false)
+  const [editSheetItem, setEditSheetItem] = useState<ItemInventario | null>(null)
+  const [scanFeedback, setScanFeedback] = useState<string | null>(null)
   const processando = useRef<Set<string>>(new Set())
   const inputRef = useRef<HTMLInputElement>(null)
   const conviteRef = useRef<HTMLInputElement>(null)
+  const scrollPosRef = useRef(0)
+  const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { getUsername } = useAuth()
   const { toast } = useToast()
@@ -64,15 +68,34 @@ export default function Inventario() {
       .catch(() => setErro('Erro ao carregar itens'))
   }, [sessaoAtiva])
 
+  useEffect(() => {
+    if (!sessaoAtiva || scrollPosRef.current <= 0) return
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: scrollPosRef.current, behavior: 'auto' })
+      scrollPosRef.current = 0
+    })
+  }, [sessaoAtiva])
+
+  function mostrarFeedback(nome: string) {
+    setScanFeedback(null)
+    if (feedbackTimer.current) clearTimeout(feedbackTimer.current)
+    requestAnimationFrame(() => {
+      setScanFeedback(nome)
+      feedbackTimer.current = setTimeout(() => setScanFeedback(null), 700)
+    })
+  }
+
   function haptico() {
     try { navigator.vibrate?.(20) } catch {}
   }
 
   function handleVoltar() {
+    scrollPosRef.current = window.scrollY
     setSessaoAtiva(null)
     setItens([])
     setConsolidado(false)
     setEditando({})
+    setCamera(false)
     getSessoesInventario().then(setSessoes).catch(() => {})
   }
 
@@ -168,6 +191,7 @@ export default function Inventario() {
         await adicionarItemInventario(sessaoAtiva.id, { codigo: codigoLimpo, nome: existente.nome, grupo: existente.grupo, familia: existente.familia })
         if (inputRef.current) inputRef.current.value = ''
         haptico()
+        mostrarFeedback(existente.nome)
         return
       }
 
@@ -185,11 +209,13 @@ export default function Inventario() {
       await adicionarItemInventario(sessaoAtiva.id, { codigo: internalCode, nome: produto.nome, grupo: produto.grupo, familia: produto.familia })
       if (inputRef.current) inputRef.current.value = ''
       haptico()
+      mostrarFeedback(produto.nome)
     } catch (e: unknown) {
       const error = e as { response?: { status?: number } }
-      if (error.response?.status === 404) setErro('Produto não encontrado.')
-      else if (error.response?.status === 400) setErro('Código inválido.')
-      else setErro('Erro ao consultar.')
+      let msg = 'Erro ao consultar.'
+      if (error.response?.status === 404) msg = 'Produto não encontrado.'
+      else if (error.response?.status === 400) msg = 'Código inválido.'
+      toast({ type: 'error', message: msg })
     } finally {
       processando.current.delete(codigoLimpo)
     }
@@ -388,7 +414,8 @@ export default function Inventario() {
     <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex flex-col items-center px-4 py-6">
       {camera && (
         <LeitorCodigo
-          onLeitura={(codigo) => { setCamera(false); handleCodigo(codigo) }}
+          continuo
+          onLeitura={(codigo) => { handleCodigo(codigo) }}
           onFechar={() => setCamera(false)}
         />
       )}
@@ -446,6 +473,11 @@ export default function Inventario() {
                 <Camera size={18} />
               </button>
             </div>
+            {scanFeedback && (
+              <div className="mt-2 flex items-center gap-2 text-green-600 dark:text-green-400 text-sm font-medium animate-fade-in-up">
+                <Check size={16} /> {scanFeedback}
+              </div>
+            )}
             {erro && <p className="text-red-500 text-sm mt-2" role="alert">{erro}</p>}
           </div>
         )}
@@ -477,7 +509,11 @@ export default function Inventario() {
 
             <div className="flex flex-col gap-2">
               {itens.map(item => (
-                <div key={item.codigo} className="flex justify-between items-center border dark:border-gray-700 rounded-lg px-4 py-2">
+                <div
+                  key={item.codigo}
+                  onClick={() => !consolidado && setEditSheetItem(item)}
+                  className="flex justify-between items-center border dark:border-gray-700 rounded-lg px-4 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition"
+                >
                   <div className="min-w-0 flex-1">
                     <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{item.codigo}</span>
                     <span className="text-xs text-gray-400 dark:text-gray-500 ml-2 truncate block sm:inline">
@@ -489,7 +525,7 @@ export default function Inventario() {
                   ) : (
                     <div className="flex items-center gap-2 shrink-0">
                       <button
-                        onClick={() => ajustarQuantidade(item.codigo, -1)}
+                        onClick={(e) => { e.stopPropagation(); ajustarQuantidade(item.codigo, -1) }}
                         className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-bold transition flex items-center justify-center"
                       >
                         <Minus size={14} />
@@ -503,10 +539,11 @@ export default function Inventario() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') definirQuantidade(item.codigo, (e.target as HTMLInputElement).value)
                         }}
+                        onClick={(e) => e.stopPropagation()}
                         className="w-14 text-center text-sm font-semibold text-gray-700 dark:text-gray-200 bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-1 py-1 focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                       <button
-                        onClick={() => ajustarQuantidade(item.codigo, 1)}
+                        onClick={(e) => { e.stopPropagation(); ajustarQuantidade(item.codigo, 1) }}
                         className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-bold transition flex items-center justify-center"
                       >
                         <Plus size={14} />
@@ -522,6 +559,57 @@ export default function Inventario() {
         {!consolidado && itens.length === 0 && (
           <p className="text-sm text-gray-400 dark:text-gray-500 text-center">Nenhum item bipado ainda</p>
         )}
+
+        {/* Modal Editar Item (bottom-sheet) */}
+        <Modal
+          open={!!editSheetItem}
+          onClose={() => setEditSheetItem(null)}
+          title="Editar quantidade"
+          actions={
+            <Button variant="ghost" onClick={() => setEditSheetItem(null)}>
+              Fechar
+            </Button>
+          }
+        >
+          {editSheetItem && (
+            <div>
+              <p className="font-semibold text-gray-800 dark:text-gray-100">{editSheetItem.codigo}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{editSheetItem.nome}</p>
+              <div className="flex items-center gap-6 mt-5 justify-center">
+                <button
+                  onClick={() => ajustarQuantidade(editSheetItem.codigo, -1)}
+                  className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-bold transition flex items-center justify-center"
+                >
+                  <Minus size={22} />
+                </button>
+                <input
+                  type="number"
+                  min="0"
+                  value={editando[editSheetItem.codigo] ?? editSheetItem.quantidade}
+                  onChange={(e) => setEditando(prev => ({ ...prev, [editSheetItem.codigo]: e.target.value }))}
+                  onBlur={(e) => {
+                    definirQuantidade(editSheetItem.codigo, e.target.value)
+                    setEditSheetItem(null)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      definirQuantidade(editSheetItem.codigo, (e.target as HTMLInputElement).value)
+                      setEditSheetItem(null)
+                    }
+                  }}
+                  className="w-20 text-center text-xl font-bold text-gray-800 dark:text-gray-100 bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                  autoFocus
+                />
+                <button
+                  onClick={() => ajustarQuantidade(editSheetItem.codigo, 1)}
+                  className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-bold transition flex items-center justify-center"
+                >
+                  <Plus size={22} />
+                </button>
+              </div>
+            </div>
+          )}
+        </Modal>
 
         {/* Modal Confirmar Encerrar */}
         <Modal

@@ -1,15 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { BrowserMultiFormatReader } from '@zxing/browser'
+import { X, ScanLine, CameraOff } from 'lucide-react'
+import Button from './ui/Button'
 
 interface Props {
   onLeitura: (codigo: string) => void
   onFechar: () => void
+  continuo?: boolean
 }
 
-export default function LeitorCodigo({ onLeitura, onFechar }: Props) {
+export default function LeitorCodigo({ onLeitura, onFechar, continuo = false }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [erro, setErro] = useState('')
-  const leuRef = useRef(false)
   const readerRef = useRef<BrowserMultiFormatReader | null>(null)
   const controlsRef = useRef<{ stop: () => void } | null>(null)
 
@@ -18,69 +20,63 @@ export default function LeitorCodigo({ onLeitura, onFechar }: Props) {
   useEffect(() => { onLeituraRef.current = onLeitura }, [onLeitura])
   useEffect(() => { onFecharRef.current = onFechar }, [onFechar])
 
-  function cleanup() {
-    try {
-      controlsRef.current?.stop()
-    } catch {
-      // ignora se já parado
-    }
+  const cleanup = useCallback(() => {
+    try { controlsRef.current?.stop() } catch {}
     controlsRef.current = null
     readerRef.current = null
     BrowserMultiFormatReader.releaseAllStreams()
-  }
+  }, [])
 
   useEffect(() => {
     const reader = new BrowserMultiFormatReader()
     readerRef.current = reader
-    leuRef.current = false
 
     reader.decodeFromVideoDevice(undefined, videoRef.current!, (result) => {
-      if (result && !leuRef.current) {
-        leuRef.current = true
-        cleanup()
+      if (result) {
+        navigator.vibrate?.(20)
         onLeituraRef.current(result.getText())
+        if (!continuo) {
+          cleanup()
+        }
       }
     })
-      .then(controls => {
-        controlsRef.current = controls
-      })
-      .catch(() => {
-        setErro('Não foi possível acessar a câmera. Verifique as permissões.')
-      })
+      .then(controls => { controlsRef.current = controls })
+      .catch(() => setErro('Não foi possível acessar a câmera. Verifique as permissões.'))
 
     return cleanup
-  }, [])
-
-  function handleCancelar() {
-    cleanup()
-    onFecharRef.current()
-  }
+  }, [continuo, cleanup])
 
   return (
-    <div className="fixed inset-0 bg-black/80 dark:bg-black/90 flex flex-col items-center justify-center z-50 px-4">
-      <div className="w-full max-w-sm bg-black dark:bg-gray-900 rounded-2xl overflow-hidden">
-        <div className="relative">
-          <video ref={videoRef} className="w-full" autoPlay muted playsInline />
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-48 h-24 border-2 border-white rounded-lg opacity-60" />
+    <div className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center px-4">
+      <div className="relative w-full max-w-sm bg-gray-950 rounded-2xl overflow-hidden">
+        <video ref={videoRef} className="w-full aspect-[4/3] object-cover" autoPlay muted playsInline />
+
+        {/* Scan frame overlay */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="relative">
+            <ScanLine size={40} className="text-white/30" />
           </div>
         </div>
 
         {erro && (
-          <p className="text-red-400 text-sm text-center px-4 py-3">{erro}</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 gap-3">
+            <CameraOff size={32} className="text-red-400" />
+            <p className="text-red-400 text-sm text-center px-6">{erro}</p>
+            <Button variant="secondary" size="sm" onClick={onFecharRef.current}>Fechar</Button>
+          </div>
         )}
+      </div>
 
-        <div className="p-4">
-          <p className="text-gray-400 text-xs text-center mb-3">
-            Aponte para o código de barras
-          </p>
-          <button
-            onClick={handleCancelar}
-            className="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 rounded-lg transition"
-          >
-            Cancelar
-          </button>
-        </div>
+      <div className="w-full max-w-sm mt-4 flex items-center justify-between">
+        <p className="text-gray-500 text-xs">
+          {continuo ? 'Escaneio contínuo — aponte para o código' : 'Aponte para o código de barras'}
+        </p>
+        <button
+          onClick={() => { cleanup(); onFecharRef.current() }}
+          className="text-gray-400 hover:text-white transition flex items-center gap-1 text-sm"
+        >
+          <X size={16} /> Fechar
+        </button>
       </div>
     </div>
   )

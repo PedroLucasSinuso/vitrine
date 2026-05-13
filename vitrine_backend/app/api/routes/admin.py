@@ -17,6 +17,7 @@ from app.domain.models.cache_status import CacheStatus
 from app.domain.models.usuario import Usuario
 from app.application.etl.pipeline import run_etl, EtlResult
 from app.core.error_handler import sanitizar_erro, logar_erro_interno
+from app.application.scheduler_manager import listar_jobs
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ def _run_etl_background(job_id: str):
         JOB_STORE[job_id]["codigos_count"] = result.codigos_count
 
         logger.info(
-            "Sync job %s concluÃ­do | produtos=%s codigos=%s",
+            "Sync job %s concluído | produtos=%s codigos=%s",
             job_id, result.produtos_count, result.codigos_count
         )
 
@@ -90,7 +91,7 @@ def get_sync_status(
     sync_data = JOB_STORE.get(job_id)
 
     if not sync_data:
-        raise HTTPException(status_code=404, detail=f"Job {job_id} nÃ£o encontrado")
+        raise HTTPException(status_code=404, detail=f"Job {job_id} não encontrado")
 
     return SyncStatusResponse(
         job_id=sync_data["job_id"],
@@ -129,3 +130,10 @@ def list_sync_history(
         ))
 
     return SyncListResponse(jobs=jobs, total=len(jobs))
+
+
+@router.get("/scheduler/jobs")
+def get_scheduler_jobs(
+    _admin: Usuario = Depends(require_admin),
+):
+    return {"jobs": listar_jobs()}
