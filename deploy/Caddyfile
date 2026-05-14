@@ -1,0 +1,16 @@
+:8080 {
+    root * C:\Vitrine\code\vitrine_frontend\dist
+    try_files {path} /index.html
+
+    reverse_proxy /api/* localhost:8000
+    reverse_proxy /static/* localhost:8000
+
+    encode gzip
+
+    header {
+        -Server
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}

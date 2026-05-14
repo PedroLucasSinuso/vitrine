@@ -10,6 +10,18 @@ Sistema completo de consulta de produtos, Business Intelligence, etiquetas, inve
 
 > Projeto de portfólio desenvolvido para resolver um problema real de varejo: operadores precisam consultar informações rápidas sem depender de conectividade constante com o banco principal.
 
+```
+vitrine/
+├── vitrine_backend/    # API FastAPI + ETL
+├── vitrine_frontend/   # React + Vite
+└── deploy/             # Scripts de deploy Windows
+    ├── setup.bat       # Configuracao unica no servidor
+    ├── start/stop/restart.bat
+    ├── update.bat      # git pull + rebuild + restart
+    ├── Caddyfile       # Servidor web (5 linhas)
+    └── README.md       # Instrucoes completas
+```
+
 ---
 
 ## Visão geral
@@ -459,18 +471,28 @@ npm install                         # Instala dependências
 npm run dev                         # Dev server em localhost:5173
 ```
 
-### Docker
+### Produção (Windows Server)
+
+Deploy em servidor Windows limpo, sem necessidade de instalar Python, Node ou Docker:
+
+| Componente | Função |
+|---|---|
+| **Python Embedded** | Runtime Python portátil (~30MB, sem instalação) |
+| **Caddy** | Servidor web (1 .exe, zero config, HTTPS automático) |
+| **NSSM** | Registra processos como serviços Windows (iniciam com o sistema) |
+| **Cloudflare Tunnel** | Acesso HTTPS público sem abrir porta no roteador |
 
 ```bash
-# Da raiz do projeto
-docker compose up --build
+# Setup completo (roda 1x no servidor)
+deploy\setup.bat
+
+# Serviços iniciados automaticamente com o Windows
+# Frontend: http://localhost:8080
 ```
 
-A documentação interativa da API estará disponível em `http://localhost:8000/docs`.
+> Instruções detalhadas em [`deploy/README.md`](deploy/README.md)
 
 ---
-
-## Testes
 
 ### Backend
 

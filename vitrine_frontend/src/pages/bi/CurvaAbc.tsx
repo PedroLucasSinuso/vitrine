@@ -178,11 +178,11 @@ export default function CurvaAbc() {
                       animationBegin={0}
                       animationDuration={600}
                     >
-                      {pieData.map((entry, idx) => (
+                      {pieData.map((_, idx) => (
                         <Cell key={idx} fill={CURVA_CORES[statsPorCurva[idx].curva]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                    <Tooltip formatter={(v) => formatCurrency(Number(v))} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="flex justify-center gap-4 mt-2">
