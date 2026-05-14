@@ -13,7 +13,7 @@ from app.schemas.sync_schema import (
     SyncTriggerResponse,
     SyncListResponse,
 )
-from app.domain.models.cache_status import CacheStatus
+from app.domain.models.sync_job import SyncJob
 from app.domain.models.usuario import Usuario
 from app.application.etl.pipeline import run_etl, EtlResult
 from app.core.error_handler import sanitizar_erro, logar_erro_interno
@@ -25,24 +25,30 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 
 executor = ThreadPoolExecutor(max_workers=1)
 
-JOB_STORE: dict[str, dict] = {}
-
 
 def _run_etl_background(job_id: str):
     from app.infrastructure.db.bootstrap import init_db
+    from app.infrastructure.db.session import SqliteSession
     init_db()
-
-    JOB_STORE[job_id]["started_at"] = datetime.now(timezone.utc)
-    JOB_STORE[job_id]["status"] = "em_progresso"
-    logger.info("Sync job %s iniciado em background", job_id)
+    session = SqliteSession()
 
     try:
+        job = session.query(SyncJob).filter(SyncJob.job_id == job_id).first()
+        if not job:
+            logger.error("SyncJob %s not found in DB", job_id)
+            return
+        job.started_at = datetime.now(timezone.utc)
+        job.status = "em_progresso"
+        session.commit()
+        logger.info("Sync job %s iniciado em background", job_id)
+
         result: EtlResult = run_etl()
 
-        JOB_STORE[job_id]["status"] = "sucesso"
-        JOB_STORE[job_id]["finished_at"] = datetime.now(timezone.utc)
-        JOB_STORE[job_id]["produtos_count"] = result.produtos_count
-        JOB_STORE[job_id]["codigos_count"] = result.codigos_count
+        job.status = "sucesso"
+        job.finished_at = datetime.now(timezone.utc)
+        job.produtos_count = result.produtos_count
+        job.codigos_count = result.codigos_count
+        session.commit()
 
         logger.info(
             "Sync job %s concluído | produtos=%s codigos=%s",
@@ -50,27 +56,36 @@ def _run_etl_background(job_id: str):
         )
 
     except Exception as e:
+        session.rollback()
         logar_erro_interno(f"Sync job {job_id} falhou", e)
-        JOB_STORE[job_id]["status"] = "erro"
-        JOB_STORE[job_id]["finished_at"] = datetime.now(timezone.utc)
-        JOB_STORE[job_id]["error_message"] = sanitizar_erro(e)
+        try:
+            job = session.query(SyncJob).filter(SyncJob.job_id == job_id).first()
+            if job:
+                job.status = "erro"
+                job.finished_at = datetime.now(timezone.utc)
+                job.error_message = sanitizar_erro(e)
+                session.commit()
+        except Exception:
+            pass
+    finally:
+        session.close()
 
 
 @router.post("/sync", response_model=SyncTriggerResponse, status_code=201)
 def trigger_sync(
+    db: Session = Depends(get_db),
     _admin: Usuario = Depends(require_admin)
 ):
     job_id = str(uuid.uuid4())[:8]
+    now = datetime.now(timezone.utc)
 
-    JOB_STORE[job_id] = {
-        "job_id": job_id,
-        "started_at": datetime.now(timezone.utc),
-        "finished_at": None,
-        "status": "em_progresso",
-        "produtos_count": None,
-        "codigos_count": None,
-        "error_message": None,
-    }
+    job = SyncJob(
+        job_id=job_id,
+        status="em_progresso",
+        started_at=now,
+    )
+    db.add(job)
+    db.commit()
 
     executor.submit(_run_etl_background, job_id)
 
@@ -86,21 +101,22 @@ def trigger_sync(
 @router.get("/sync/{job_id}", response_model=SyncStatusResponse)
 def get_sync_status(
     job_id: str,
+    db: Session = Depends(get_db),
     _admin: Usuario = Depends(require_admin)
 ):
-    sync_data = JOB_STORE.get(job_id)
+    job = db.query(SyncJob).filter(SyncJob.job_id == job_id).first()
 
-    if not sync_data:
+    if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} não encontrado")
 
     return SyncStatusResponse(
-        job_id=sync_data["job_id"],
-        started_at=sync_data["started_at"],
-        finished_at=sync_data.get("finished_at"),
-        status=sync_data["status"],
-        produtos_count=sync_data.get("produtos_count"),
-        codigos_count=sync_data.get("codigos_count"),
-        error_message=sync_data.get("error_message"),
+        job_id=job.job_id,
+        started_at=job.started_at,
+        finished_at=job.finished_at,
+        status=job.status,
+        produtos_count=job.produtos_count,
+        codigos_count=job.codigos_count,
+        error_message=job.error_message,
     )
 
 
@@ -111,23 +127,24 @@ def list_sync_history(
     _admin: Usuario = Depends(require_admin)
 ):
     stmt = (
-        select(CacheStatus)
-        .order_by(CacheStatus.id.desc())
+        select(SyncJob)
+        .order_by(SyncJob.id.desc())
         .limit(limit)
     )
     results = db.execute(stmt).scalars().all()
 
-    jobs = []
-    for r in results:
-        jobs.append(SyncStatusResponse(
-            job_id=str(r.id),
-            started_at=r.last_updated,
-            finished_at=None,
-            status=r.status,
-            produtos_count=None,
-            codigos_count=None,
-            error_message=r.erro,
-        ))
+    jobs = [
+        SyncStatusResponse(
+            job_id=job.job_id,
+            started_at=job.started_at,
+            finished_at=job.finished_at,
+            status=job.status,
+            produtos_count=job.produtos_count,
+            codigos_count=job.codigos_count,
+            error_message=job.error_message,
+        )
+        for job in results
+    ]
 
     return SyncListResponse(jobs=jobs, total=len(jobs))
 

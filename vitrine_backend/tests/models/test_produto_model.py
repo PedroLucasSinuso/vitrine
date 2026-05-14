@@ -8,7 +8,7 @@ def criar_produto1():
         preco_custo=10.0,
         preco_venda=15.0,
         estoque=100,
-        grupo="EletrÃ´nicos",
+        grupo="Eletrônicos",
         familia="Smartphones",
         nome="Smartphone XYZ",
         codigos=[
@@ -24,7 +24,7 @@ def criar_produto2():
         preco_custo=0.0,
         preco_venda=0.0,
         estoque=50,
-        grupo="EletrÃ´nicos",
+        grupo="Eletrônicos",
         familia="Tablets",
         nome="Tablet ABC",
         codigos=[
@@ -39,13 +39,13 @@ def criar_produto3():
         preco_custo=0.0,
         preco_venda=0.0,
         estoque=50,
-        grupo="EletrÃ´nicos",
+        grupo="Eletrônicos",
         familia="Tablets",
         nome="Tablet ABC",
         codigos=[]
     )
 
-# Estrutura bÃ¡sica
+# Estrutura básica
 @pytest.mark.parametrize("produto", [criar_produto1(), criar_produto2()])
 def test_produto_codigos(produto):
     assert len(produto.codigos) == 2

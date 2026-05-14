@@ -8,20 +8,20 @@ logger = logging.getLogger(__name__)
 
 
 class DominioBI:
-    """ContÃ©m os domÃ­nios de vendas e trocas para o perÃ­odo informado."""
+    """Contém os domínios de vendas e trocas para o período informado."""
     def __init__(self, vendas: Vendas, trocas: Trocas):
-        """Inicializa com os domÃ­nios de vendas e trocas."""
+        """Inicializa com os domínios de vendas e trocas."""
         self.vendas = vendas
         self.trocas = trocas
 
 
 def criar_dominio(data_inicio: date, data_fim: date) -> DominioBI:
-    """Cria o domÃ­nio BI carregando os dados do PostgreSQL para o perÃ­odo."""
-    logger.info("BI criando domÃ­nio | periodo=%s..%s", data_inicio, data_fim)
+    """Cria o domínio BI carregando os dados do PostgreSQL para o período."""
+    logger.info("BI criando domínio | periodo=%s..%s", data_inicio, data_fim)
     df = carregar_fluxo(data_inicio, data_fim)
     vendas = Vendas(df)
     trocas = Trocas(df)
-    logger.info("BI domÃ­nio criado | periodo=%s..%s vendas=%s trocas=%s",
+    logger.info("BI domínio criado | periodo=%s..%s vendas=%s trocas=%s",
                 data_inicio, data_fim, len(vendas.df), len(trocas.df))
     return DominioBI(vendas=vendas, trocas=trocas)
 

@@ -1,13 +1,13 @@
 ﻿from app.domain.value_objects.codigo import Codigo
 import pytest
 
-# EANs vÃ¡lidos para testes
+# EANs válidos para testes
 _EAN13 = "4006381333931"
 _EAN12 = "789191000203"
 _EAN8 = "78936478"
 _PLU = "123456"
 
-# Casos invÃ¡lidos
+# Casos inválidos
 @pytest.mark.parametrize("codigo", [
     "abc",
     "123456789010",
@@ -20,7 +20,7 @@ def test_codigos_invalidos(codigo):
     with pytest.raises(ValueError):
         Codigo(codigo)
 
-# Tipos invÃ¡lidos
+# Tipos inválidos
 @pytest.mark.parametrize("entrada", [
     123456,
     12.34,
@@ -32,7 +32,7 @@ def test_codigo_nao_string(entrada):
     with pytest.raises(TypeError):
         Codigo(entrada)
 
-# CÃ³digos vÃ¡lidos
+# Códigos válidos
 @pytest.mark.parametrize("codigo, tipo", [
     (_PLU, "PLU6"),
     (_EAN13, "EAN13"),
@@ -44,7 +44,7 @@ def test_codigos_validos(codigo, tipo):
     assert c.valor == codigo
     assert c.tipo == tipo
 
-# NormalizaÃ§Ã£o
+# Normalização
 def test_normalizacao():
     c = Codigo(" 123-456 ")
     assert c.valor == "123456"

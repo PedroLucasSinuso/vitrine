@@ -13,12 +13,12 @@ class AuthService:
     def autenticar(self, username: str, password: str) -> str:
         usuario = self.repo.buscar_por_username(username)
         if not usuario or not verify_password(password, usuario.hashed_password):
-            raise ValueError("Credenciais invÃ¡lidas")
+            raise ValueError("Credenciais inválidas")
         return create_access_token({"sub": usuario.username, "role": usuario.role, "nome_exibicao": usuario.nome_exibicao})
 
     def registrar(self, dados: UsuarioCreate) -> Usuario:
         if self.repo.buscar_por_username(dados.username):
-            raise ValueError(f"Username '{dados.username}' jÃ¡ estÃ¡ em uso")
+            raise ValueError(f"Username '{dados.username}' já está em uso")
         usuario = Usuario(
             username=dados.username,
             nome_exibicao=dados.nome_exibicao,
@@ -33,9 +33,9 @@ class AuthService:
     def atualizar(self, usuario_id: int, dados: UsuarioPatch) -> Usuario:
         usuario = self.repo.buscar_por_id(usuario_id)
         if not usuario:
-            raise LookupError(f"UsuÃ¡rio {usuario_id} nÃ£o encontrado")
+            raise LookupError(f"Usuário {usuario_id} não encontrado")
         if not dados.tem_alteracao():
-            raise ValueError("Nenhuma alteraÃ§Ã£o fornecida")
+            raise ValueError("Nenhuma alteração fornecida")
         if dados.password is not None:
             usuario.hashed_password = hash_password(dados.password)
         if dados.role is not None:
@@ -45,8 +45,8 @@ class AuthService:
 
     def excluir(self, usuario_id: int, admin_id: int) -> None:
         if usuario_id == admin_id:
-            raise PermissionError("NÃ£o Ã© possÃ­vel excluir o prÃ³prio usuÃ¡rio")
+            raise PermissionError("Não é possível excluir o próprio usuário")
         usuario = self.repo.buscar_por_id(usuario_id)
         if not usuario:
-            raise LookupError(f"UsuÃ¡rio {usuario_id} nÃ£o encontrado")
+            raise LookupError(f"Usuário {usuario_id} não encontrado")
         self.repo.excluir(usuario)

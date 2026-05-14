@@ -27,7 +27,7 @@ class UsuarioPatch(BaseModel):
     @classmethod
     def senha_nao_vazia(cls, v: Optional[str]) -> Optional[str]:
         if v is not None and len(v.strip()) == 0:
-            raise ValueError("Senha nÃ£o pode ser vazia")
+            raise ValueError("Senha não pode ser vazia")
         return v
 
     def tem_alteracao(self) -> bool:

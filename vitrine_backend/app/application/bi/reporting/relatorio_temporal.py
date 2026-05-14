@@ -4,8 +4,8 @@ from app.application.bi.schema import COLUNAS, Metrica
 from app.schemas.bi_schema import PontoHoraDTO, PontoDiaSemanaDTO
 
 _DIAS_SEMANA = {
-    0: "Segunda", 1: "TerÃ§a", 2: "Quarta",
-    3: "Quinta", 4: "Sexta", 5: "SÃ¡bado", 6: "Domingo",
+    0: "Segunda", 1: "Terça", 2: "Quarta",
+    3: "Quinta", 4: "Sexta", 5: "Sábado", 6: "Domingo",
 }
 
 

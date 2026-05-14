@@ -15,7 +15,7 @@ class PostgresLoader(DataSource):
         logger.info("Executando query no Postgres")
 
         if not PostgresSession:
-            raise RuntimeError("PostgreSQL nÃ£o configurado. Verifique as variÃ¡veis de ambiente.")
+            raise RuntimeError("PostgreSQL não configurado. Verifique as variáveis de ambiente.")
 
         with temporizador("PostgresLoader.load", logger):
             with PostgresSession() as session:

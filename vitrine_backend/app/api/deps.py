@@ -11,7 +11,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 
 def get_db():
-    """Retorna uma sessÃ£o do banco SQLite."""
+    """Retorna uma sessão do banco SQLite."""
     session = SqliteSession()
     try:
         yield session
@@ -20,36 +20,36 @@ def get_db():
 
 
 def get_produto_repository(db=Depends(get_db)):
-    """Retorna o repositÃ³rio de produtos."""
+    """Retorna o repositório de produtos."""
     return ProdutoRepository(db)
 
 
 def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_db)) -> Usuario:
-    """Valida o token JWT e retorna o usuÃ¡rio autenticado."""
+    """Valida o token JWT e retorna o usuário autenticado."""
     try:
         payload = decode_access_token(token)
         username = payload.get("sub")
         if not username:
             raise ValueError()
     except ValueError:
-        raise HTTPException(status_code=401, detail="Token invÃ¡lido")
+        raise HTTPException(status_code=401, detail="Token inválido")
 
     usuario = UsuarioRepository(db).buscar_por_username(username)
     if not usuario:
-        raise HTTPException(status_code=401, detail="UsuÃ¡rio nÃ£o encontrado")
+        raise HTTPException(status_code=401, detail="Usuário não encontrado")
 
     return usuario
 
 
 def require_role(usuario: Usuario, allowed_roles: list[RolesEnum], detail: str) -> Usuario:
-    """Verifica se o usuÃ¡rio tem um dos roles permitidos, senÃ£o levanta 403."""
+    """Verifica se o usuário tem um dos roles permitidos, senão levanta 403."""
     if usuario.role not in [r.value for r in allowed_roles]:
         raise HTTPException(status_code=403, detail=detail)
     return usuario
 
 
 def require_supervisor(usuario: Usuario = Depends(get_current_user)) -> Usuario:
-    """Garante que o usuÃ¡rio seja supervisor ou admin."""
+    """Garante que o usuário seja supervisor ou admin."""
     return require_role(
         usuario,
         [RolesEnum.SUPERVISOR, RolesEnum.ADMIN],
@@ -58,7 +58,7 @@ def require_supervisor(usuario: Usuario = Depends(get_current_user)) -> Usuario:
 
 
 def require_admin(usuario: Usuario = Depends(get_current_user)) -> Usuario:
-    """Garante que o usuÃ¡rio seja administrador."""
+    """Garante que o usuário seja administrador."""
     return require_role(
         usuario,
         [RolesEnum.ADMIN],

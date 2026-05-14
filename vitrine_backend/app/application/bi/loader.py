@@ -16,9 +16,9 @@ _bi_cache: TTLCache = TTLCache(maxsize=32, ttl=3600)
 
 def _validar_periodo(data_inicio: date, data_fim: date) -> None:
     if data_fim < data_inicio:
-        raise ValueError("data_fim nÃ£o pode ser anterior a data_inicio")
+        raise ValueError("data_fim não pode ser anterior a data_inicio")
     if (data_fim - data_inicio).days > MAX_RANGE_DIAS:
-        raise ValueError(f"Range mÃ¡ximo permitido Ã© {MAX_RANGE_DIAS} dias")
+        raise ValueError(f"Range máximo permitido é {MAX_RANGE_DIAS} dias")
 
 
 def carregar_fluxo(data_inicio: date, data_fim: date) -> pd.DataFrame:

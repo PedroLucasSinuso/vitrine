@@ -12,9 +12,10 @@ interface Props {
   delay?: number
   pulseKey?: number
   variacao?: VariacaoInfo | null
+  invertVariation?: boolean
 }
 
-export default function KpiCard({ label, valor, destaque, delay = 0, pulseKey, variacao }: Props) {
+export default function KpiCard({ label, valor, destaque, delay = 0, pulseKey, variacao, invertVariation }: Props) {
   const [pulsing, setPulsing] = useState(false)
 
   useEffect(() => {
@@ -35,8 +36,11 @@ export default function KpiCard({ label, valor, destaque, delay = 0, pulseKey, v
         {variacao && (
           <span
             className={`inline-flex items-center gap-0.5 text-sm ml-2 font-semibold ${
-              variacao.direcao === 'positivo' ? 'text-green-600' :
-              variacao.direcao === 'negativo' ? 'text-red-600' : 'text-gray-400'
+              invertVariation
+                ? variacao.direcao === 'negativo' ? 'text-green-600' :
+                  variacao.direcao === 'positivo' ? 'text-red-600' : 'text-gray-400'
+                : variacao.direcao === 'positivo' ? 'text-green-600' :
+                  variacao.direcao === 'negativo' ? 'text-red-600' : 'text-gray-400'
             }`}
           >
             {variacao.direcao === 'positivo' ? '▲' : variacao.direcao === 'negativo' ? '▼' : '◆'}

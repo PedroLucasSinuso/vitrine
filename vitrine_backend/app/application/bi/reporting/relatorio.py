@@ -61,18 +61,18 @@ def comparar_kpis(kpis_atual: KpisDTO, kpis_anterior: KpisDTO | None, dados_parc
 
 
 class Relatorio:
-    """Gera relatÃ³rios de vendas e trocas com KPIs e anÃ¡lises por dimensÃ£o."""
+    """Gera relatórios de vendas e trocas com KPIs e análises por dimensão."""
     def __init__(
         self,
         vendas: Vendas,
         trocas: Trocas,
     ):
-        """Inicializa com os domÃ­nios de vendas e trocas."""
+        """Inicializa com os domínios de vendas e trocas."""
         self.vendas = vendas
         self.trocas = trocas
 
     def kpis(self) -> KpisDTO:
-        """Calcula os KPIs principais: faturamento, trocas, tickets e mÃ©dias."""
+        """Calcula os KPIs principais: faturamento, trocas, tickets e médias."""
         with temporizador("BI Relatorio.kpis", logger):
             df_vendas = self.vendas.df
             df_trocas = self.trocas.df
@@ -101,7 +101,7 @@ class Relatorio:
         return resultado
 
     def por_dimensao(self, dimensao: Dimensao, metrica: Metrica) -> list[ItemDimensaoDTO]:
-        """Retorna a receita ou quantidade agregada por dimensÃ£o (produto, grupo, famÃ­lia)."""
+        """Retorna a receita ou quantidade agregada por dimensão (produto, grupo, família)."""
         with temporizador("BI Relatorio.por_dimensao", logger):
             colunas_grupo = dimensao.colunas()
             col_metrica = metrica.value
@@ -163,7 +163,7 @@ class Relatorio:
         return resultado
 
     def ranking(self, metrica: Metrica, top: int = 10) -> list[ItemRankingDTO]:
-        """Retorna o ranking dos top produtos por mÃ©trica (receita ou quantidade)."""
+        """Retorna o ranking dos top produtos por métrica (receita ou quantidade)."""
         with temporizador("BI Relatorio.ranking", logger):
             col_metrica = metrica.value
 

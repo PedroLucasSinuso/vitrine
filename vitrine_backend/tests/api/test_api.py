@@ -32,7 +32,7 @@ def produto_existente(db_session):
     valid_code = generate_valid_ean13()
     prod = Produto(
         codigo_chamada=valid_code,
-        grupo="EletrÃ´nicos",
+        grupo="Eletrônicos",
         familia="Celulares",
         nome="Smartphone XYZ",
         preco_venda=999.99,
@@ -69,7 +69,7 @@ class TestAuthToken:
             data={"username": "admin1", "password": "errada"},
         )
         assert response.status_code == 401
-        assert response.json()["detail"] == "Credenciais invÃ¡lidas"
+        assert response.json()["detail"] == "Credenciais inválidas"
 
     def test_token_usuario_inexistente(self, client):
         response = client.post(
@@ -92,7 +92,7 @@ class TestAuthRegister:
             "/auth/register",
             json={
                 "username": "novousuario",
-                "nome_exibicao": "Novo UsuÃ¡rio",
+                "nome_exibicao": "Novo Usuário",
                 "password": "senha456",
                 "role": "operador",
             },
@@ -243,7 +243,7 @@ class TestAdminSync:
             "/admin/sync",
             headers={"Authorization": f"Bearer {token_admin}"},
         )
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert "job_id" in data
         assert isinstance(data["job_id"], str)
@@ -292,14 +292,15 @@ class TestAdminSync:
         assert response.status_code == 404
 
     def test_listar_sync_history(self, client, token_admin, db_session):
-        from app.domain.models.cache_status import CacheStatus
+        from app.domain.models.sync_job import SyncJob
         from datetime import datetime, timezone
 
-        cache = CacheStatus(
-            last_updated=datetime.now(timezone.utc),
-            status="sucesso"
+        job = SyncJob(
+            job_id="teste-history",
+            status="sucesso",
+            started_at=datetime.now(timezone.utc),
         )
-        db_session.add(cache)
+        db_session.add(job)
         db_session.commit()
 
         response = client.get(

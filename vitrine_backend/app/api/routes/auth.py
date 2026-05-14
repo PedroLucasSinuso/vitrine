@@ -1,6 +1,7 @@
-﻿from fastapi import APIRouter, Depends, HTTPException
+﻿from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from app.limiter import limiter
 import logging
 
 from app.api.deps import get_db, require_admin
@@ -15,12 +16,13 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("/token", response_model=TokenResponse)
-def login(dados: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login(request: Request, dados: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     service = AuthService(UsuarioRepository(db))
     try:
         token = service.autenticar(dados.username, dados.password)
     except ValueError:
-        raise HTTPException(status_code=401, detail="Credenciais invÃ¡lidas")
+        raise HTTPException(status_code=401, detail="Credenciais inválidas")
     return TokenResponse(access_token=token)
 
 

@@ -19,8 +19,8 @@ class ProdutoService:
         produto = self.repo.obter_por_codigo(codigo)
 
         if not produto:
-            logger.warning("Produto nÃ£o encontrado | codigo=%s", codigo)
-            logger_nao_encontrado.info("Produto nÃ£o encontrado | codigo=%s | origem=service", codigo)
+            logger.warning("Produto não encontrado | codigo=%s", codigo)
+            logger_nao_encontrado.info("Produto não encontrado | codigo=%s | origem=service", codigo)
 
         return produto
 

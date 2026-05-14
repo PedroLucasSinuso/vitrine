@@ -38,21 +38,36 @@ interface Props {
   presets?: Preset[]
 }
 
+function presetAtivo(p: Preset, value: { data_inicio: string; data_fim: string }): boolean {
+  const computed = computePreset(p)
+  return computed.data_inicio === value.data_inicio && computed.data_fim === value.data_fim
+}
+
 export default function PeriodoForm({ value, onChange, onBuscar, loading, presets }: Props) {
   return (
     <div className="flex flex-col gap-3">
       {presets && (
         <div className="flex gap-1.5 flex-wrap">
-          {presets.map((p) => (
-            <button
-              key={p.label}
-              type="button"
-              onClick={() => onChange(computePreset(p))}
-              className="text-xs px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-primary-lighter hover:text-primary dark:hover:text-primary transition"
-            >
-              {p.label}
-            </button>
-          ))}
+          {presets.map((p) => {
+            const ativo = presetAtivo(p, value)
+            return (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => {
+                  onChange(computePreset(p))
+                  if (onBuscar) onBuscar()
+                }}
+                className={`text-xs px-2.5 py-1 rounded-full transition ${
+                  ativo
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-primary-lighter hover:text-primary dark:hover:text-primary'
+                }`}
+              >
+                {p.label}
+              </button>
+            )
+          })}
         </div>
       )}
       <div className="flex flex-wrap gap-2 items-end">

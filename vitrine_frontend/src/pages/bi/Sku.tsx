@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { subDays, format } from 'date-fns'
+import { subDays, format, parseISO, getDay } from 'date-fns'
 import AdminHeader from '../../components/AdminHeader'
 import BiSubNav from '../../components/bi/BiSubNav'
 import PeriodoForm, { type Preset } from '../../components/bi/PeriodoForm'
@@ -54,6 +54,7 @@ export default function Sku() {
   const [erro, setErro] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<ProdutoBasico[]>([])
+  const [produtoNome, setProdutoNome] = useState('')
   const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const cache = useBiCache()
   const { toast } = useToast()
@@ -124,6 +125,7 @@ export default function Sku() {
                     key={p.codigo_chamada}
                     onClick={() => {
                       setCodigo(p.codigo_chamada)
+                      setProdutoNome(p.nome)
                       setSearchQuery('')
                       setSearchResults([])
                       buscar(p.codigo_chamada)
@@ -135,6 +137,9 @@ export default function Sku() {
                   </button>
                 ))}
               </div>
+            )}
+            {produtoNome && !searchQuery && (
+              <p className="mt-1 text-sm text-primary font-medium">{produtoNome}</p>
             )}
           </div>
           <div className="flex gap-2">
@@ -229,6 +234,38 @@ export default function Sku() {
                 <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Receita por hora</h2>
                 <ResponsiveContainer width="100%" minHeight={180}>
                   <BarChart data={dados.distribuicao_hora.map((d) => ({ label: `${d.hora}h`, valor: d.valor }))} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#059669" stopOpacity={0.9} />
+                        <stop offset="100%" stopColor="#059669" stopOpacity={0.3} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                    <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={36} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="valor" fill="url(#barGradient)" radius={[4, 4, 0, 0]} animationBegin={0} animationDuration={600} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Distribuição por dia da semana */}
+            {dados.ranking_dias.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
+                <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Receita por dia da semana</h2>
+                <ResponsiveContainer width="100%" minHeight={180}>
+                  <BarChart
+                    data={(() => {
+                      const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+                      const agrupado = Array(7).fill(0)
+                      dados.ranking_dias.forEach((d) => {
+                        agrupado[getDay(parseISO(d.data))] += d.valor
+                      })
+                      return dias.map((label, i) => ({ label, valor: agrupado[i] }))
+                    })()}
+                    margin={{ top: 0, right: 8, left: 0, bottom: 0 }}
+                  >
                     <defs>
                       <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#059669" stopOpacity={0.9} />

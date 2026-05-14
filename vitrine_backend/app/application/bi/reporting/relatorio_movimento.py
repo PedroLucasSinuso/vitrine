@@ -7,7 +7,7 @@ from app.schemas.bi_schema import MovimentoDTO, ItemMovimentoDTO
 class RelatorioMovimento:
     """Gera resumo de movimentos isolados (perdas ou consumo)."""
     def __init__(self, dominio: Perdas | Consumo):
-        """Inicializa com o domÃ­nio de perdas ou consumo."""
+        """Inicializa com o domínio de perdas ou consumo."""
         self._dominio = dominio
 
     def resumo(self) -> MovimentoDTO:

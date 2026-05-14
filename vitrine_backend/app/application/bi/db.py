@@ -6,13 +6,13 @@ _engine: Engine | None = None
 
 
 def get_bi_engine() -> Engine:
-    """Retorna o engine SQLAlchemy para o PostgreSQL, criando se necessÃ¡rio."""
+    """Retorna o engine SQLAlchemy para o PostgreSQL, criando se necessário."""
     global _engine
     if _engine is None:
         if not settings.postgres_url:
             raise RuntimeError(
-                "POSTGRES_URL nÃ£o configurado. "
-                "O mÃ³dulo BI requer conexÃ£o com o PostgreSQL."
+                "POSTGRES_URL não configurado. "
+                "O módulo BI requer conexão com o PostgreSQL."
             )
         _engine = create_engine(
             settings.postgres_url,

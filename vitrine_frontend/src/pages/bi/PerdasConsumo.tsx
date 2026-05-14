@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { subDays, format } from 'date-fns'
 import AdminHeader from '../../components/AdminHeader'
 import BiSubNav from '../../components/bi/BiSubNav'
-import PeriodoForm, { type Preset } from '../../components/bi/PeriodoForm'
+import PeriodoForm from '../../components/bi/PeriodoForm'
 import KpiCard from '../../components/bi/KpiCard'
 import { fetchPerdas, fetchConsumo, exportarExcelBI } from '../../api/bi'
 import { baixarCSVdeArray } from '../../utils/csv'
@@ -11,12 +11,6 @@ import { formatCurrency } from '../../utils/formatters'
 import { useBiCache } from '../../stores/biCache'
 import { useToast } from '../../hooks/useToast'
 import Skeleton from '../../components/ui/Skeleton'
-
-const PRESETS_PERDAS: Preset[] = [
-  { label: '7 dias', kind: 'days', days: 7 },
-  { label: '30 dias', kind: 'days', days: 30 },
-  { label: 'Este mês', kind: 'current_month' },
-]
 
 function periodoInicial(): PeriodoBi {
   return {
@@ -28,6 +22,7 @@ function periodoInicial(): PeriodoBi {
 type Aba = 'perdas' | 'consumo'
 
 function TabelaMovimento({ dados }: { dados: MovimentoDTO }) {
+  const maximo = dados.por_produto[0]?.receita ?? 1
   return (
     <>
       <KpiCard label="Total" valor={formatCurrency(dados.total)} destaque />
@@ -38,24 +33,30 @@ function TabelaMovimento({ dados }: { dados: MovimentoDTO }) {
         {dados.por_produto.length === 0 ? (
           <p className="text-sm text-gray-400 dark:text-gray-500">Nenhum registro no período.</p>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b dark:border-gray-700 text-left">
-                <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Código</th>
-                <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Produto</th>
-                <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right">Valor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dados.por_produto.map((item, i) => (
-                <tr key={i} className="border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="py-2 text-gray-400 dark:text-gray-500 font-mono">{item.codigo}</td>
-                  <td className="py-2 text-gray-700 dark:text-gray-300">{item.produto}</td>
-                  <td className="py-2 text-right font-semibold text-gray-800 dark:text-gray-100">{formatCurrency(item.receita)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="flex flex-col gap-3">
+            {dados.por_produto.slice(0, 20).map((item, i) => (
+              <div key={i} className="flex flex-col gap-0.5">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-700 dark:text-gray-300 truncate">
+                    <span className="text-gray-400 dark:text-gray-500 font-mono mr-1">{item.codigo}</span>
+                    {item.produto}
+                  </span>
+                  <span className="font-semibold text-gray-800 dark:text-gray-100 shrink-0 ml-2">{formatCurrency(item.receita)}</span>
+                </div>
+                <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all"
+                    style={{ width: `${(item.receita / maximo) * 100}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+            {dados.por_produto.length > 20 && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
+                +{dados.por_produto.length - 20} produtos não listados
+              </p>
+            )}
+          </div>
         )}
       </div>
     </>
@@ -112,7 +113,7 @@ export default function PerdasConsumo() {
       <div className="w-full max-w-3xl flex flex-col gap-5">
 
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
-          <PeriodoForm value={periodo} onChange={setPeriodo} onBuscar={handleBuscar} loading={loading} presets={PRESETS_PERDAS} />
+          <PeriodoForm value={periodo} onChange={setPeriodo} onBuscar={handleBuscar} loading={loading} />
           {erro && <p className="text-red-500 text-sm mt-3">{erro}</p>}
           <div className="flex gap-2 mt-3">
             <button
@@ -140,6 +141,31 @@ export default function PerdasConsumo() {
         )}
         {(perdas || consumo) && (
           <>
+            {/* Comparativo Perdas vs Consumo */}
+            {perdas && consumo && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 flex flex-col gap-1">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">Perdas</p>
+                  <p className="text-xl font-bold text-red-600">{formatCurrency(perdas.total)}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">{perdas.por_produto.length} produtos</p>
+                </div>
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 flex flex-col gap-1">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">Consumo</p>
+                  <p className="text-xl font-bold text-amber-600">{formatCurrency(consumo.total)}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">{consumo.por_produto.length} produtos</p>
+                </div>
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 flex flex-col gap-1 col-span-2">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">Proporção</p>
+                  <p className="text-xl font-bold text-gray-800 dark:text-gray-100">
+                    {perdas.total > 0
+                      ? `${((consumo.total / perdas.total) * 100).toFixed(1)}%`
+                      : '—'}
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">consumo em relação a perdas</p>
+                </div>
+              </div>
+            )}
+
             {/* Abas */}
             <div className="flex gap-1 bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-1 w-fit">
               {(['perdas', 'consumo'] as Aba[]).map((a) => (

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { subDays, format } from 'date-fns'
+import { subMonths, startOfMonth, endOfMonth, format } from 'date-fns'
 import AdminHeader from '../../components/AdminHeader'
 import BiSubNav from '../../components/bi/BiSubNav'
 import PeriodoForm, { type Preset } from '../../components/bi/PeriodoForm'
@@ -22,9 +22,10 @@ const PRESETS_RECEITA: Preset[] = [
 ]
 
 function periodoInicial(): PeriodoBi {
+  const mesPassado = subMonths(new Date(), 1)
   return {
-    data_inicio: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
-    data_fim: format(new Date(), 'yyyy-MM-dd'),
+    data_inicio: format(startOfMonth(mesPassado), 'yyyy-MM-dd'),
+    data_fim: format(endOfMonth(mesPassado), 'yyyy-MM-dd'),
   }
 }
 
@@ -50,7 +51,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 
 export default function Receita() {
   const [periodo, setPeriodo] = useState<PeriodoBi>(periodoInicial)
-  const [dimensao, setDimensao] = useState<Dimensao>('grupo')
+  const [dimensao, setDimensao] = useState<Dimensao>('produto')
   const [metrica, setMetrica] = useState<Metrica>('receita_produto')
   const [dados, setDados] = useState<ItemDimensaoDTO[]>([])
   const [filtroGrupo, setFiltroGrupo] = useState('')
@@ -64,7 +65,7 @@ export default function Receita() {
     const cacheKey = `receita_${dimensao}_${metrica}`
     if (!force) {
       const cached = cache.get<ItemDimensaoDTO[]>(cacheKey, periodo)
-      if (cached) { setDados(cached); setFiltroGrupo(''); setFiltroFamilia(''); return }
+      if (cached) { setDados(cached); return }
     }
     setErro('')
     setLoading(true)
@@ -73,8 +74,6 @@ export default function Receita() {
         ? await fetchReceita(periodo, dimensao)
         : await fetchQuantidade(periodo, dimensao)
       setDados(data)
-      setFiltroGrupo('')
-      setFiltroFamilia('')
       cache.set(cacheKey, periodo, data)
     } catch (e: unknown) {
       const err = e as { response?: { status?: number; data?: { detail?: string } } }

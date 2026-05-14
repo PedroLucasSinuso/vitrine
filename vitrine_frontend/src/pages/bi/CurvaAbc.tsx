@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { subDays, format } from 'date-fns'
 import AdminHeader from '../../components/AdminHeader'
 import BiSubNav from '../../components/bi/BiSubNav'
@@ -10,16 +10,18 @@ import { formatCurrency } from '../../utils/formatters'
 import { useBiCache } from '../../stores/biCache'
 import { useToast } from '../../hooks/useToast'
 import Skeleton from '../../components/ui/Skeleton'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 
 const PRESETS_CURVA: Preset[] = [
-  { label: '7 dias', kind: 'days', days: 7 },
   { label: '30 dias', kind: 'days', days: 30 },
+  { label: '60 dias', kind: 'days', days: 60 },
+  { label: '3 meses', kind: 'days', days: 90 },
   { label: 'Este mês', kind: 'current_month' },
 ]
 
 function periodoInicial(): PeriodoBi {
   return {
-    data_inicio: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
+    data_inicio: format(subDays(new Date(), 90), 'yyyy-MM-dd'),
     data_fim: format(new Date(), 'yyyy-MM-dd'),
   }
 }
@@ -28,6 +30,12 @@ const CURVA_BADGE: Record<CurvaAbc, string> = {
   A: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
   B: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
   C: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+}
+
+const CURVA_CORES: Record<CurvaAbc, string> = {
+  A: '#059669',
+  B: '#eab308',
+  C: '#6b7280',
 }
 
 export default function CurvaAbc() {
@@ -69,6 +77,25 @@ export default function CurvaAbc() {
 
   const contagem = { A: 0, B: 0, C: 0 }
   dados.forEach((d) => contagem[d.curva]++)
+
+  const statsPorCurva = useMemo(() => {
+    const totalReceita = dados.reduce((s, d) => s + d.receita, 0)
+    const curvas = { A: { qtd: 0, receita: 0 }, B: { qtd: 0, receita: 0 }, C: { qtd: 0, receita: 0 } } as Record<CurvaAbc, { qtd: number; receita: number }>
+    dados.forEach((d) => {
+      curvas[d.curva].qtd++
+      curvas[d.curva].receita += d.receita
+    })
+    return (Object.entries(curvas) as [CurvaAbc, { qtd: number; receita: number }][]).map(([curva, info]) => ({
+      curva,
+      ...info,
+      pctReceita: totalReceita > 0 ? (info.receita / totalReceita) * 100 : 0,
+    }))
+  }, [dados])
+
+  const pieData = statsPorCurva.map((s) => ({
+    name: `Curva ${s.curva}`,
+    value: s.receita,
+  }))
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex flex-col items-center px-4 py-6">
@@ -121,15 +148,68 @@ export default function CurvaAbc() {
           <>
             {/* Resumo por curva */}
             <div className="grid grid-cols-3 gap-4">
-              {(['A', 'B', 'C'] as CurvaAbc[]).map((curva) => (
+              {statsPorCurva.map(({ curva, qtd, receita, pctReceita }) => (
                 <div key={curva} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 flex flex-col gap-1">
                   <span className={`text-xs font-semibold px-2 py-1 rounded-full w-fit ${CURVA_BADGE[curva]}`}>
                     Curva {curva}
                   </span>
-                  <p className="text-xl font-bold text-gray-800 dark:text-gray-100 break-words">{contagem[curva]}</p>
+                  <p className="text-xl font-bold text-gray-800 dark:text-gray-100 break-words">{qtd}</p>
                   <p className="text-xs text-gray-400 dark:text-gray-500">itens</p>
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-1">{formatCurrency(receita)}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">{pctReceita.toFixed(1)}% da receita</p>
                 </div>
               ))}
+            </div>
+
+            {/* Gráfico de distribuição */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
+                <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Distribuição da Receita</h2>
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={90}
+                      paddingAngle={4}
+                      dataKey="value"
+                      animationBegin={0}
+                      animationDuration={600}
+                    >
+                      {pieData.map((entry, idx) => (
+                        <Cell key={idx} fill={CURVA_CORES[statsPorCurva[idx].curva]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex justify-center gap-4 mt-2">
+                  {statsPorCurva.map(({ curva, pctReceita }) => (
+                    <div key={curva} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CURVA_CORES[curva] }} />
+                      {curva} · {pctReceita.toFixed(1)}%
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Curva de Lorenz */}
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
+                <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Concentração Acumulada</h2>
+                <p className="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                  {statsPorCurva[0]?.pctReceita.toFixed(1) ?? 0}%
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  da receita está em {statsPorCurva[0]?.qtd ?? 0} itens da Curva A
+                </p>
+                <div className="mt-3 flex flex-col gap-1 text-sm text-gray-600 dark:text-gray-400">
+                  <p>· Curva A: {statsPorCurva[0]?.qtd ?? 0} itens · {statsPorCurva[0]?.pctReceita.toFixed(1) ?? 0}% receita</p>
+                  <p>· Curva B: {statsPorCurva[1]?.qtd ?? 0} itens · {statsPorCurva[1]?.pctReceita.toFixed(1) ?? 0}% receita</p>
+                  <p>· Curva C: {statsPorCurva[2]?.qtd ?? 0} itens · {statsPorCurva[2]?.pctReceita.toFixed(1) ?? 0}% receita</p>
+                </div>
+              </div>
             </div>
 
             {/* Tabela */}

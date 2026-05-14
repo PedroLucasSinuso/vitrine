@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect } from 'react'
-import { format } from 'date-fns'
+import { startOfMonth, format } from 'date-fns'
 import AdminHeader from '../../components/AdminHeader'
 import BiSubNav from '../../components/bi/BiSubNav'
-import PeriodoForm from '../../components/bi/PeriodoForm'
+import PeriodoForm, { type Preset } from '../../components/bi/PeriodoForm'
 import KpiCard from '../../components/bi/KpiCard'
 import { fetchKpis, fetchKpisComparativo, fetchRanking, exportarExcelBI } from '../../api/bi'
 import { baixarCSVdeArray } from '../../utils/csv'
@@ -14,9 +14,20 @@ import { useCountUp } from '../../hooks/useCountUp'
 import { Clock } from 'lucide-react'
 import Skeleton from '../../components/ui/Skeleton'
 
+const PRESETS_DASHBOARD: Preset[] = [
+  { label: 'Hoje', kind: 'days', days: 0 },
+  { label: '7 dias', kind: 'days', days: 7 },
+  { label: '30 dias', kind: 'days', days: 30 },
+  { label: 'Este mês', kind: 'current_month' },
+  { label: 'Mês passado', kind: 'last_month' },
+]
+
 function periodoInicial(): PeriodoBi {
-  const hoje = format(new Date(), 'yyyy-MM-dd')
-  return { data_inicio: hoje, data_fim: hoje }
+  const hoje = new Date()
+  return {
+    data_inicio: format(startOfMonth(hoje), 'yyyy-MM-dd'),
+    data_fim: format(hoje, 'yyyy-MM-dd'),
+  }
 }
 
 function variacaoInfo(pct: number | null): { valor: number; direcao: 'positivo' | 'negativo' | 'estavel' } | null {
@@ -112,6 +123,7 @@ export default function Dashboard() {
             onChange={setPeriodo}
             onBuscar={handleBuscar}
             loading={loading}
+            presets={PRESETS_DASHBOARD}
           />
           <div className="flex items-center gap-2 mt-3">
             <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer select-none">
@@ -163,7 +175,7 @@ export default function Dashboard() {
             <KpiCard label="Faturamento Líquido" valor={formatCurrency(animFatLiq)} destaque delay={80} pulseKey={pulseKey}
               variacao={kpisComp ? variacaoInfo(kpisComp.faturamento_liquido.variacao_pct) : null} />
             <KpiCard label="Total de Trocas" valor={formatCurrency(animTrocas)} delay={160} pulseKey={pulseKey}
-              variacao={kpisComp ? variacaoInfo(kpisComp.total_trocas.variacao_pct) : null} />
+              variacao={kpisComp ? variacaoInfo(kpisComp.total_trocas.variacao_pct) : null} invertVariation />
             <KpiCard label="Tickets" valor={Math.round(animTickets).toLocaleString('pt-BR')} delay={240} pulseKey={pulseKey}
               variacao={kpisComp ? variacaoInfo(kpisComp.qtd_tickets.variacao_pct) : null} />
             <KpiCard label="Ticket Médio" valor={formatCurrency(animTicketMedio)} delay={320} pulseKey={pulseKey}

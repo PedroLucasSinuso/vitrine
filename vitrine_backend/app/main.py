@@ -3,6 +3,9 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from app.limiter import limiter
 from app.api.routes import produto, cache_status
 from app.api.routes import auth
 from app.api.routes import admin
@@ -41,6 +44,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Vitrine", lifespan=lifespan)
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,

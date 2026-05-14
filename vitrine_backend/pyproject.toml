@@ -5,6 +5,7 @@ description = "Backend do sistema Vitrine"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi",
+    "slowapi",
     "sqlalchemy",
     "uvicorn[standard]",
     "pydantic-settings",

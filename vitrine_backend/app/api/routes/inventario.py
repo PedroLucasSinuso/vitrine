@@ -33,7 +33,7 @@ def get_session_or_404(sessao_id: int, db: Session) -> SessaoInventario:
         select(SessaoInventario).where(SessaoInventario.id == sessao_id)
     ).scalar_one_or_none()
     if not sessao:
-        raise HTTPException(status_code=404, detail="SessÃ£o nÃ£o encontrada")
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
     return sessao
 
 
@@ -112,9 +112,9 @@ def entrar_sessao(
         select(SessaoInventario).where(SessaoInventario.codigo_convite == body.codigo_convite)
     ).scalar_one_or_none()
     if not sessao:
-        raise HTTPException(status_code=404, detail="SessÃ£o nÃ£o encontrada")
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
     if sessao.status != "ativa":
-        raise HTTPException(status_code=400, detail="SessÃ£o jÃ¡ encerrada")
+        raise HTTPException(status_code=400, detail="Sessão já encerrada")
     return _build_sessao_response(sessao, db)
 
 
@@ -127,7 +127,7 @@ def encerrar_sessao(
     init_db()
     sessao = get_session_or_404(sessao_id, db)
     if sessao.criado_por_id != usuario.id:
-        raise HTTPException(status_code=403, detail="Apenas o criador pode encerrar a sessÃ£o")
+        raise HTTPException(status_code=403, detail="Apenas o criador pode encerrar a sessão")
     sessao.status = "encerrada"
     sessao.encerrado_em = datetime.now(timezone.utc)
     db.commit()
@@ -275,7 +275,7 @@ def atualizar_item(
     ).scalar_one_or_none()
 
     if not item:
-        raise HTTPException(status_code=404, detail="Item nÃ£o encontrado")
+        raise HTTPException(status_code=404, detail="Item não encontrado")
 
     if body.quantidade <= 0:
         db.delete(item)
