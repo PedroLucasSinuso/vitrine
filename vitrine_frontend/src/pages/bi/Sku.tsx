@@ -72,20 +72,21 @@ export default function Sku() {
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current) }
   }, [searchQuery])
 
-  const buscar = useCallback(async (codigoParam?: string, force = false) => {
+  const buscar = useCallback(async (codigoParam?: string, periodoOverride?: PeriodoBi, force = false) => {
+    const p = periodoOverride ?? periodo
     const valor = (codigoParam ?? codigoRef.current).trim()
     if (!valor) return
     const cacheKey = `sku_${valor}`
     if (!force) {
-      const cached = cache.get<SkuDTO>(cacheKey, periodo)
+      const cached = cache.get<SkuDTO>(cacheKey, p)
       if (cached) { setDados(cached); return }
     }
     setErro('')
     setLoading(true)
     try {
-      const data = await fetchSku(periodo, valor)
+      const data = await fetchSku(p, valor)
       setDados(data)
-      cache.set(cacheKey, periodo, data)
+      cache.set(cacheKey, p, data)
     } catch (e: unknown) {
       const err = e as { response?: { status?: number } }
       if (err.response?.status === 400) setErro('Código inválido.')
@@ -97,9 +98,9 @@ export default function Sku() {
     }
   }, [periodo, cache])
 
-  function handleBuscar() {
+  function handleBuscar(periodoOverride?: PeriodoBi) {
     cache.clear()
-    buscar(undefined, true)
+    buscar(undefined, periodoOverride, true)
   }
 
   return (

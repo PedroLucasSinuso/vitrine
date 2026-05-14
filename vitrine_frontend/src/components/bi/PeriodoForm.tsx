@@ -33,7 +33,7 @@ function computePreset(preset: Preset): { data_inicio: string; data_fim: string 
 interface Props {
   value: { data_inicio: string; data_fim: string }
   onChange: (v: { data_inicio: string; data_fim: string }) => void
-  onBuscar?: () => void
+  onBuscar?: (periodoOverride?: { data_inicio: string; data_fim: string }) => void
   loading?: boolean
   presets?: Preset[]
 }
@@ -55,8 +55,9 @@ export default function PeriodoForm({ value, onChange, onBuscar, loading, preset
                 key={p.label}
                 type="button"
                 onClick={() => {
-                  onChange(computePreset(p))
-                  if (onBuscar) onBuscar()
+                  const novo = computePreset(p)
+                  onChange(novo)
+                  if (onBuscar) onBuscar(novo)
                 }}
                 className={`text-xs px-2.5 py-1 rounded-full transition ${
                   ativo
@@ -91,7 +92,7 @@ export default function PeriodoForm({ value, onChange, onBuscar, loading, preset
         </div>
         {onBuscar && (
           <button
-            onClick={onBuscar}
+            onClick={() => onBuscar()}
             disabled={loading}
             className="bg-primary hover:bg-primary-hover text-white font-semibold px-5 py-2 rounded-lg transition disabled:opacity-50 text-sm"
           >

@@ -35,18 +35,19 @@ export default function Ranking() {
   const cache = useBiCache()
   const { toast } = useToast()
 
-  const buscar = useCallback(async (force = false) => {
+  const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false) => {
+    const p = periodoOverride ?? periodo
     const cacheKey = `ranking_${metrica}_${top}`
     if (!force) {
-      const cached = cache.get<ItemRankingDTO[]>(cacheKey, periodo)
+      const cached = cache.get<ItemRankingDTO[]>(cacheKey, p)
       if (cached) { setDados(cached); return }
     }
     setErro('')
     setLoading(true)
     try {
-      const data = await fetchRanking(periodo, metrica, top)
+      const data = await fetchRanking(p, metrica, top)
       setDados(data)
-      cache.set(cacheKey, periodo, data)
+      cache.set(cacheKey, p, data)
     } catch (e: unknown) {
       const err = e as { response?: { status?: number; data?: { detail?: string } } }
       if (err.response?.status === 400) setErro(err.response.data?.detail ?? 'Erro ao carregar dados.')
@@ -58,9 +59,9 @@ export default function Ranking() {
 
   useEffect(() => { const t = setTimeout(() => buscar()); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps -- Mount-only fetch via setTimeout; deps intentionally omitted -- Mount-only fetch via setTimeout; deps intentionally omitted
 
-  function handleBuscar() {
+  function handleBuscar(periodoOverride?: PeriodoBi) {
     cache.clear()
-    buscar(true)
+    buscar(periodoOverride, true)
   }
 
   const isReceita = metrica === 'receita_produto'

@@ -53,22 +53,23 @@ export default function Temporal() {
   const cache = useBiCache()
   const { toast } = useToast()
 
-  const buscar = useCallback(async (force = false) => {
+  const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false) => {
+    const p = periodoOverride ?? periodo
     const cacheKey = `temporal_${metrica}`
     if (!force) {
-      const cached = cache.get<{ hora: PontoHoraDTO[]; dia: PontoDiaSemanaDTO[] }>(cacheKey, periodo)
+      const cached = cache.get<{ hora: PontoHoraDTO[]; dia: PontoDiaSemanaDTO[] }>(cacheKey, p)
       if (cached) { setPorHora(cached.hora); setPorDia(cached.dia); return }
     }
     setErro('')
     setLoading(true)
     try {
       const [hora, dia] = await Promise.all([
-        fetchTemporalHora(periodo, metrica),
-        fetchTemporalDiaSemana(periodo, metrica),
+        fetchTemporalHora(p, metrica),
+        fetchTemporalDiaSemana(p, metrica),
       ])
       setPorHora(hora)
       setPorDia(dia)
-      cache.set(cacheKey, periodo, { hora, dia })
+      cache.set(cacheKey, p, { hora, dia })
     } catch (e: unknown) {
       const err = e as { response?: { status?: number; data?: { detail?: string } } }
       if (err.response?.status === 400) setErro(err.response.data?.detail ?? 'Erro ao carregar dados.')
@@ -80,9 +81,9 @@ export default function Temporal() {
 
   useEffect(() => { const t = setTimeout(() => buscar()); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps -- Mount-only fetch via setTimeout; deps intentionally omitted -- Mount-only fetch via setTimeout; deps intentionally omitted
 
-  function handleBuscar() {
+  function handleBuscar(periodoOverride?: PeriodoBi) {
     cache.clear()
-    buscar(true)
+    buscar(periodoOverride, true)
   }
 
   const isReceita = metrica === 'receita_produto'

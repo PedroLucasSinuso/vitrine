@@ -33,17 +33,18 @@ export default function Trocas() {
   const cache = useBiCache()
   const { toast } = useToast()
 
-  const buscar = useCallback(async (force = false) => {
+  const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false) => {
+    const p = periodoOverride ?? periodo
     if (!force) {
-      const cached = cache.get<TrocasDTO>('trocas', periodo)
+      const cached = cache.get<TrocasDTO>('trocas', p)
       if (cached) { setDados(cached); return }
     }
     setErro('')
     setLoading(true)
     try {
-      const data = await fetchTrocas(periodo)
+      const data = await fetchTrocas(p)
       setDados(data)
-      cache.set('trocas', periodo, data)
+      cache.set('trocas', p, data)
     } catch (e: unknown) {
       const err = e as { response?: { status?: number; data?: { detail?: string } } }
       if (err.response?.status === 400) setErro(err.response.data?.detail ?? 'Erro ao carregar dados.')
@@ -55,9 +56,9 @@ export default function Trocas() {
 
   useEffect(() => { const t = setTimeout(() => buscar()); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps -- Mount-only fetch via setTimeout; deps intentionally omitted -- Mount-only fetch via setTimeout; deps intentionally omitted
 
-  function handleBuscar() {
+  function handleBuscar(periodoOverride?: PeriodoBi) {
     cache.clear()
-    buscar(true)
+    buscar(periodoOverride, true)
   }
 
   return (

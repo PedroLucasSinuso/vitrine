@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import { startOfMonth, format } from 'date-fns'
+import { format } from 'date-fns'
 import AdminHeader from '../../components/AdminHeader'
 import BiSubNav from '../../components/bi/BiSubNav'
 import PeriodoForm, { type Preset } from '../../components/bi/PeriodoForm'
@@ -23,11 +23,8 @@ const PRESETS_DASHBOARD: Preset[] = [
 ]
 
 function periodoInicial(): PeriodoBi {
-  const hoje = new Date()
-  return {
-    data_inicio: format(startOfMonth(hoje), 'yyyy-MM-dd'),
-    data_fim: format(hoje, 'yyyy-MM-dd'),
-  }
+  const hoje = format(new Date(), 'yyyy-MM-dd')
+  return { data_inicio: hoje, data_fim: hoje }
 }
 
 function variacaoInfo(pct: number | null): { valor: number; direcao: 'positivo' | 'negativo' | 'estavel' } | null {
@@ -58,9 +55,10 @@ export default function Dashboard() {
   const cache = useBiCache()
   const { toast } = useToast()
 
-  const buscar = useCallback(async (force = false) => {
+  const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false) => {
+    const p = periodoOverride ?? periodo
     if (!force) {
-      const cached = cache.get<{ kpis: KpisDTO | KpisComparativoDTO; ranking: ItemRankingDTO[] }>('dashboard', periodo)
+      const cached = cache.get<{ kpis: KpisDTO | KpisComparativoDTO; ranking: ItemRankingDTO[] }>('dashboard', p)
       if (cached) {
         if (comparar && 'faturamento_bruto' in cached.kpis && 'atual' in (cached.kpis as KpisComparativoDTO).faturamento_bruto) {
           setKpisComp(cached.kpis as KpisComparativoDTO)
@@ -79,8 +77,8 @@ export default function Dashboard() {
     setErro('')
     setLoading(true)
     try {
-      const kpisPromise = comparar ? fetchKpisComparativo(periodo) : fetchKpis(periodo)
-      const rankingPromise = fetchRanking(periodo, 'receita_produto', 5)
+      const kpisPromise = comparar ? fetchKpisComparativo(p) : fetchKpis(p)
+      const rankingPromise = fetchRanking(p, 'receita_produto', 5)
       const [kpisData, rankingData] = await Promise.all([kpisPromise, rankingPromise])
       if (comparar) {
         setKpisComp(kpisData as KpisComparativoDTO)
@@ -90,7 +88,7 @@ export default function Dashboard() {
         setKpisComp(null)
       }
       setTopProdutos(rankingData)
-      cache.set('dashboard', periodo, { kpis: kpisData, ranking: rankingData })
+      cache.set('dashboard', p, { kpis: kpisData, ranking: rankingData })
       setPulseKey((prev) => prev + 1)
     } catch (e: unknown) {
       const err = e as { response?: { status?: number; data?: { detail?: string } } }
@@ -103,9 +101,9 @@ export default function Dashboard() {
 
   useEffect(() => { const t = setTimeout(() => buscar()); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps -- Mount-only fetch via setTimeout; deps intentionally omitted -- Mount-only fetch via setTimeout; deps intentionally omitted
 
-  function handleBuscar() {
+  function handleBuscar(periodoOverride?: PeriodoBi) {
     cache.clear()
-    buscar(true)
+    buscar(periodoOverride, true)
   }
 
   return (

@@ -61,20 +61,21 @@ export default function Receita() {
   const cache = useBiCache()
   const { toast } = useToast()
 
-  const buscar = useCallback(async (force = false) => {
+  const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false) => {
+    const p = periodoOverride ?? periodo
     const cacheKey = `receita_${dimensao}_${metrica}`
     if (!force) {
-      const cached = cache.get<ItemDimensaoDTO[]>(cacheKey, periodo)
+      const cached = cache.get<ItemDimensaoDTO[]>(cacheKey, p)
       if (cached) { setDados(cached); return }
     }
     setErro('')
     setLoading(true)
     try {
       const data = metrica === 'receita_produto'
-        ? await fetchReceita(periodo, dimensao)
-        : await fetchQuantidade(periodo, dimensao)
+        ? await fetchReceita(p, dimensao)
+        : await fetchQuantidade(p, dimensao)
       setDados(data)
-      cache.set(cacheKey, periodo, data)
+      cache.set(cacheKey, p, data)
     } catch (e: unknown) {
       const err = e as { response?: { status?: number; data?: { detail?: string } } }
       if (err.response?.status === 400) setErro(err.response.data?.detail ?? 'Erro ao carregar dados.')
@@ -86,9 +87,9 @@ export default function Receita() {
 
   useEffect(() => { const t = setTimeout(() => buscar()); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps -- Mount-only fetch via setTimeout; deps intentionally omitted -- Mount-only fetch via setTimeout; deps intentionally omitted
 
-  function handleBuscar() {
+  function handleBuscar(periodoOverride?: PeriodoBi) {
     cache.clear()
-    buscar(true)
+    buscar(periodoOverride, true)
   }
 
   const isReceita = metrica === 'receita_produto'

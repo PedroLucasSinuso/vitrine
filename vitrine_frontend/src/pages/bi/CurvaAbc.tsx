@@ -47,18 +47,19 @@ export default function CurvaAbc() {
   const cache = useBiCache()
   const { toast } = useToast()
 
-  const buscar = useCallback(async (force = false) => {
+  const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false) => {
+    const p = periodoOverride ?? periodo
     const cacheKey = `curva-abc_${dimensao}`
     if (!force) {
-      const cached = cache.get<ItemCurvaAbcDTO[]>(cacheKey, periodo)
+      const cached = cache.get<ItemCurvaAbcDTO[]>(cacheKey, p)
       if (cached) { setDados(cached); return }
     }
     setErro('')
     setLoading(true)
     try {
-      const data = await fetchCurvaAbc(periodo, dimensao)
+      const data = await fetchCurvaAbc(p, dimensao)
       setDados(data)
-      cache.set(cacheKey, periodo, data)
+      cache.set(cacheKey, p, data)
     } catch (e: unknown) {
       const err = e as { response?: { status?: number; data?: { detail?: string } } }
       if (err.response?.status === 400) setErro(err.response.data?.detail ?? 'Erro ao carregar dados.')
@@ -70,9 +71,9 @@ export default function CurvaAbc() {
 
   useEffect(() => { const t = setTimeout(() => buscar()); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps -- Mount-only fetch via setTimeout; deps intentionally omitted -- Mount-only fetch via setTimeout; deps intentionally omitted
 
-  function handleBuscar() {
+  function handleBuscar(periodoOverride?: PeriodoBi) {
     cache.clear()
-    buscar(true)
+    buscar(periodoOverride, true)
   }
 
   const contagem = { A: 0, B: 0, C: 0 }
@@ -201,7 +202,7 @@ export default function CurvaAbc() {
                 <p className="text-3xl font-bold text-gray-800 dark:text-gray-100">
                   {statsPorCurva[0]?.pctReceita.toFixed(1) ?? 0}%
                 </p>
-                <p className="text-xs text-gray-400 dark:text-gray-500">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   da receita está em {statsPorCurva[0]?.qtd ?? 0} itens da Curva A
                 </p>
                 <div className="mt-3 flex flex-col gap-1 text-sm text-gray-600 dark:text-gray-400">
@@ -234,14 +235,14 @@ export default function CurvaAbc() {
                   <tbody>
                     {dados.map((item, i) => (
                       <tr key={i} className="border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="py-2 text-gray-400 dark:text-gray-500">{i + 1}</td>
-                        <td className="py-2 text-gray-700 dark:text-gray-300">{item.grupo}</td>
-                        {dimensao !== 'grupo' && <td className="py-2 text-gray-500 dark:text-gray-400">{item.familia ?? '—'}</td>}
-                        {dimensao === 'produto' && <td className="py-2 text-gray-700 dark:text-gray-300">{item.produto ?? '—'}</td>}
-                        <td className="py-2 text-right font-semibold text-gray-800 dark:text-gray-100">{formatCurrency(item.receita)}</td>
-                        <td className="py-2 text-right text-gray-600 dark:text-gray-400">{item.participacao_pct.toFixed(2)}%</td>
-                        <td className="py-2 text-right text-gray-600 dark:text-gray-400">{item.participacao_acumulada.toFixed(2)}%</td>
-                        <td className="py-2 text-center">
+                        <td className="py-3 text-gray-400 dark:text-gray-500">{i + 1}</td>
+                        <td className="py-3 text-gray-700 dark:text-gray-300">{item.grupo}</td>
+                        {dimensao !== 'grupo' && <td className="py-3 text-gray-500 dark:text-gray-400">{item.familia ?? '—'}</td>}
+                        {dimensao === 'produto' && <td className="py-3 text-gray-700 dark:text-gray-300">{item.produto ?? '—'}</td>}
+                        <td className="py-3 text-right font-semibold text-gray-800 dark:text-gray-100">{formatCurrency(item.receita)}</td>
+                        <td className="py-3 text-right text-gray-600 dark:text-gray-400">{item.participacao_pct.toFixed(2)}%</td>
+                        <td className="py-3 text-right text-gray-600 dark:text-gray-400">{item.participacao_acumulada.toFixed(2)}%</td>
+                        <td className="py-3 text-center">
                           <span className={`text-xs font-semibold px-2 py-1 rounded-full ${CURVA_BADGE[item.curva]}`}>
                             {item.curva}
                           </span>
