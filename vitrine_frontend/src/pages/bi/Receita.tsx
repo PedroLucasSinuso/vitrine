@@ -247,13 +247,13 @@ export default function Receita() {
                 Todos os resultados <span className="text-gray-400 dark:text-gray-500 font-normal text-sm">({dadosFiltrados.length})</span>
               </h2>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm table-fixed">
                   <thead>
                     <tr className="border-b dark:border-gray-700 text-left">
-                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Grupo</th>
-                      {dimensao !== 'grupo' && <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Família</th>}
-                      {dimensao === 'produto' && <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Produto</th>}
-                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right">
+                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium w-full">Grupo</th>
+                      {dimensao !== 'grupo' && <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium w-full">Família</th>}
+                      {dimensao === 'produto' && <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium w-full">Produto</th>}
+                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right w-28">
                         {isReceita ? 'Receita' : 'Quantidade'}
                       </th>
                     </tr>
@@ -261,9 +261,9 @@ export default function Receita() {
                   <tbody>
                     {dadosFiltrados.map((item, i) => (
                       <tr key={i} className="border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="py-2 text-gray-700 dark:text-gray-300">{item.grupo}</td>
-                        {dimensao !== 'grupo' && <td className="py-2 text-gray-500 dark:text-gray-400">{item.familia ?? '—'}</td>}
-                        {dimensao === 'produto' && <td className="py-2 text-gray-700 dark:text-gray-300">{item.produto ?? '—'}</td>}
+                        <td className="py-2 text-gray-700 dark:text-gray-300 truncate" title={item.grupo}>{item.grupo}</td>
+                        {dimensao !== 'grupo' && <td className="py-2 text-gray-500 dark:text-gray-400 truncate" title={item.familia ?? ''}>{item.familia ?? '—'}</td>}
+                        {dimensao === 'produto' && <td className="py-2 text-gray-700 dark:text-gray-300 truncate" title={item.produto ?? ''}>{item.produto ?? '—'}</td>}
                         <td className="py-2 text-right font-semibold text-gray-800 dark:text-gray-100">
                           {isReceita ? formatCurrency(item.valor) : item.valor.toLocaleString('pt-BR')}
                         </td>

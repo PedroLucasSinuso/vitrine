@@ -109,24 +109,26 @@ export default function Trocas() {
               {dados.por_produto.length === 0 ? (
                 <p className="text-sm text-gray-400 dark:text-gray-500">Nenhuma troca no período.</p>
               ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b dark:border-gray-700 text-left">
-                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Código</th>
-                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Produto</th>
-                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right">Valor</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dados.por_produto.map((item, i) => (
-                      <tr key={i} className="border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="py-2 text-gray-400 dark:text-gray-500 font-mono">{item.codigo}</td>
-                        <td className="py-2 text-gray-700 dark:text-gray-300">{item.produto}</td>
-                        <td className="py-2 text-right font-semibold text-gray-800 dark:text-gray-100">{formatCurrency(item.receita)}</td>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm table-fixed">
+                    <thead>
+                      <tr className="border-b dark:border-gray-700 text-left">
+                        <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium w-28">Código</th>
+                        <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium w-full">Produto</th>
+                        <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right w-28">Valor</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {dados.por_produto.map((item, i) => (
+                        <tr key={i} className="border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <td className="py-2 text-gray-400 dark:text-gray-500 font-mono truncate" title={item.codigo}>{item.codigo}</td>
+                          <td className="py-2 text-gray-700 dark:text-gray-300 truncate" title={item.produto}>{item.produto}</td>
+                          <td className="py-2 text-right font-semibold text-gray-800 dark:text-gray-100">{formatCurrency(item.receita)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           </>

@@ -219,30 +219,30 @@ export default function CurvaAbc() {
                 Classificação completa <span className="text-gray-400 dark:text-gray-500 font-normal text-sm">({dados.length})</span>
               </h2>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm table-fixed">
                   <thead>
                     <tr className="border-b dark:border-gray-700 text-left">
-                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium">#</th>
+                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium w-8">#</th>
                       <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Grupo</th>
                       {dimensao !== 'grupo' && <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Família</th>}
                       {dimensao === 'produto' && <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Produto</th>}
-                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right">Receita</th>
-                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right">Part. %</th>
-                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right">Acum. %</th>
-                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-center">Curva</th>
+                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right w-24">Receita</th>
+                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right w-20">Part. %</th>
+                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right w-20">Acum. %</th>
+                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-center w-16">Curva</th>
                     </tr>
                   </thead>
                   <tbody>
                     {dados.map((item, i) => (
                       <tr key={i} className="border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="py-3 text-gray-400 dark:text-gray-500">{i + 1}</td>
-                        <td className="py-3 text-gray-700 dark:text-gray-300">{item.grupo}</td>
-                        {dimensao !== 'grupo' && <td className="py-3 text-gray-500 dark:text-gray-400">{item.familia ?? '—'}</td>}
-                        {dimensao === 'produto' && <td className="py-3 text-gray-700 dark:text-gray-300">{item.produto ?? '—'}</td>}
-                        <td className="py-3 text-right font-semibold text-gray-800 dark:text-gray-100">{formatCurrency(item.receita)}</td>
-                        <td className="py-3 text-right text-gray-600 dark:text-gray-400">{item.participacao_pct.toFixed(2)}%</td>
-                        <td className="py-3 text-right text-gray-600 dark:text-gray-400">{item.participacao_acumulada.toFixed(2)}%</td>
-                        <td className="py-3 text-center">
+                        <td className="py-2 text-gray-400 dark:text-gray-500">{i + 1}</td>
+                        <td className="py-2 text-gray-700 dark:text-gray-300 truncate" title={item.grupo}>{item.grupo}</td>
+                        {dimensao !== 'grupo' && <td className="py-2 text-gray-500 dark:text-gray-400 truncate" title={item.familia ?? ''}>{item.familia ?? '—'}</td>}
+                        {dimensao === 'produto' && <td className="py-2 text-gray-700 dark:text-gray-300 truncate" title={item.produto ?? ''}>{item.produto ?? '—'}</td>}
+                        <td className="py-2 text-right font-semibold text-gray-800 dark:text-gray-100">{formatCurrency(item.receita)}</td>
+                        <td className="py-2 text-right text-gray-600 dark:text-gray-400">{item.participacao_pct.toFixed(2)}%</td>
+                        <td className="py-2 text-right text-gray-600 dark:text-gray-400">{item.participacao_acumulada.toFixed(2)}%</td>
+                        <td className="py-2 text-center">
                           <span className={`text-xs font-semibold px-2 py-1 rounded-full ${CURVA_BADGE[item.curva]}`}>
                             {item.curva}
                           </span>

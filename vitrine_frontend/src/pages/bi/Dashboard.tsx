@@ -195,27 +195,29 @@ export default function Dashboard() {
         {topProdutos.length > 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
             <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Top 5 Produtos mais vendidos</h2>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b dark:border-gray-700 text-left">
-                  <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium w-8">#</th>
-                  <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Produto</th>
-                  <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right">Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topProdutos.map((item, i) => (
-                  <tr key={item.codigo} className="border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="py-2 text-gray-400 dark:text-gray-500 font-semibold">{i + 1}</td>
-                    <td className="py-2 text-gray-700 dark:text-gray-300">
-                      <span className="text-gray-400 dark:text-gray-500 font-mono mr-1">{item.codigo}</span>
-                      {item.produto}
-                    </td>
-                    <td className="py-2 text-right font-semibold text-gray-800 dark:text-gray-100">{formatCurrency(item.valor)}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm table-fixed">
+                <thead>
+                  <tr className="border-b dark:border-gray-700 text-left">
+                    <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium w-8">#</th>
+                    <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium w-full">Produto</th>
+                    <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right w-28">Valor</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {topProdutos.map((item, i) => (
+                    <tr key={item.codigo} className="border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="py-2 text-gray-400 dark:text-gray-500 font-semibold">{i + 1}</td>
+                      <td className="py-2 text-gray-700 dark:text-gray-300 truncate" title={item.produto}>
+                        <span className="text-gray-400 dark:text-gray-500 font-mono mr-1 shrink-0">{item.codigo}</span>
+                        <span className="truncate">{item.produto}</span>
+                      </td>
+                      <td className="py-2 text-right font-semibold text-gray-800 dark:text-gray-100">{formatCurrency(item.valor)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
