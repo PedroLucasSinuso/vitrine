@@ -2,7 +2,7 @@
 
 <#
 .SYNOPSIS
-    Instala o Vitrine em Windows Server — Python, Caddy, NSSM, backend e frontend.
+    Instala o Vitrine em Windows Server - Python, Caddy, NSSM, backend e frontend.
 
 .PARAMETER DistPath
     Caminho do pendrive contendo .env, price_checker.db e a pasta dist\.
@@ -38,13 +38,13 @@ $RepoUrl = "https://github.com/PedroLucasSinuso/vitrine.git"
 $ProgressPreference = "SilentlyContinue"
 
 # ---------- HELPERS ----------
-function Write-Step { param($Msg) Write-Host "`n>>> $Msg" -ForegroundColor Cyan }
+function Write-Step { param($Msg) Write-Host ">>> $Msg" -ForegroundColor Cyan }
 function Write-OK   { Write-Host "  [OK] $($args -join ' ')" -ForegroundColor Green }
 function Write-Warn { Write-Host "  [!] $($args -join ' ')" -ForegroundColor Yellow }
 function Write-Err  { Write-Host "  [ERRO] $($args -join ' ')" -ForegroundColor Red; exit 1 }
 
 # ---------- 1. GIT ----------
-Write-Step "1/13 — Verificando Git..."
+Write-Step "1/13 - Verificando Git..."
 if (!(Get-Command git -ErrorAction SilentlyContinue)) {
     if (Get-Command winget -ErrorAction SilentlyContinue) {
         Write-Host "  Instalando Git via winget..."
@@ -53,7 +53,8 @@ if (!(Get-Command git -ErrorAction SilentlyContinue)) {
         Write-Host "  Baixando Git portable..."
         $gitInstaller = "$env:TEMP\git-installer.exe"
         Invoke-WebRequest -Uri $GitUrl -OutFile $gitInstaller
-        Start-Process -Wait -FilePath $gitInstaller -ArgumentList "/VERYSILENT /NORESTART /NOCANCEL /SP- /CLOSEAPPLICATIONS /COMPONENTS=""icons,ext\reg\shellhere,assoc,assoc_sh"""
+        $gitArgs = '/VERYSILENT /NORESTART /NOCANCEL /SP- /CLOSEAPPLICATIONS /COMPONENTS="icons,ext\reg\shellhere,assoc,assoc_sh"'
+        Start-Process -Wait -FilePath $gitInstaller -ArgumentList $gitArgs
     }
     $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
 }
@@ -61,14 +62,14 @@ $gitVer = git --version
 Write-OK "Git: $gitVer"
 
 # ---------- 2. PASTAS ----------
-Write-Step "2/13 — Criando estrutura de pastas..."
+Write-Step "2/13 - Criando estrutura de pastas..."
 @($PYTHON_DIR, $LOGS_DIR) | ForEach-Object {
     New-Item -ItemType Directory -Path $_ -Force | Out-Null
 }
 Write-OK "Pastas criadas em $VITRINE"
 
 # ---------- 3. PYTHON ----------
-Write-Step "3/13 — Baixando Python embeddable $PythonVersion..."
+Write-Step "3/13 - Baixando Python embeddable $PythonVersion..."
 $pythonZip = "$env:TEMP\python-$PythonVersion-embed-amd64.zip"
 if (!(Test-Path "$PYTHON_DIR\python.exe")) {
     Invoke-WebRequest -Uri $PythonUrl -OutFile $pythonZip
@@ -79,7 +80,7 @@ if (!(Test-Path "$PYTHON_DIR\python.exe")) {
 }
 
 # ---------- 4. CADDY ----------
-Write-Step "4/13 — Baixando Caddy..."
+Write-Step "4/13 - Baixando Caddy..."
 $caddyPath = "$CODE\caddy.exe"
 if (!(Test-Path $caddyPath)) {
     Invoke-WebRequest -Uri $CaddyUrl -OutFile $caddyPath
@@ -89,7 +90,7 @@ if (!(Test-Path $caddyPath)) {
 }
 
 # ---------- 5. NSSM ----------
-Write-Step "5/13 — Verificando NSSM..."
+Write-Step "5/13 - Verificando NSSM..."
 $nssmPath = "$CODE\nssm.exe"
 $nssmGlobal = Get-Command nssm -ErrorAction SilentlyContinue
 if ($nssmGlobal) {
@@ -109,7 +110,7 @@ if ($nssmGlobal) {
 $NSSM = $nssmPath
 
 # ---------- 6. CLONE ----------
-Write-Step "6/13 — Clonando repositorio..."
+Write-Step "6/13 - Clonando repositorio..."
 if (Test-Path "$CODE\.git") {
     Write-OK "Repositorio ja clonado, atualizando..."
     Push-Location $CODE
@@ -122,7 +123,7 @@ if (Test-Path "$CODE\.git") {
 git config --global --add safe.directory $CODE 2>$null
 
 # ---------- 7. SITE-PACKAGES ----------
-Write-Step "7/13 — Habilitando site-packages no Python..."
+Write-Step "7/13 - Habilitando site-packages no Python..."
 $pythonPth = "$PYTHON_DIR\python._pth"
 if (Test-Path $pythonPth) {
     $content = Get-Content $pythonPth -Raw
@@ -136,7 +137,7 @@ if (Test-Path $pythonPth) {
 }
 
 # ---------- 8. PIP ----------
-Write-Step "8/13 — Instalando pip..."
+Write-Step "8/13 - Instalando pip..."
 $pipCheck = & "$PYTHON_DIR\python.exe" -m pip --version 2>&1
 if ($LASTEXITCODE -ne 0) {
     $getPip = "$env:TEMP\get-pip.py"
@@ -148,22 +149,22 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # ---------- 9. REQUIREMENTS ----------
-Write-Step "9/13 — Instalando dependencias do backend..."
+Write-Step "9/13 - Instalando dependencias do backend..."
 $reqFile = "$CODE\deploy\requirements.txt"
 if (Test-Path $reqFile) {
     & "$PYTHON_DIR\python.exe" -m pip install -r $reqFile --no-warn-script-location
     Write-OK "Dependencias instaladas"
 } else {
-    Write-Warn "requirements.txt nao encontrado em $reqFile — ignorando"
+    Write-Warn "requirements.txt nao encontrado em $reqFile - ignorando"
 }
 
 # ---------- 10. CONFIGS ----------
-Write-Step "10/13 — Copiando configuracoes..."
+Write-Step "10/13 - Copiando configuracoes..."
 Copy-Item "$CODE\deploy\Caddyfile" "$CODE\Caddyfile" -Force
 Write-OK "Caddyfile copiado"
 
 # ---------- 11. .ENV + DADOS ----------
-Write-Step "11/13 — Copiando .env e dados..."
+Write-Step "11/13 - Copiando .env e dados..."
 if ($DistPath -and (Test-Path $DistPath)) {
     if (Test-Path "$DistPath\.env") {
         Copy-Item "$DistPath\.env" "$DATA_DIR\.env" -Force
@@ -183,7 +184,7 @@ if (Test-Path "$DATA_DIR\.env") {
 }
 
 # ---------- 12. FRONTEND ----------
-Write-Step "12/13 — Copiando frontend..."
+Write-Step "12/13 - Copiando frontend..."
 if ($DistPath -and (Test-Path "$DistPath\dist")) {
     $distDest = "$FRONTEND_DIR\dist"
     if (Test-Path $distDest) {
@@ -196,7 +197,7 @@ if ($DistPath -and (Test-Path "$DistPath\dist")) {
 }
 
 # ---------- 13. SERVICOS ----------
-Write-Step "13/13 — Registrando servicos Windows..."
+Write-Step "13/13 - Registrando servicos Windows..."
 & $NSSM stop VitrineBackend 2>$null
 & $NSSM remove VitrineBackend confirm 2>$null
 & $NSSM stop VitrineFrontend 2>$null
@@ -224,12 +225,13 @@ Write-OK "Servico VitrineBackend registrado"
 Write-OK "Servico VitrineFrontend registrado"
 
 # ---------- INICIAR ----------
-Write-Step "— Iniciando servicos..."
+Write-Step "- Iniciando servicos..."
 & $NSSM start VitrineBackend
 Start-Sleep -Seconds 3
 & $NSSM start VitrineFrontend
 
-Write-Host "`n============================================" -ForegroundColor Green
+Write-Host ""
+Write-Host "============================================" -ForegroundColor Green
 Write-Host "  Instalacao concluida!" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Green
 Write-Host ""
