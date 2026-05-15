@@ -1,8 +1,10 @@
 import { useState, useCallback, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
-import AdminHeader from '../../components/AdminHeader'
-import BiSubNav from '../../components/bi/BiSubNav'
 import PeriodoForm, { type Preset } from '../../components/bi/PeriodoForm'
+import BiPageLayout from '../../components/bi/BiPageLayout'
+import ExportButtons from '../../components/bi/ExportButtons'
+import EmptyState from '../../components/ui/EmptyState'
 import KpiCard from '../../components/bi/KpiCard'
 import { fetchKpis, fetchKpisComparativo, fetchRanking, exportarExcelBI } from '../../api/bi'
 import { baixarCSVdeArray } from '../../utils/csv'
@@ -11,7 +13,7 @@ import { formatCurrency } from '../../utils/formatters'
 import { useBiCache } from '../../stores/biCache'
 import { useToast } from '../../hooks/useToast'
 import { useCountUp } from '../../hooks/useCountUp'
-import { Clock } from 'lucide-react'
+import { Clock, Circle } from 'lucide-react'
 import Skeleton from '../../components/ui/Skeleton'
 
 const PRESETS_DASHBOARD: Preset[] = [
@@ -35,6 +37,7 @@ function variacaoInfo(pct: number | null): { valor: number; direcao: 'positivo' 
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate()
   const [periodo, setPeriodo] = useState<PeriodoBi>(periodoInicial)
   const [comparar, setComparar] = useState(true)
   const [kpis, setKpis] = useState<KpisDTO | null>(null)
@@ -53,6 +56,7 @@ export default function Dashboard() {
   const animTickets = useCountUp(kpisAtivos ? (kpisComp ? kpisComp.qtd_tickets.atual : (kpis as KpisDTO).qtd_tickets) : 0, 600, !!kpisAtivos)
   const animItensTicket = useCountUp(kpisAtivos ? (kpisComp ? kpisComp.itens_por_ticket.atual : (kpis as KpisDTO).itens_por_ticket) : 0, 600, !!kpisAtivos)
   const cache = useBiCache()
+  const cacheTimestamp = cache.getTimestamp('dashboard', periodo)
   const { toast } = useToast()
 
   const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false) => {
@@ -99,7 +103,7 @@ export default function Dashboard() {
     }
   }, [periodo, comparar, cache])
 
-  useEffect(() => { const t = setTimeout(() => buscar()); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps -- Mount-only fetch via setTimeout; deps intentionally omitted -- Mount-only fetch via setTimeout; deps intentionally omitted
+  useEffect(() => { const t = setTimeout(() => buscar()); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleBuscar(periodoOverride?: PeriodoBi) {
     cache.clear()
@@ -107,121 +111,122 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex flex-col items-center px-4 py-6">
-      <AdminHeader titulo="BI" paginaAtual="bi" hideNav breadcrumb={[{ label: 'BI' }]} />
-      <BiSubNav />
-
-      <div className="w-full max-w-5xl flex flex-col gap-5">
-
-        {/* Seletor de período */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
-          <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Período de análise</h2>
-          <PeriodoForm
-            value={periodo}
-            onChange={setPeriodo}
-            onBuscar={handleBuscar}
-            loading={loading}
-            presets={PRESETS_DASHBOARD}
+    <BiPageLayout titulo="BI" breadcrumb={[{ label: 'BI' }]}>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
+        <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Período de análise</h2>
+        <PeriodoForm
+          value={periodo}
+          onChange={setPeriodo}
+          onBuscar={handleBuscar}
+          loading={loading}
+          presets={PRESETS_DASHBOARD}
+        />
+        <div className="flex items-center gap-2 mt-3">
+          <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={comparar}
+              onChange={(e) => setComparar(e.target.checked)}
+              className="accent-primary w-4 h-4"
+            />
+            Comparar com ano anterior
+          </label>
+          {kpisComp?.dados_parciais_ate && (
+            <span className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 rounded-full ml-auto">
+              <Clock size={14} className="inline mr-1" /> Comparação por hora — atualizado até {kpisComp.dados_parciais_ate}
+            </span>
+          )}
+        </div>
+        {erro && <p className="text-red-500 text-sm mt-3">{erro}</p>}
+        <div className="mt-4 flex items-center gap-3">
+          {cacheTimestamp && (
+            <span className="text-xs text-gray-400 dark:text-gray-500">
+              <Circle size={8} className={`inline mr-1 ${cacheTimestamp > Date.now() - 300000 ? 'fill-green-500 text-green-500' : 'fill-amber-500 text-amber-500'}`} />
+              Dados de {format(new Date(cacheTimestamp), 'HH:mm')}
+            </span>
+          )}
+          <ExportButtons
+            onExcel={() => { exportarExcelBI(periodo, 'kpis'); toast({ type: 'success', message: 'Excel exportado' }) }}
+            onCsv={() => { if (kpisAtivos) { baixarCSVdeArray([kpisAtivos], 'kpis'); toast({ type: 'success', message: 'CSV exportado' }) } }}
+            disabled={!kpisAtivos}
           />
-          <div className="flex items-center gap-2 mt-3">
-            <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={comparar}
-                onChange={(e) => setComparar(e.target.checked)}
-                className="accent-primary w-4 h-4"
-              />
-              Comparar com ano anterior
-            </label>
-            {kpisComp?.dados_parciais_ate && (
-              <span className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 rounded-full ml-auto">
-                <Clock size={14} className="inline mr-1" /> Dados parciais — atualizados até {kpisComp.dados_parciais_ate}
-              </span>
-            )}
-          </div>
-          {erro && <p className="text-red-500 text-sm mt-3">{erro}</p>}
-          <div className="flex gap-2 mt-4">
-            <button
-              onClick={() => { exportarExcelBI(periodo, 'kpis'); toast({ type: 'success', message: 'Excel exportado' }) }}
-              disabled={!kpisAtivos}
-              className="text-xs bg-green-600 hover:bg-green-700 disabled:opacity-40 text-white font-semibold px-3 py-1.5 rounded-lg transition"
-            >
-              Excel
-            </button>
-            <button
-              onClick={() => { if (kpisAtivos) { baixarCSVdeArray([kpisAtivos], 'kpis'); toast({ type: 'success', message: 'CSV exportado' }) } }}
-              disabled={!kpisAtivos}
-              className="text-xs bg-gray-600 hover:bg-gray-700 disabled:opacity-40 text-white font-semibold px-3 py-1.5 rounded-lg transition"
-            >
-              CSV
-            </button>
+        </div>
+      </div>
+
+      {loading && !kpisAtivos && (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-2xl" />
+          ))}
+        </div>
+      )}
+      {kpisAtivos && (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <KpiCard label="Faturamento Bruto" valor={formatCurrency(animFatBruto)} destaque delay={0} pulseKey={pulseKey}
+            variacao={kpisComp ? variacaoInfo(kpisComp.faturamento_bruto.variacao_pct) : null}
+            valorAnterior={kpisComp?.faturamento_bruto.anterior != null ? formatCurrency(kpisComp.faturamento_bruto.anterior) : undefined} />
+          <KpiCard label="Faturamento Líquido" valor={formatCurrency(animFatLiq)} destaque delay={80} pulseKey={pulseKey}
+            variacao={kpisComp ? variacaoInfo(kpisComp.faturamento_liquido.variacao_pct) : null}
+            valorAnterior={kpisComp?.faturamento_liquido.anterior != null ? formatCurrency(kpisComp.faturamento_liquido.anterior) : undefined} />
+          <KpiCard label="Total de Trocas" valor={formatCurrency(animTrocas)} delay={160} pulseKey={pulseKey}
+            variacao={kpisComp ? variacaoInfo(kpisComp.total_trocas.variacao_pct) : null} invertVariation
+            valorAnterior={kpisComp?.total_trocas.anterior != null ? formatCurrency(kpisComp.total_trocas.anterior) : undefined} />
+          <KpiCard label="Tickets" valor={Math.round(animTickets).toLocaleString('pt-BR')} delay={240} pulseKey={pulseKey}
+            variacao={kpisComp ? variacaoInfo(kpisComp.qtd_tickets.variacao_pct) : null}
+            valorAnterior={kpisComp?.qtd_tickets.anterior != null ? Math.round(kpisComp.qtd_tickets.anterior).toLocaleString('pt-BR') : undefined} />
+          <KpiCard label="Ticket Médio" valor={formatCurrency(animTicketMedio)} delay={320} pulseKey={pulseKey}
+            variacao={kpisComp ? variacaoInfo(kpisComp.ticket_medio.variacao_pct) : null}
+            valorAnterior={kpisComp?.ticket_medio.anterior != null ? formatCurrency(kpisComp.ticket_medio.anterior) : undefined} />
+          <KpiCard label="Itens por Ticket" valor={animItensTicket.toFixed(2)} delay={400} pulseKey={pulseKey}
+            variacao={kpisComp ? variacaoInfo(kpisComp.itens_por_ticket.variacao_pct) : null}
+            valorAnterior={kpisComp?.itens_por_ticket.anterior != null ? kpisComp.itens_por_ticket.anterior.toFixed(2) : undefined} />
+        </div>
+      )}
+
+      {!kpisAtivos && !loading && !erro && (
+        <EmptyState title="Selecione um período" description="Escolha um período para analisar os dados." />
+      )}
+
+      {(loading || topProdutos.length === 0) && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
+          <Skeleton className="h-5 w-48 mb-4" />
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-6 w-full mb-2" />
+          ))}
+        </div>
+      )}
+      {topProdutos.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
+          <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Top 5 Produtos mais vendidos</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm table-fixed">
+              <thead>
+                <tr className="border-b dark:border-gray-700 text-left">
+                  <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium w-8">#</th>
+                  <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium w-full">Produto</th>
+                  <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right w-28">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topProdutos.map((item, i) => (
+                  <tr
+                    key={item.codigo}
+                    onClick={() => navigate(`/bi/sku?codigo=${item.codigo}`)}
+                    className="border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                  >
+                    <td className="py-2 text-gray-400 dark:text-gray-500 font-semibold">{i + 1}</td>
+                    <td className="py-2 text-gray-700 dark:text-gray-300 truncate" title={item.produto}>
+                      <span className="text-gray-400 dark:text-gray-500 font-mono mr-1 shrink-0">{item.codigo}</span>
+                      <span className="truncate">{item.produto}</span>
+                    </td>
+                    <td className="py-2 text-right font-semibold text-gray-800 dark:text-gray-100">{formatCurrency(item.valor)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-
-        {/* KPIs */}
-        {loading && !kpisAtivos && (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-24 rounded-2xl" />
-            ))}
-          </div>
-        )}
-        {kpisAtivos && (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <KpiCard label="Faturamento Bruto" valor={formatCurrency(animFatBruto)} destaque delay={0} pulseKey={pulseKey}
-              variacao={kpisComp ? variacaoInfo(kpisComp.faturamento_bruto.variacao_pct) : null} />
-            <KpiCard label="Faturamento Líquido" valor={formatCurrency(animFatLiq)} destaque delay={80} pulseKey={pulseKey}
-              variacao={kpisComp ? variacaoInfo(kpisComp.faturamento_liquido.variacao_pct) : null} />
-            <KpiCard label="Total de Trocas" valor={formatCurrency(animTrocas)} delay={160} pulseKey={pulseKey}
-              variacao={kpisComp ? variacaoInfo(kpisComp.total_trocas.variacao_pct) : null} invertVariation />
-            <KpiCard label="Tickets" valor={Math.round(animTickets).toLocaleString('pt-BR')} delay={240} pulseKey={pulseKey}
-              variacao={kpisComp ? variacaoInfo(kpisComp.qtd_tickets.variacao_pct) : null} />
-            <KpiCard label="Ticket Médio" valor={formatCurrency(animTicketMedio)} delay={320} pulseKey={pulseKey}
-              variacao={kpisComp ? variacaoInfo(kpisComp.ticket_medio.variacao_pct) : null} />
-            <KpiCard label="Itens por Ticket" valor={animItensTicket.toFixed(2)} delay={400} pulseKey={pulseKey}
-              variacao={kpisComp ? variacaoInfo(kpisComp.itens_por_ticket.variacao_pct) : null} />
-          </div>
-        )}
-
-        {/* Top 5 produtos */}
-        {loading && !topProdutos.length && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
-            <Skeleton className="h-5 w-48 mb-4" />
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-6 w-full mb-2" />
-            ))}
-          </div>
-        )}
-        {topProdutos.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
-            <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Top 5 Produtos mais vendidos</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm table-fixed">
-                <thead>
-                  <tr className="border-b dark:border-gray-700 text-left">
-                    <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium w-8">#</th>
-                    <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium w-full">Produto</th>
-                    <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right w-28">Valor</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topProdutos.map((item, i) => (
-                    <tr key={item.codigo} className="border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="py-2 text-gray-400 dark:text-gray-500 font-semibold">{i + 1}</td>
-                      <td className="py-2 text-gray-700 dark:text-gray-300 truncate" title={item.produto}>
-                        <span className="text-gray-400 dark:text-gray-500 font-mono mr-1 shrink-0">{item.codigo}</span>
-                        <span className="truncate">{item.produto}</span>
-                      </td>
-                      <td className="py-2 text-right font-semibold text-gray-800 dark:text-gray-100">{formatCurrency(item.valor)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-      </div>
-    </div>
+      )}
+    </BiPageLayout>
   )
 }

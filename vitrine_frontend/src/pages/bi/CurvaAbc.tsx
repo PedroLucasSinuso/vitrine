@@ -1,8 +1,10 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { subDays, format } from 'date-fns'
-import AdminHeader from '../../components/AdminHeader'
-import BiSubNav from '../../components/bi/BiSubNav'
 import PeriodoForm, { type Preset } from '../../components/bi/PeriodoForm'
+import BiPageLayout from '../../components/bi/BiPageLayout'
+import ExportButtons from '../../components/bi/ExportButtons'
+import EmptyState from '../../components/ui/EmptyState'
 import { fetchCurvaAbc, exportarExcelBI } from '../../api/bi'
 import { baixarCSVdeArray } from '../../utils/csv'
 import type { ItemCurvaAbcDTO, PeriodoBi, Dimensao, CurvaAbc } from '../../types'
@@ -39,11 +41,15 @@ const CURVA_CORES: Record<CurvaAbc, string> = {
 }
 
 export default function CurvaAbc() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [periodo, setPeriodo] = useState<PeriodoBi>(periodoInicial)
-  const [dimensao, setDimensao] = useState<Dimensao>('produto')
+  const [dimensao, setDimensao] = useState<Dimensao>(
+    (searchParams.get('dimensao') as Dimensao) ?? 'produto'
+  )
   const [dados, setDados] = useState<ItemCurvaAbcDTO[]>([])
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState('')
+  const navigate = useNavigate()
   const cache = useBiCache()
   const { toast } = useToast()
 
@@ -69,15 +75,18 @@ export default function CurvaAbc() {
     }
   }, [periodo, dimensao, cache])
 
-  useEffect(() => { const t = setTimeout(() => buscar()); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps -- Mount-only fetch via setTimeout; deps intentionally omitted -- Mount-only fetch via setTimeout; deps intentionally omitted
+  useEffect(() => { const t = setTimeout(() => buscar()); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function syncParams(d: Dimensao) {
+    const next = new URLSearchParams()
+    if (d !== 'produto') next.set('dimensao', d)
+    setSearchParams(next, { replace: true })
+  }
 
   function handleBuscar(periodoOverride?: PeriodoBi) {
     cache.clear()
     buscar(periodoOverride, true)
   }
-
-  const contagem = { A: 0, B: 0, C: 0 }
-  dados.forEach((d) => contagem[d.curva]++)
 
   const statsPorCurva = useMemo(() => {
     const totalReceita = dados.reduce((s, d) => s + d.receita, 0)
@@ -99,163 +108,149 @@ export default function CurvaAbc() {
   }))
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex flex-col items-center px-4 py-6">
-      <AdminHeader titulo="Curva ABC" paginaAtual="bi" hideNav breadcrumb={[{ label: 'BI', path: '/bi' }, { label: 'Curva ABC' }]} />
-      <BiSubNav />
-
-      <div className="w-full max-w-5xl flex flex-col gap-5">
-
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5 flex flex-col gap-4">
-          <PeriodoForm value={periodo} onChange={setPeriodo} onBuscar={handleBuscar} loading={loading} presets={PRESETS_CURVA} />
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500 dark:text-gray-400">Dimensão</label>
-            <select
-              className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-40"
-              value={dimensao}
-              onChange={(e) => setDimensao(e.target.value as Dimensao)}
-            >
-              <option value="produto">Produto</option>
-              <option value="familia">Família</option>
-              <option value="grupo">Grupo</option>
-            </select>
-          </div>
-          {erro && <p className="text-red-500 text-sm">{erro}</p>}
-          <div className="flex gap-2">
-            <button
-              onClick={() => { exportarExcelBI(periodo, 'curva-abc', { dimensao }); toast({ type: 'success', message: 'Excel exportado' }) }}
-              disabled={dados.length === 0}
-              className="text-xs bg-green-600 hover:bg-green-700 disabled:opacity-40 text-white font-semibold px-3 py-1.5 rounded-lg transition"
-            >
-              Excel
-            </button>
-            <button
-              onClick={() => { baixarCSVdeArray(dados, 'curva-abc'); toast({ type: 'success', message: 'CSV exportado' }) }}
-              disabled={dados.length === 0}
-              className="text-xs bg-gray-600 hover:bg-gray-700 disabled:opacity-40 text-white font-semibold px-3 py-1.5 rounded-lg transition"
-            >
-              CSV
-            </button>
-          </div>
+    <BiPageLayout titulo="Curva ABC" breadcrumb={[{ label: 'BI', path: '/bi' }, { label: 'Curva ABC' }]}>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5 flex flex-col gap-4">
+        <PeriodoForm value={periodo} onChange={setPeriodo} onBuscar={handleBuscar} loading={loading} presets={PRESETS_CURVA} />
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-gray-500 dark:text-gray-400">Dimensão</label>
+          <select
+            className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-40"
+            value={dimensao}
+              onChange={(e) => { const val = e.target.value as Dimensao; setDimensao(val); syncParams(val) }}
+          >
+            <option value="produto">Produto</option>
+            <option value="familia">Família</option>
+            <option value="grupo">Grupo</option>
+          </select>
         </div>
+        {erro && <p className="text-red-500 text-sm">{erro}</p>}
+        <ExportButtons
+          onExcel={() => { exportarExcelBI(periodo, 'curva-abc', { dimensao }); toast({ type: 'success', message: 'Excel exportado' }) }}
+          onCsv={() => { baixarCSVdeArray(dados, 'curva-abc'); toast({ type: 'success', message: 'CSV exportado' }) }}
+          disabled={dados.length === 0}
+        />
+      </div>
 
-        {loading && !dados.length && (
+      {loading && !dados.length && (
+        <div className="grid grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-2xl" />
+          ))}
+        </div>
+      )}
+      {!loading && dados.length === 0 && (
+        <EmptyState title="Nenhum dado no período" description="Tente ampliar o período ou alterar os filtros." />
+      )}
+      {dados.length > 0 && (
+        <>
           <div className="grid grid-cols-3 gap-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-24 rounded-2xl" />
+            {statsPorCurva.map(({ curva, qtd, receita, pctReceita }) => (
+              <div key={curva} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 flex flex-col items-center text-center gap-1">
+                <span className={`text-xs font-semibold px-2 py-1 rounded-full mx-auto ${CURVA_BADGE[curva]}`}>
+                  Curva {curva}
+                </span>
+                <p className="text-xl font-bold text-gray-800 dark:text-gray-100 break-words">{qtd}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">itens</p>
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-1">{formatCurrency(receita)}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">{pctReceita.toFixed(1)}% da receita</p>
+              </div>
             ))}
           </div>
-        )}
-        {dados.length > 0 && (
-          <>
-            {/* Resumo por curva */}
-            <div className="grid grid-cols-3 gap-4">
-              {statsPorCurva.map(({ curva, qtd, receita, pctReceita }) => (
-                <div key={curva} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 flex flex-col gap-1">
-                  <span className={`text-xs font-semibold px-2 py-1 rounded-full w-fit ${CURVA_BADGE[curva]}`}>
-                    Curva {curva}
-                  </span>
-                  <p className="text-xl font-bold text-gray-800 dark:text-gray-100 break-words">{qtd}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">itens</p>
-                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-1">{formatCurrency(receita)}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">{pctReceita.toFixed(1)}% da receita</p>
-                </div>
-              ))}
-            </div>
 
-            {/* Gráfico de distribuição */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
-                <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Distribuição da Receita</h2>
-                <ResponsiveContainer width="100%" height={220}>
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={90}
-                      paddingAngle={4}
-                      dataKey="value"
-                      animationBegin={0}
-                      animationDuration={600}
-                    >
-                      {pieData.map((_, idx) => (
-                        <Cell key={idx} fill={CURVA_CORES[statsPorCurva[idx].curva]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="flex justify-center gap-4 mt-2">
-                  {statsPorCurva.map(({ curva, pctReceita }) => (
-                    <div key={curva} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CURVA_CORES[curva] }} />
-                      {curva} · {pctReceita.toFixed(1)}%
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Curva de Lorenz */}
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
-                <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Concentração Acumulada</h2>
-                <p className="text-3xl font-bold text-gray-800 dark:text-gray-100">
-                  {statsPorCurva[0]?.pctReceita.toFixed(1) ?? 0}%
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  da receita está em {statsPorCurva[0]?.qtd ?? 0} itens da Curva A
-                </p>
-                <div className="mt-3 flex flex-col gap-1 text-sm text-gray-600 dark:text-gray-400">
-                  <p>· Curva A: {statsPorCurva[0]?.qtd ?? 0} itens · {statsPorCurva[0]?.pctReceita.toFixed(1) ?? 0}% receita</p>
-                  <p>· Curva B: {statsPorCurva[1]?.qtd ?? 0} itens · {statsPorCurva[1]?.pctReceita.toFixed(1) ?? 0}% receita</p>
-                  <p>· Curva C: {statsPorCurva[2]?.qtd ?? 0} itens · {statsPorCurva[2]?.pctReceita.toFixed(1) ?? 0}% receita</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Tabela */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
-              <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">
-                Classificação completa <span className="text-gray-400 dark:text-gray-500 font-normal text-sm">({dados.length})</span>
-              </h2>
-              <div className="overflow-x-auto">
+              <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Distribuição da Receita</h2>
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={90}
+                    paddingAngle={4}
+                    dataKey="value"
+                    animationBegin={0}
+                    animationDuration={600}
+                  >
+                    {pieData.map((_, idx) => (
+                      <Cell key={idx} fill={CURVA_CORES[statsPorCurva[idx].curva]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(v) => formatCurrency(Number(v))} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex justify-center gap-4 mt-2">
+                {statsPorCurva.map(({ curva, pctReceita }) => (
+                  <div key={curva} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CURVA_CORES[curva] }} />
+                    {curva} · {pctReceita.toFixed(1)}%
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
+              <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Concentração Acumulada</h2>
+              <p className="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                {statsPorCurva[0]?.pctReceita.toFixed(1) ?? 0}%
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                da receita está em {statsPorCurva[0]?.qtd ?? 0} itens da Curva A
+              </p>
+              <div className="mt-3 flex flex-col gap-1 text-sm text-gray-600 dark:text-gray-400">
+                <p>· Curva A: {statsPorCurva[0]?.qtd ?? 0} itens · {statsPorCurva[0]?.pctReceita.toFixed(1) ?? 0}% receita</p>
+                <p>· Curva B: {statsPorCurva[1]?.qtd ?? 0} itens · {statsPorCurva[1]?.pctReceita.toFixed(1) ?? 0}% receita</p>
+                <p>· Curva C: {statsPorCurva[2]?.qtd ?? 0} itens · {statsPorCurva[2]?.pctReceita.toFixed(1) ?? 0}% receita</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
+            <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">
+              Classificação completa <span className="text-gray-400 dark:text-gray-500 font-normal text-sm">({dados.length})</span>
+            </h2>
+              <div className="overflow-x-auto max-h-96 overflow-y-auto">
                 <table className="w-full text-sm table-fixed">
                   <thead>
-                    <tr className="border-b dark:border-gray-700 text-left">
-                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium w-8">#</th>
-                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Grupo</th>
-                      {dimensao !== 'grupo' && <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Família</th>}
-                      {dimensao === 'produto' && <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Produto</th>}
-                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right w-24">Receita</th>
-                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right w-20">Part. %</th>
-                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right w-20">Acum. %</th>
-                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-center w-16">Curva</th>
+                    <tr className="border-b dark:border-gray-700 text-left sticky top-0 bg-white dark:bg-gray-800 z-10">
+                    <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium w-8">#</th>
+                    <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Grupo</th>
+                    {dimensao !== 'grupo' && <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Família</th>}
+                    {dimensao === 'produto' && <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Produto</th>}
+                    <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right w-24">Receita</th>
+                    <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right w-20">Part. %</th>
+                    <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right w-20">Acum. %</th>
+                    <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-center w-16">Curva</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dados.map((item, i) => (
+                    <tr
+                      key={i}
+                      onClick={() => item.codigo && navigate(`/bi/sku?codigo=${item.codigo}`)}
+                      className={`border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700 ${item.codigo ? 'cursor-pointer' : ''}`}
+                    >
+                      <td className="py-2 text-gray-400 dark:text-gray-500">{i + 1}</td>
+                      <td className="py-2 text-gray-700 dark:text-gray-300 truncate" title={item.grupo}>{item.grupo}</td>
+                      {dimensao !== 'grupo' && <td className="py-2 text-gray-500 dark:text-gray-400 truncate" title={item.familia ?? ''}>{item.familia ?? '\u2014'}</td>}
+                      {dimensao === 'produto' && <td className="py-2 text-gray-700 dark:text-gray-300 truncate" title={item.produto ?? ''}>{item.produto ?? '\u2014'}</td>}
+                      <td className="py-2 text-right font-semibold text-gray-800 dark:text-gray-100">{formatCurrency(item.receita)}</td>
+                      <td className="py-2 text-right text-gray-600 dark:text-gray-400">{item.participacao_pct.toFixed(2)}%</td>
+                      <td className="py-2 text-right text-gray-600 dark:text-gray-400">{item.participacao_acumulada.toFixed(2)}%</td>
+                      <td className="py-2 text-center">
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${CURVA_BADGE[item.curva]}`}>
+                          {item.curva}
+                        </span>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {dados.map((item, i) => (
-                      <tr key={i} className="border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="py-2 text-gray-400 dark:text-gray-500">{i + 1}</td>
-                        <td className="py-2 text-gray-700 dark:text-gray-300 truncate" title={item.grupo}>{item.grupo}</td>
-                        {dimensao !== 'grupo' && <td className="py-2 text-gray-500 dark:text-gray-400 truncate" title={item.familia ?? ''}>{item.familia ?? '—'}</td>}
-                        {dimensao === 'produto' && <td className="py-2 text-gray-700 dark:text-gray-300 truncate" title={item.produto ?? ''}>{item.produto ?? '—'}</td>}
-                        <td className="py-2 text-right font-semibold text-gray-800 dark:text-gray-100">{formatCurrency(item.receita)}</td>
-                        <td className="py-2 text-right text-gray-600 dark:text-gray-400">{item.participacao_pct.toFixed(2)}%</td>
-                        <td className="py-2 text-right text-gray-600 dark:text-gray-400">{item.participacao_acumulada.toFixed(2)}%</td>
-                        <td className="py-2 text-center">
-                          <span className={`text-xs font-semibold px-2 py-1 rounded-full ${CURVA_BADGE[item.curva]}`}>
-                            {item.curva}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </>
-        )}
-      </div>
-    </div>
+          </div>
+        </>
+      )}
+    </BiPageLayout>
   )
 }

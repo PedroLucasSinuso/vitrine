@@ -5,12 +5,14 @@ import type { PeriodoBi } from '../types'
 interface CacheEntry {
   data: unknown
   periodoKey: string
+  timestamp: number
 }
 
 interface BiCacheContextType {
   get: <T>(key: string, periodo: PeriodoBi) => T | null
   set: (key: string, periodo: PeriodoBi, data: unknown) => void
   clear: () => void
+  getTimestamp: (key: string, periodo: PeriodoBi) => number | null
 }
 
 function periodoKey(p: PeriodoBi): string {
@@ -33,15 +35,25 @@ export function BiCacheProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const set = useCallback((key: string, periodo: PeriodoBi, data: unknown) => {
-    cacheRef.current.set(key, { data, periodoKey: periodoKey(periodo) })
+    cacheRef.current.set(key, { data, periodoKey: periodoKey(periodo), timestamp: Date.now() })
   }, [])
 
   const clear = useCallback(() => {
     cacheRef.current.clear()
   }, [])
 
+  const getTimestamp = useCallback((key: string, periodo: PeriodoBi): number | null => {
+    const entry = cacheRef.current.get(key)
+    if (!entry) return null
+    if (entry.periodoKey !== periodoKey(periodo)) {
+      cacheRef.current.delete(key)
+      return null
+    }
+    return entry.timestamp
+  }, [])
+
   return (
-    <BiCacheContext.Provider value={{ get, set, clear }}>
+    <BiCacheContext.Provider value={{ get, set, clear, getTimestamp }}>
       {children}
     </BiCacheContext.Provider>
   )

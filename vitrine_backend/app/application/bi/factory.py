@@ -1,7 +1,9 @@
 ﻿from datetime import date, datetime
+import pandas as pd
 from app.application.bi.loader import carregar_fluxo
 from app.application.bi.domain.vendas import Vendas
 from app.application.bi.domain.trocas import Trocas
+from app.application.bi.schema import COLUNAS
 import logging
 
 logger = logging.getLogger(__name__)
@@ -38,11 +40,22 @@ def criar_dominio_comparativo(data_inicio: date, data_fim: date) -> tuple[Domini
     if data_fim == date.today():
         hora_atual = datetime.now().hour
         dominio_anterior = criar_dominio(data_inicio_ant, data_fim_ant)
-        hora_col = "hora"
-        if hora_col in dominio_anterior.vendas.df.columns:
-            dominio_anterior.vendas.df = dominio_anterior.vendas.df[
-                dominio_anterior.vendas.df[hora_col].astype(str).str.split(":").str[0].astype(int) <= hora_atual
-            ]
+        logger.info("BI hora filter | hora_atual=%s data_fim_ant=%s", hora_atual, data_fim_ant)
+        for nome, dominio in (("vendas", dominio_anterior.vendas), ("trocas", dominio_anterior.trocas)):
+            if COLUNAS.hora in dominio.df.columns and COLUNAS.emissao in dominio.df.columns:
+                rows_before = len(dominio.df)
+                emissao_dtype = dominio.df[COLUNAS.emissao].dtype
+                hora_dtype = dominio.df[COLUNAS.hora].dtype
+                mask = (
+                    (dominio.df[COLUNAS.emissao].astype(str) != data_fim_ant.isoformat()) |
+                    (pd.to_numeric(dominio.df[COLUNAS.hora].astype(str).str.split(":").str[0], errors="coerce").fillna(0).astype(int) <= hora_atual)
+                )
+                dominio.df = dominio.df[mask]
+                rows_after = len(dominio.df)
+                logger.warning(
+                    "BI hora filter | nome=%s emissao_dtype=%s hora_dtype=%s rows=%s->%s",
+                    nome, emissao_dtype, hora_dtype, rows_before, rows_after,
+                )
         return dominio_atual, dominio_anterior
 
     try:

@@ -1,8 +1,10 @@
 import { useState, useCallback, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { subDays, format } from 'date-fns'
-import AdminHeader from '../../components/AdminHeader'
-import BiSubNav from '../../components/bi/BiSubNav'
 import PeriodoForm from '../../components/bi/PeriodoForm'
+import BiPageLayout from '../../components/bi/BiPageLayout'
+import ExportButtons from '../../components/bi/ExportButtons'
+import EmptyState from '../../components/ui/EmptyState'
 import KpiCard from '../../components/bi/KpiCard'
 import { fetchPerdas, fetchConsumo, exportarExcelBI } from '../../api/bi'
 import { baixarCSVdeArray } from '../../utils/csv'
@@ -22,6 +24,7 @@ function periodoInicial(): PeriodoBi {
 type Aba = 'perdas' | 'consumo'
 
 function TabelaMovimento({ dados }: { dados: MovimentoDTO }) {
+  const navigate = useNavigate()
   const maximo = dados.por_produto[0]?.receita ?? 1
   return (
     <>
@@ -35,7 +38,11 @@ function TabelaMovimento({ dados }: { dados: MovimentoDTO }) {
         ) : (
           <div className="flex flex-col gap-3">
             {dados.por_produto.slice(0, 20).map((item, i) => (
-              <div key={i} className="flex flex-col gap-0.5">
+              <div
+                key={i}
+                onClick={() => navigate(`/bi/sku?codigo=${item.codigo}`)}
+                className="flex flex-col gap-0.5 cursor-pointer"
+              >
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-700 dark:text-gray-300 truncate">
                     <span className="text-gray-400 dark:text-gray-500 font-mono mr-1">{item.codigo}</span>
@@ -96,7 +103,7 @@ export default function PerdasConsumo() {
     }
   }, [periodo, cache])
 
-  useEffect(() => { const t = setTimeout(() => buscar()); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps -- Mount-only fetch via setTimeout; deps intentionally omitted -- Mount-only fetch via setTimeout; deps intentionally omitted
+  useEffect(() => { const t = setTimeout(() => buscar()); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleBuscar() {
     cache.clear()
@@ -106,85 +113,71 @@ export default function PerdasConsumo() {
   const dadosAtivos = aba === 'perdas' ? perdas : consumo
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex flex-col items-center px-4 py-6">
-      <AdminHeader titulo="Perdas e Consumo" paginaAtual="bi" hideNav breadcrumb={[{ label: 'BI', path: '/bi' }, { label: 'Perdas e Consumo' }]} />
-      <BiSubNav />
-
-      <div className="w-full max-w-3xl flex flex-col gap-5">
-
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
-          <PeriodoForm value={periodo} onChange={setPeriodo} onBuscar={handleBuscar} loading={loading} />
-          {erro && <p className="text-red-500 text-sm mt-3">{erro}</p>}
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={() => { exportarExcelBI(periodo, aba); toast({ type: 'success', message: 'Excel exportado' }) }}
-              disabled={!dadosAtivos}
-              className="text-xs bg-green-600 hover:bg-green-700 disabled:opacity-40 text-white font-semibold px-3 py-1.5 rounded-lg transition"
-            >
-              Excel
-            </button>
-            <button
-              onClick={() => { if (dadosAtivos) { baixarCSVdeArray(dadosAtivos.por_produto, aba); toast({ type: 'success', message: 'CSV exportado' }) } }}
-              disabled={!dadosAtivos}
-              className="text-xs bg-gray-600 hover:bg-gray-700 disabled:opacity-40 text-white font-semibold px-3 py-1.5 rounded-lg transition"
-            >
-              CSV
-            </button>
-          </div>
+    <BiPageLayout titulo="Perdas e Consumo" breadcrumb={[{ label: 'BI', path: '/bi' }, { label: 'Perdas e Consumo' }]}>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
+        <PeriodoForm value={periodo} onChange={setPeriodo} onBuscar={handleBuscar} loading={loading} />
+        {erro && <p className="text-red-500 text-sm mt-3">{erro}</p>}
+        <div className="mt-3">
+          <ExportButtons
+            onExcel={() => { exportarExcelBI(periodo, aba); toast({ type: 'success', message: 'Excel exportado' }) }}
+            onCsv={() => { if (dadosAtivos) { baixarCSVdeArray(dadosAtivos.por_produto, aba); toast({ type: 'success', message: 'CSV exportado' }) } }}
+            disabled={!dadosAtivos}
+          />
         </div>
-
-        {loading && !perdas && !consumo && (
-          <div className="flex flex-col gap-4">
-            <Skeleton className="h-24 rounded-2xl" />
-            <Skeleton className="h-48 rounded-2xl" />
-          </div>
-        )}
-        {(perdas || consumo) && (
-          <>
-            {/* Comparativo Perdas vs Consumo */}
-            {perdas && consumo && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 flex flex-col gap-1">
-                  <p className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">Perdas</p>
-                  <p className="text-xl font-bold text-red-600">{formatCurrency(perdas.total)}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">{perdas.por_produto.length} produtos</p>
-                </div>
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 flex flex-col gap-1">
-                  <p className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">Consumo</p>
-                  <p className="text-xl font-bold text-amber-600">{formatCurrency(consumo.total)}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">{consumo.por_produto.length} produtos</p>
-                </div>
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 flex flex-col gap-1 col-span-2">
-                  <p className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">Proporção</p>
-                  <p className="text-xl font-bold text-gray-800 dark:text-gray-100">
-                    {perdas.total > 0
-                      ? `${((consumo.total / perdas.total) * 100).toFixed(1)}%`
-                      : '—'}
-                  </p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">consumo em relação a perdas</p>
-                </div>
-              </div>
-            )}
-
-            {/* Abas */}
-            <div className="flex gap-1 bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-1 w-fit">
-              {(['perdas', 'consumo'] as Aba[]).map((a) => (
-                <button
-                  key={a}
-                  onClick={() => setAba(a)}
-                  className={`px-5 py-2 rounded-xl text-sm font-semibold transition ${
-                    aba === a ? 'bg-primary text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                  }`}
-                >
-                  {a.charAt(0).toUpperCase() + a.slice(1)}
-                </button>
-              ))}
-            </div>
-
-            {dadosAtivos && <TabelaMovimento dados={dadosAtivos} />}
-          </>
-        )}
       </div>
-    </div>
+
+      {loading && !perdas && !consumo && (
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-24 rounded-2xl" />
+          <Skeleton className="h-48 rounded-2xl" />
+        </div>
+      )}
+      {!loading && !perdas && !consumo && !erro && (
+        <EmptyState title="Nenhum dado no período" description="Tente ampliar o período." />
+      )}
+      {(perdas || consumo) && (
+        <>
+          {perdas && consumo && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 flex flex-col items-center text-center gap-1">
+                <p className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">Perdas</p>
+                <p className="text-xl font-bold text-red-600">{formatCurrency(perdas.total)}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">{perdas.por_produto.length} produtos</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 flex flex-col items-center text-center gap-1">
+                <p className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">Consumo</p>
+                <p className="text-xl font-bold text-amber-600">{formatCurrency(consumo.total)}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">{consumo.por_produto.length} produtos</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 flex flex-col items-center text-center gap-1 col-span-2">
+                <p className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">Proporção</p>
+                <p className="text-xl font-bold text-gray-800 dark:text-gray-100">
+                  {perdas.total > 0
+                    ? `${((consumo.total / perdas.total) * 100).toFixed(1)}%`
+                    : '\u2014'}
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">consumo em relação a perdas</p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-1 bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-1 w-fit">
+            {(['perdas', 'consumo'] as Aba[]).map((a) => (
+              <button
+                key={a}
+                onClick={() => setAba(a)}
+                className={`px-5 py-2 rounded-xl text-sm font-semibold transition ${
+                  aba === a ? 'bg-primary text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              >
+                {a.charAt(0).toUpperCase() + a.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {dadosAtivos && <TabelaMovimento dados={dadosAtivos} />}
+        </>
+      )}
+    </BiPageLayout>
   )
 }

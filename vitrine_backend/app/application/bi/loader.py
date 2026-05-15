@@ -9,7 +9,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-MAX_RANGE_DIAS = 366
+MAX_RANGE_DIAS = 731
 
 _bi_cache: TTLCache = TTLCache(maxsize=32, ttl=3600)
 

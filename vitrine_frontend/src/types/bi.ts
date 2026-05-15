@@ -28,6 +28,7 @@ export interface KpisComparativoDTO {
 }
 
 export interface ItemDimensaoDTO {
+  codigo?: string
   grupo: string
   familia?: string | null
   produto?: string | null
@@ -35,6 +36,7 @@ export interface ItemDimensaoDTO {
 }
 
 export interface ItemCurvaAbcDTO {
+  codigo?: string
   grupo: string
   familia?: string | null
   produto?: string | null

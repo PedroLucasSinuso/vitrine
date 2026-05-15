@@ -106,6 +106,9 @@ class Relatorio:
             colunas_grupo = dimensao.colunas()
             col_metrica = metrica.value
 
+            if dimensao == Dimensao.PRODUTO:
+                colunas_grupo = colunas_grupo + [COLUNAS.codigo]
+
             df_agrupado = (
                 self.vendas.df
                 .groupby(colunas_grupo)[col_metrica]
@@ -116,6 +119,7 @@ class Relatorio:
 
             resultado = [
                 ItemDimensaoDTO(
+                    codigo=str(row.get(COLUNAS.codigo, "")),
                     grupo=row.get(COLUNAS.grupo, ""),
                     familia=row.get(COLUNAS.familia),
                     produto=row.get(COLUNAS.produto),
@@ -131,6 +135,9 @@ class Relatorio:
         """Gera a curva ABC baseada na receita, classificando produtos em A, B ou C."""
         with temporizador("BI Relatorio.curva_abc", logger):
             colunas_grupo = dimensao.colunas()
+
+            if dimensao == Dimensao.PRODUTO:
+                colunas_grupo = colunas_grupo + [COLUNAS.codigo]
 
             df_agrupado = (
                 self.vendas.df
@@ -149,6 +156,7 @@ class Relatorio:
 
             resultado = [
                 ItemCurvaAbcDTO(
+                    codigo=str(row.get(COLUNAS.codigo, "")),
                     grupo=row.get(COLUNAS.grupo, ""),
                     familia=row.get(COLUNAS.familia),
                     produto=row.get(COLUNAS.produto),

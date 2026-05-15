@@ -24,12 +24,14 @@ class KpisComparativoDTO(BaseModel):
     dados_parciais_ate: str | None = None
 
 class ItemDimensaoDTO(BaseModel):
+    codigo: str = ""
     grupo: str
     familia: str | None = None
     produto: str | None = None
     valor: float
 
 class ItemCurvaAbcDTO(BaseModel):
+    codigo: str = ""
     grupo: str
     familia: str | None = None
     produto: str | None = None
