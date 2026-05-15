@@ -1,134 +1,94 @@
 # Vitrine - Deploy Windows Server
 
-## Pré-requisitos
+## Instalação nova (1 comando)
 
-Baixar e colocar na pasta `deploy/`:
+> **Requisito:** Windows 10+ ou Server 2019+ com PowerShell 5.1+
 
-| Arquivo | Onde baixar |
-|---------|-------------|
-| `python-3.11.*-embed-amd64.zip` | https://www.python.org/downloads/windows/ → Windows embeddable package |
-| `caddy.exe` | https://caddyserver.com/download (Windows amd64) |
-| `nssm.exe` | https://nssm.cc/download |
-| `cloudflared.exe` | `winget install cloudflare.cloudflared` ou https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/ |
+### Preparar o pendrive
 
-Também precisa do **Git for Windows**: https://git-scm.com/download/win
-
-## Estrutura esperada no servidor
+No PC de desenvolvimento, copiar para um pendrive:
 
 ```
-C:\Vitrine\
-├── python\              ← Extraia o embeddable zip AQUI
-│   └── python.exe
-├── code\                ← Criado pelo setup (git clone + scripts)
-│   ├── vitrine_backend\
-│   ├── vitrine_frontend\dist\   ← Build do React (copiar manualmente)
-│   ├── caddy.exe
-│   ├── nssm.exe
-│   └── Caddyfile
-├── data\                ← CRIAR MANUALMENTE
-│   ├── .env             ← Copiar do dev (ou criar do zero)
-│   ├── price_checker.db ← Copiar do dev (SQLite)
-│   └── logs\
-└── deploy\              ← Esta pasta (pendrive / git clone)
-    ├── setup.bat
-    ├── Caddyfile
-    ├── start.bat
-    ├── stop.bat
-    ├── restart.bat
-    └── requirements.txt
+pendrive\
+├── .env                            ← credenciais (obrigatório)
+├── price_checker.db                ← dados SQLite (opcional)
+└── dist\                           ← build do frontend (npm run build)
 ```
 
-## Setup passo a passo
+### No servidor (PowerShell como Administrador)
 
-### 1. Preparar o servidor
+```powershell
+# Baixar a pasta deploy/ mais recente do GitHub
+Invoke-WebRequest -Uri "https://github.com/PedroLucasSinuso/vitrine/archive/refs/heads/main.zip" -OutFile "$env:TEMP\vitrine.zip"
+Expand-Archive -Path "$env:TEMP\vitrine.zip" -DestinationPath "$env:TEMP\vitrine" -Force
+cd "$env:TEMP\vitrine\vitrine-main\deploy"
 
-```batch
-:: Criar pastas
-mkdir C:\Vitrine\data\logs
-mkdir C:\Vitrine\python
-
-:: Extrair Python embedded em C:\Vitrine\python\
-:: (extraia o .zip direto na pasta)
-
-:: Copiar .env e price_checker.db do dev para C:\Vitrine\data\
+# Instalar (pendrive na letra D:\)
+.\install.ps1 -DistPath D:\
 ```
 
-### 2. Executar setup
+O script faz **tudo automático**:
 
-```batch
-:: No servidor, dentro da pasta deploy\
-C:\Vitrine\deploy\setup.bat
+| Etapa | O que faz |
+|-------|-----------|
+| 1 | Instala Git for Windows (se não tiver) |
+| 2 | Cria pastas `C:\Vitrine\` |
+| 3 | Baixa Python embeddable 3.11 |
+| 4 | Baixa Caddy (servidor web) |
+| 5 | Detecta NSSM do sistema ou baixa |
+| 6 | `git clone` do repositório |
+| 7 | Habilita `site-packages` no Python |
+| 8 | Instala `pip` |
+| 9 | Instala dependências Python |
+| 10 | Copia configurações (Caddyfile) |
+| 11 | Copia `.env` e dados do pendrive |
+| 12 | Copia `dist/` do frontend |
+| 13 | Registra serviços Windows (NSSM) |
+| — | Inicia os serviços |
+
+**Pronto.** Acessar: `http://localhost:8080`
+
+---
+
+## Desinstalar
+
+```powershell
+.\uninstall.ps1
 ```
 
-O setup faz automaticamente:
-- Clona o repositório em `C:\Vitrine\code\`
-- Habilita site-packages no Python Embedded
-- Instala pip
-- Instala dependências Python
-- Copia Caddyfile, nssm.exe, caddy.exe para `C:\Vitrine\code\`
-- Copia `.env` de `C:\Vitrine\data\` para o backend
-- Registra 2 serviços Windows (VitrineBackend + VitrineFrontend)
+Para serviços, remove do NSSM, e pergunta se quer deletar `C:\Vitrine\`.
 
-### 3. Build do frontend (no PC dev)
+---
 
-```bash
-cd vitrine_frontend
-npm run build
-:: Copiar a pasta dist\ gerada para C:\Vitrine\code\vitrine_frontend\dist\ no servidor
+## Sem pendrive
+
+Se não tiver pendrive, rode sem `-DistPath` e copie os arquivos depois:
+
+```powershell
+.\install.ps1
+# Depois:
+#   Copie .env  → C:\Vitrine\data\.env
+#   Copie dist\ → C:\Vitrine\code\vitrine_frontend\dist\
 ```
 
-### 4. Iniciar
+---
 
-```batch
-C:\Vitrine\deploy\start.bat
-```
-
-Acessar: http://localhost:8080
-
-### 5. Cloudflare Tunnel (acesso externo)
-
-```batch
-:: Autenticar (abre browser)
-cloudflared tunnel login
-
-:: Criar tunnel
-cloudflared tunnel create vitrine
-
-:: Apontar DNS (vitrine.seudominio.com -> tunnel)
-cloudflared tunnel route dns vitrine vitrine.seudominio.com
-
-:: Configurar como servico Windows (inicia automaticamente)
-cloudflared service install
-
-:: Iniciar
-net start cloudflared
-```
-
-## Gerenciamento
+## Gerenciamento diário
 
 | Ação | Comando |
 |------|---------|
-| Iniciar serviços | `start.bat` ou `nssm start VitrineBackend` + `nssm start VitrineFrontend` |
-| Parar serviços | `stop.bat` ou `nssm stop VitrineBackend` + `nssm stop VitrineFrontend` |
+| Iniciar serviços | `start.bat` |
+| Parar serviços | `stop.bat` |
 | Reiniciar | `restart.bat` |
+| Atualizar (git pull) | `update.bat` |
 | Ver logs | `C:\Vitrine\data\logs\backend.log` e `caddy.log` |
-| Status serviços | `nssm status VitrineBackend` ou services.msc |
 
-## Atualizar (após alterações no código)
+## Cloudflare Tunnel (acesso externo)
 
 ```batch
-:: No servidor
-cd C:\Vitrine\code
-git pull
-
-:: Se houver novas dependencias Python
-C:\Vitrine\python\python.exe -m pip install -r C:\Vitrine\deploy\requirements.txt
-
-:: Se houver alteracoes no frontend
-:: Copiar dist\ novo para C:\Vitrine\code\vitrine_frontend\dist\
-
-:: Reiniciar
-C:\Vitrine\deploy\restart.bat
+cloudflared tunnel login
+cloudflared tunnel create vitrine
+cloudflared tunnel route dns vitrine vitrine.seudominio.com
+cloudflared service install
+net start cloudflared
 ```
-
-Os dados em `C:\Vitrine\data\` (SQLite + .env) **nunca são afetados** pelo git pull.
