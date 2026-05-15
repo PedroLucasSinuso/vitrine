@@ -30,7 +30,7 @@ $DEPLOY_DIR = "$CODE\deploy"
 
 $PythonVersion = "3.11.9"
 $PythonUrl = "https://www.python.org/ftp/python/$PythonVersion/python-$PythonVersion-embed-amd64.zip"
-$CaddyUrl = "https://github.com/caddyserver/caddy/releases/latest/download/caddy_windows_amd64.exe"
+$CaddyUrl = "https://github.com/caddyserver/caddy/releases/latest/download/caddy_windows_amd64.zip"
 $NssmUrl = "https://nssm.cc/release/nssm-2.24.zip"
 $GitUrl = "https://github.com/git-for-windows/git/releases/latest/download/Git-2.48.1-64-bit.exe"
 $RepoUrl = "https://github.com/PedroLucasSinuso/vitrine.git"
@@ -83,12 +83,15 @@ if (!(Test-Path "$PYTHON_DIR\python.exe")) {
 Write-Step "4/13 - Baixando Caddy..."
 $caddyPath = "$CODE\caddy.exe"
 if (!(Test-Path $caddyPath)) {
+    $caddyZip = "$env:TEMP\caddy.zip"
     try {
-        Invoke-WebRequest -Uri $CaddyUrl -OutFile $caddyPath -TimeoutSec 60
-        Write-OK "Caddy baixado"
+        Invoke-WebRequest -Uri $CaddyUrl -OutFile $caddyZip -TimeoutSec 60
+        Expand-Archive -Path $caddyZip -DestinationPath $CODE -Force
+        Remove-Item $caddyZip -Force
+        Write-OK "Caddy baixado e extraido"
     } catch {
         Write-Warn "Falha ao baixar Caddy ($($_.Exception.Message))"
-        Write-Warn "Baixe manualmente de $CaddyUrl e salve em $caddyPath"
+        Write-Warn "Baixe manualmente de $CaddyUrl, extraia caddy.exe e salve em $caddyPath"
     }
 } else {
     Write-OK "Caddy ja existe"
