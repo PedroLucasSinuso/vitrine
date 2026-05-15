@@ -68,12 +68,21 @@ if (!(Get-Command git -ErrorAction SilentlyContinue)) {
 $gitVer = git --version
 Write-OK "Git: $gitVer"
 
-# ---------- 2. PASTAS ----------
+# ---------- 2. PASTAS E FIREWALL ----------
 Write-Step "2/13 - Criando estrutura de pastas..."
 @($BIN, $CODE, $PYTHON_DIR, $LOGS_DIR) | ForEach-Object {
     New-Item -ItemType Directory -Path $_ -Force | Out-Null
 }
 Write-OK "Pastas criadas em $VITRINE"
+
+Write-Host "  Configurando firewall para porta 8080..."
+$fwRule = Get-NetFirewallRule -DisplayName "Vitrine Web (8080)" -ErrorAction SilentlyContinue
+if (-not $fwRule) {
+    New-NetFirewallRule -DisplayName "Vitrine Web (8080)" -Direction Inbound -Protocol TCP -LocalPort 8080 -Action Allow | Out-Null
+    Write-OK "Regra de firewall criada para porta 8080"
+} else {
+    Write-OK "Regra de firewall ja existe"
+}
 
 # ---------- 3. PYTHON ----------
 Write-Step "3/13 - Baixando Python embeddable $PythonVersion..."
@@ -277,10 +286,30 @@ if (!(Test-Path $NSSM)) {
     # ---------- INICIAR ----------
     Write-Step "- Iniciando servicos..."
     & $NSSM start VitrineBackend
-    Start-Sleep -Seconds 3
+    Start-Sleep -Seconds 5
     if (Test-Path $caddyPath) {
         & $NSSM start VitrineFrontend
+        Start-Sleep -Seconds 3
     }
+
+    # ---------- HEALTH CHECK ----------
+    Write-Step "- Verificando servicos..."
+    $backendOk = $false
+    $frontendOk = $false
+    try {
+        $r = Invoke-WebRequest -Uri "http://localhost:8000/docs" -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop
+        $backendOk = $r.StatusCode -eq 200
+    } catch {}
+    try {
+        $r = Invoke-WebRequest -Uri "http://localhost:8080" -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop
+        $frontendOk = $r.StatusCode -eq 200
+    } catch {}
+
+    if ($backendOk) { Write-OK "Backend OK - http://localhost:8000" }
+    else { Write-Warn "Backend nao respondeu em http://localhost:8000 - veja $LOGS_DIR\backend.log" }
+
+    if ($frontendOk) { Write-OK "Frontend OK - http://localhost:8080" }
+    else { Write-Warn "Frontend nao respondeu em http://localhost:8080 - veja $LOGS_DIR\caddy.log" }
 }
 
 Write-Host ""
