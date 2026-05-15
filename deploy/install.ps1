@@ -63,7 +63,7 @@ Write-OK "Git: $gitVer"
 
 # ---------- 2. PASTAS ----------
 Write-Step "2/13 - Criando estrutura de pastas..."
-@($PYTHON_DIR, $LOGS_DIR) | ForEach-Object {
+@($CODE, $PYTHON_DIR, $LOGS_DIR) | ForEach-Object {
     New-Item -ItemType Directory -Path $_ -Force | Out-Null
 }
 Write-OK "Pastas criadas em $VITRINE"
@@ -83,8 +83,13 @@ if (!(Test-Path "$PYTHON_DIR\python.exe")) {
 Write-Step "4/13 - Baixando Caddy..."
 $caddyPath = "$CODE\caddy.exe"
 if (!(Test-Path $caddyPath)) {
-    Invoke-WebRequest -Uri $CaddyUrl -OutFile $caddyPath
-    Write-OK "Caddy baixado"
+    try {
+        Invoke-WebRequest -Uri $CaddyUrl -OutFile $caddyPath -TimeoutSec 60
+        Write-OK "Caddy baixado"
+    } catch {
+        Write-Warn "Falha ao baixar Caddy ($($_.Exception.Message))"
+        Write-Warn "Baixe manualmente de $CaddyUrl e salve em $caddyPath"
+    }
 } else {
     Write-OK "Caddy ja existe"
 }
@@ -124,16 +129,18 @@ git config --global --add safe.directory $CODE 2>$null
 
 # ---------- 7. SITE-PACKAGES ----------
 Write-Step "7/13 - Habilitando site-packages no Python..."
-$pythonPth = "$PYTHON_DIR\python._pth"
-if (Test-Path $pythonPth) {
+$pythonPth = Get-ChildItem "$PYTHON_DIR\*._pth" | Select-Object -First 1 -ExpandProperty FullName
+if ($pythonPth) {
     $content = Get-Content $pythonPth -Raw
     if ($content -match '#import site') {
         $content = $content -replace '#import site', 'import site'
         Set-Content -Path $pythonPth -Value $content
-        Write-OK "site-packages habilitado"
+        Write-OK "site-packages habilitado ($pythonPth)"
     } else {
         Write-OK "site-packages ja habilitado"
     }
+} else {
+    Write-Warn "Arquivo ._pth nao encontrado em $PYTHON_DIR"
 }
 
 # ---------- 8. PIP ----------
@@ -198,37 +205,42 @@ if ($DistPath -and (Test-Path "$DistPath\dist")) {
 
 # ---------- 13. SERVICOS ----------
 Write-Step "13/13 - Registrando servicos Windows..."
-& $NSSM stop VitrineBackend 2>$null
-& $NSSM remove VitrineBackend confirm 2>$null
-& $NSSM stop VitrineFrontend 2>$null
-& $NSSM remove VitrineFrontend confirm 2>$null
+if (!(Test-Path $NSSM)) {
+    Write-Warn "NSSM nao encontrado em $NSSM. Registro de servicos pulado."
+    Write-Warn "Baixe manualmente de $NssmUrl e extraia nssm.exe para $CODE"
+} else {
+    & $NSSM stop VitrineBackend 2>$null
+    & $NSSM remove VitrineBackend confirm 2>$null
+    & $NSSM stop VitrineFrontend 2>$null
+    & $NSSM remove VitrineFrontend confirm 2>$null
 
-# Backend (Uvicorn)
-& $NSSM install VitrineBackend "$PYTHON_DIR\python.exe" "-m uvicorn app.main:app --host 127.0.0.1 --port 8000"
-& $NSSM set VitrineBackend AppDirectory $BACKEND_DIR
-& $NSSM set VitrineBackend AppEnvironmentExtra "PYTHONPATH=$BACKEND_DIR;$PYTHON_DIR\Lib\site-packages"
-& $NSSM set VitrineBackend AppStdout "$LOGS_DIR\backend.log"
-& $NSSM set VitrineBackend AppStderr "$LOGS_DIR\backend-error.log"
-& $NSSM set VitrineBackend Start SERVICE_AUTO_START
-& $NSSM set VitrineBackend ObjectName LocalSystem
-& $NSSM set VitrineBackend AppRestartDelay 5000
-Write-OK "Servico VitrineBackend registrado"
+    # Backend (Uvicorn)
+    & $NSSM install VitrineBackend "$PYTHON_DIR\python.exe" "-m uvicorn app.main:app --host 127.0.0.1 --port 8000"
+    & $NSSM set VitrineBackend AppDirectory $BACKEND_DIR
+    & $NSSM set VitrineBackend AppEnvironmentExtra "PYTHONPATH=$BACKEND_DIR;$PYTHON_DIR\Lib\site-packages"
+    & $NSSM set VitrineBackend AppStdout "$LOGS_DIR\backend.log"
+    & $NSSM set VitrineBackend AppStderr "$LOGS_DIR\backend-error.log"
+    & $NSSM set VitrineBackend Start SERVICE_AUTO_START
+    & $NSSM set VitrineBackend ObjectName LocalSystem
+    & $NSSM set VitrineBackend AppRestartDelay 5000
+    Write-OK "Servico VitrineBackend registrado"
 
-# Frontend (Caddy)
-& $NSSM install VitrineFrontend "$CODE\caddy.exe" "run --config $CODE\Caddyfile"
-& $NSSM set VitrineFrontend AppDirectory $CODE
-& $NSSM set VitrineFrontend AppStdout "$LOGS_DIR\caddy.log"
-& $NSSM set VitrineFrontend AppStderr "$LOGS_DIR\caddy-error.log"
-& $NSSM set VitrineFrontend Start SERVICE_AUTO_START
-& $NSSM set VitrineFrontend ObjectName LocalSystem
-& $NSSM set VitrineFrontend AppRestartDelay 5000
-Write-OK "Servico VitrineFrontend registrado"
+    # Frontend (Caddy)
+    & $NSSM install VitrineFrontend "$CODE\caddy.exe" "run --config $CODE\Caddyfile"
+    & $NSSM set VitrineFrontend AppDirectory $CODE
+    & $NSSM set VitrineFrontend AppStdout "$LOGS_DIR\caddy.log"
+    & $NSSM set VitrineFrontend AppStderr "$LOGS_DIR\caddy-error.log"
+    & $NSSM set VitrineFrontend Start SERVICE_AUTO_START
+    & $NSSM set VitrineFrontend ObjectName LocalSystem
+    & $NSSM set VitrineFrontend AppRestartDelay 5000
+    Write-OK "Servico VitrineFrontend registrado"
 
-# ---------- INICIAR ----------
-Write-Step "- Iniciando servicos..."
-& $NSSM start VitrineBackend
-Start-Sleep -Seconds 3
-& $NSSM start VitrineFrontend
+    # ---------- INICIAR ----------
+    Write-Step "- Iniciando servicos..."
+    & $NSSM start VitrineBackend
+    Start-Sleep -Seconds 3
+    & $NSSM start VitrineFrontend
+}
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Green
