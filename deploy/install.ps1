@@ -32,7 +32,7 @@ $PythonVersion = "3.11.9"
 
 $PythonUrl = "https://www.python.org/ftp/python/$PythonVersion/python-$PythonVersion-embed-amd64.zip"
 $CaddyUrl = "https://github.com/caddyserver/caddy/releases/download/$CaddyVersion/caddy_$($CaddyVersion.Substring(1))_windows_amd64.zip"
-$NssmUrl = "https://nssm.cc/release/nssm-2.24.zip"
+$NssmUrl = "https://github.com/plossys/nssm/releases/download/v2.24.8/nssm.exe"
 $GitUrl = "https://github.com/git-for-windows/git/releases/latest/download/Git-2.48.1-64-bit.exe"
 $RepoUrl = "https://github.com/PedroLucasSinuso/vitrine.git"
 
@@ -42,6 +42,7 @@ $ProgressPreference = "SilentlyContinue"
 function Write-Step { param($Msg) Write-Host ">>> $Msg" -ForegroundColor Cyan }
 function Write-OK   { Write-Host "  [OK] $($args -join ' ')" -ForegroundColor Green }
 function Write-Warn { Write-Host "  [!] $($args -join ' ')" -ForegroundColor Yellow }
+function Write-Err  { Write-Host "  [ERRO] $($args -join ' ')" -ForegroundColor Red; exit 1 }
 
 # ---------- 0. DISTPATH ----------
 if (-not $DistPath) {
@@ -84,6 +85,16 @@ if (-not $fwRule) {
     Write-OK "Regra de firewall ja existe"
 }
 
+Write-Host "  Adicionando $BIN ao PATH do sistema..."
+$currentPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+if ($currentPath -notlike "*$BIN*") {
+    [Environment]::SetEnvironmentVariable("Path", "$currentPath;$BIN", "Machine")
+    $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+    Write-OK "$BIN adicionado ao PATH"
+} else {
+    Write-OK "$BIN ja esta no PATH"
+}
+
 # ---------- 3. PYTHON ----------
 Write-Step "3/13 - Baixando Python embeddable $PythonVersion..."
 $pythonZip = "$env:TEMP\python-$PythonVersion-embed-amd64.zip"
@@ -96,9 +107,15 @@ if (!(Test-Path "$PYTHON_DIR\python.exe")) {
 }
 
 # ---------- 4. CADDY ----------
-Write-Step "4/13 - Baixando Caddy..."
+Write-Step "4/13 - Instalando Caddy..."
 $caddyPath = "$BIN\caddy.exe"
-if (!(Test-Path $caddyPath)) {
+if (Test-Path $caddyPath) {
+    Write-OK "Caddy ja existe em $caddyPath"
+} elseif (Test-Path "$PSScriptRoot\caddy.exe") {
+    Copy-Item "$PSScriptRoot\caddy.exe" $caddyPath -Force
+    Write-OK "Caddy copiado do bundle local"
+} else {
+    Write-Host "  Baixando Caddy online..."
     $caddyZip = "$env:TEMP\caddy.zip"
     try {
         Invoke-WebRequest -Uri $CaddyUrl -OutFile $caddyZip -TimeoutSec 60
@@ -110,8 +127,6 @@ if (!(Test-Path $caddyPath)) {
         Write-Warn "Baixe manualmente: $CaddyUrl"
         Write-Warn "Extraia caddy.exe para $caddyPath"
     }
-} else {
-    Write-OK "Caddy ja existe em $caddyPath"
 }
 
 # ---------- 5. NSSM ----------
@@ -123,18 +138,17 @@ if ($nssmGlobal) {
     Write-OK "NSSM encontrado no sistema: $nssmPath"
 } elseif (Test-Path $nssmPath) {
     Write-OK "NSSM ja existe em $nssmPath"
+} elseif (Test-Path "$PSScriptRoot\nssm.exe") {
+    Copy-Item "$PSScriptRoot\nssm.exe" $nssmPath -Force
+    Write-OK "NSSM copiado do bundle local"
 } else {
-    Write-Host "  Baixando NSSM..."
-    $nssmZip = "$env:TEMP\nssm-2.24.zip"
-    $nssmTemp = "$env:TEMP\nssm"
+    Write-Host "  Baixando NSSM online..."
     try {
-        Invoke-WebRequest -Uri $NssmUrl -OutFile $nssmZip -TimeoutSec 60
-        Expand-Archive -Path $nssmZip -DestinationPath $nssmTemp -Force
-        Copy-Item "$nssmTemp\nssm-2.24\win64\nssm.exe" $nssmPath -Force
+        Invoke-WebRequest -Uri $NssmUrl -OutFile $nssmPath -TimeoutSec 60
         Write-OK "NSSM baixado para $nssmPath"
     } catch {
         Write-Warn "Falha ao baixar NSSM ($($_.Exception.Message))"
-        Write-Warn "Baixe manualmente de $NssmUrl e extraia nssm.exe para $nssmPath"
+        Write-Warn "Tente baixar manualmente de $NssmUrl e salve como $nssmPath"
     }
 }
 $NSSM = $nssmPath
@@ -152,10 +166,16 @@ if (Test-Path "$CODE\.git") {
     Write-Warn "  git clone $RepoUrl $CODE"
 } else {
     git clone $RepoUrl $CODE
+    if ($LASTEXITCODE -ne 0) {
+        Write-Err "Falha ao clonar repositorio (exit code: $LASTEXITCODE)"
+    }
     Write-OK "Repositorio clonado"
 }
 if (Test-Path "$CODE\.git") {
     git config --global --add safe.directory $CODE 2>$null
+}
+if (-not (Test-Path "$BACKEND_DIR\main.py")) {
+    Write-Warn "Backend nao encontrado em $BACKEND_DIR apos clone - algo deu errado"
 }
 
 # ---------- 7. SITE-PACKAGES ----------
@@ -207,9 +227,18 @@ if (Test-Path $reqFile) {
 
 # ---------- 10. CONFIGS ----------
 Write-Step "10/13 - Copiando configuracoes..."
-if (Test-Path "$BACKEND_DIR\..\deploy\Caddyfile") {
-    Copy-Item "$BACKEND_DIR\..\deploy\Caddyfile" "$BIN\Caddyfile" -Force
+if (Test-Path "$PSScriptRoot\Caddyfile") {
+    Copy-Item "$PSScriptRoot\Caddyfile" "$BIN\Caddyfile" -Force
+    if (Test-Path $caddyPath) {
+        & "$caddyPath" fmt --overwrite "$BIN\Caddyfile" 2>$null
+    }
     Write-OK "Caddyfile copiado para $BIN"
+} elseif (Test-Path "$BACKEND_DIR\..\deploy\Caddyfile") {
+    Copy-Item "$BACKEND_DIR\..\deploy\Caddyfile" "$BIN\Caddyfile" -Force
+    if (Test-Path $caddyPath) {
+        & "$caddyPath" fmt --overwrite "$BIN\Caddyfile" 2>$null
+    }
+    Write-OK "Caddyfile copiado do repositorio para $BIN"
 } else {
     Write-Warn "Caddyfile nao encontrado"
 }
@@ -227,7 +256,9 @@ if ($DistPath -and (Test-Path $DistPath)) {
     }
     if (Test-Path "$DistPath\price_checker.db") {
         Copy-Item "$DistPath\price_checker.db" "$DATA_DIR\price_checker.db" -Force
-        Write-OK "price_checker.db copiado"
+        if (-not (Test-Path "$BACKEND_DIR\data")) { New-Item -ItemType Directory -Path "$BACKEND_DIR\data" -Force | Out-Null }
+        Copy-Item "$DistPath\price_checker.db" "$BACKEND_DIR\data\price_checker.db" -Force
+        Write-OK "price_checker.db copiado (data/ e backend/data/)"
     }
 } else {
     Write-Warn "DistPath nao informado. Copie .env para $BACKEND_DIR\.env manualmente."

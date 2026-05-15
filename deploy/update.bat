@@ -22,24 +22,25 @@ echo.
 
 REM Dependencias Python
 echo [2/4] Atualizando dependencias Python...
-"%VITRINE%\python\python.exe" -m pip install -r "%~dp0requirements.txt" --no-warn-script-location
+"%VITRINE%\python\python.exe" -m pip install -r "%VITRINE%\code\deploy\requirements.txt" --no-warn-script-location
 echo [OK] Dependencias atualizadas
 echo.
 
-REM Copiar .env se necessario
-echo [3/4] Verificando .env...
+REM Copiar .env e configs
+echo [3/4] Copiando configuracoes...
 if exist "%VITRINE%\data\.env" (
     copy /Y "%VITRINE%\data\.env" "%VITRINE%\code\vitrine_backend\.env" >nul
 ) else (
     echo [AVISO] .env nao encontrado em %VITRINE%\data\
 )
-echo [OK] .env verificado
+copy /Y "%VITRINE%\code\deploy\Caddyfile" "%VITRINE%\bin\Caddyfile" >nul 2>&1
+echo [OK] Configuracoes copiadas
 echo.
 
 REM Reiniciar servicos
 echo [4/4] Reiniciando servicos...
-nssm restart VitrineBackend
-nssm restart VitrineFrontend
+%VITRINE%\bin\nssm.exe restart VitrineBackend
+%VITRINE%\bin\nssm.exe restart VitrineFrontend
 echo [OK] Servicos reiniciados
 echo.
 

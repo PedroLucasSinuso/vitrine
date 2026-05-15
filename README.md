@@ -1,56 +1,36 @@
-# Vitrine
+<div align="center">
+  <img src="vitrine_frontend/public/vitrine_logo.svg" alt="Vitrine" width="120" />
+  <h1 align="center">Vitrine</h1>
+  <p align="center">
+    <strong>Sistema de consulta de produtos, BI e gestão para varejo</strong>
+    <br />
+    Plataforma moderna e offline-first para operadores de supermercado
+  </p>
 
-[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-green.svg)](https://fastapi.tiangolo.com)
-[![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6.svg)](https://www.typescriptlang.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-Sistema completo de consulta de produtos, Business Intelligence, etiquetas, inventário multi-usuário e gestão para varejo. **Vitrine** (antigo Price Checker) unifica um backend em Python/FastAPI com um frontend React para oferecer uma plataforma moderna e offline-first para operadores de supermercado.
-
-> Projeto de portfólio desenvolvido para resolver um problema real de varejo: operadores precisam consultar informações rápidas sem depender de conectividade constante com o banco principal.
-
-```
-vitrine/
-├── vitrine_backend/    # API FastAPI + ETL
-├── vitrine_frontend/   # React + Vite
-└── deploy/             # Scripts de deploy Windows
-    ├── setup.bat       # Configuracao unica no servidor
-    ├── start/stop/restart.bat
-    ├── update.bat      # git pull + rebuild + restart
-    ├── Caddyfile       # Servidor web (5 linhas)
-    └── README.md       # Instrucoes completas
-```
+  [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
+  [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+  [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://typescriptlang.org)
+  [![Tailwind](https://img.shields.io/badge/Tailwind_v4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+  [![Vite](https://img.shields.io/badge/Vite_8-646CFF?logo=vite&logoColor=white)](https://vite.dev)
+  [![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)](https://sqlite.org)
+  [![License](https://img.shields.io/badge/Licen%C3%A7a-MIT-f5de19)](LICENSE)
+</div>
 
 ---
 
 ## Visão geral
 
-O **Vitrine** resolve um problema real de varejo: operadores precisam consultar preço, estoque, markup e margem de produtos rapidamente — via código de barras (EAN) ou código interno (PLU) — sem depender de conectividade contínua com o banco de dados principal. Inclui também um módulo completo de **Business Intelligence** com relatórios analíticos de vendas, incluindo **comparação YoY** (ano contra ano) para análise de sazonalidade e crescimento.
+O **Vitrine** resolve um problema real de varejo: operadores precisam consultar preço, estoque, markup e margem de produtos rapidamente — via **código de barras (EAN)** ou **código interno (PLU)** — sem depender de conectividade contínua com o banco de dados principal.
 
-### Arquitetura
+Além da consulta rápida, oferece:
 
-```
-PostgreSQL (fonte)
-      │
-      ▼
-  ETL Pipeline
-  ┌─────────────────────────────┐
-  │  Extract → Transform → Load │
-  └─────────────────────────────┘
-      │
-      ▼
-  SQLite (cache local)
-      │
-      ▼
-  FastAPI (API REST)
-      │
-      ▼
-  React 19 + TypeScript + Vite 8 (Frontend SPA)
-      │
-      ▼
-  Operador / Supervisor / Admin
-```
+- 📊 **Business Intelligence** — relatórios analíticos de vendas com comparação **YoY** (ano contra ano)
+- 📋 **Inventário multi-usuário** — contagem colaborativa com sessões, convites e consolidado
+- 🏷️ **Geração de etiquetas** — formatação profissional para impressão
+- 📱 **Leitor de código de barras via câmera** — sem hardware dedicado
+
+> Projeto desenvolvido para um problema real: operadores precisam de informações rápidas sem depender do banco principal.
 
 ---
 
@@ -59,651 +39,310 @@ PostgreSQL (fonte)
 ### Backend
 
 | Camada | Tecnologia |
-|---|---|
-| API | FastAPI |
-| ORM | SQLAlchemy 2.0 (Mapped columns, relacionamentos) |
-| Cache | SQLite |
-| Fonte de dados | PostgreSQL |
-| Validação | Pydantic v2 |
-| Configuração | pydantic-settings + `.env` |
-| Testes | pytest |
-| Autenticação | JWT (PyJWT) + bcrypt |
-| Gerenciador | uv |
+|--------|-----------|
+| API | **FastAPI** |
+| ORM | **SQLAlchemy 2.0** (mapped columns, relationships) |
+| Validação | **Pydantic v2** |
+| Config | **pydantic-settings** + `.env` |
+| Cache | **SQLite** (offline-first) |
+| Fonte | **PostgreSQL** |
+| Auth | **JWT** (PyJWT) + **bcrypt** |
+| Testes | **pytest** |
+| Gerenciador | **uv** |
 
 ### Frontend
 
 | Camada | Tecnologia |
-|---|---|
-| Framework | React 19 |
-| Linguagem | TypeScript 6 |
-| Build | Vite 8 |
-| Estilos | Tailwind v4 (dark mode, `@theme` custom) |
-| Gráficos | Recharts |
-| HTTP | Axios |
-| Planilhas | SheetJS (xlsx) |
-| Código de barras | @zxing/browser + @zxing/library |
-| Cache frontend | AbortController + stale-while-revalidate |
+|--------|-----------|
+| Framework | **React 19** |
+| Linguagem | **TypeScript** |
+| Build | **Vite 8** |
+| Estilos | **Tailwind v4** (`@theme` custom, dark mode) |
+| Gráficos | **Recharts** |
+| HTTP | **Axios** |
+| Planilhas | **SheetJS** (xlsx) |
+| Código de barras | **@zxing/browser** + **@zxing/library** |
+| Cache | AbortController + stale-while-revalidate |
+
+---
+
+## Funcionalidades
+
+| Módulo | Funcionalidades |
+|--------|----------------|
+| 🔍 **Consulta** | Busca por EAN, PLU, nome. Exibe preço, estoque, markup, margem |
+| 🏷️ **Etiquetas** | Geração de etiquetas profissionais para impressão |
+| 📋 **Inventário** | Sessões multi-usuário, código de convite, consolidado geral |
+| 📊 **BI** | Dashboard, receita, ranking, curva ABC, análise SKU, trocas, perdas, consumo, distribuição temporal |
+| 📈 **YoY** | Comparação ano contra ano nos KPIs do dashboard |
+| 📎 **Exportação** | Excel (.xlsx) para todos os relatórios de BI e inventário |
+| 📱 **Câmera** | Leitura contínua de código de barras via câmera do dispositivo |
+| ⏰ **Agendamento** | ETL e relatórios agendados via WhatsApp/Email com intervalo configurável pela UI |
+| 🔐 **Auth** | JWT com 3 roles (operador, supervisor, admin) |
 
 ---
 
 ## Arquitetura
 
-O backend segue arquitetura em camadas com separação clara de responsabilidades, aplicando princípios SOLID e DRY. O frontend segue uma organização modular por funcionalidade.
+```
+PostgreSQL (fonte)
+    │
+    ▼
+ETL Pipeline
+┌─────────────────────────────┐
+│  Extract → Transform → Load │
+└─────────────────────────────┘
+    │
+    ▼
+SQLite (cache local — offline-first)
+    │
+    ▼
+FastAPI (API REST — SQLAlchemy + Pydantic)
+    │
+    ▼
+React 19 + TypeScript + Vite 8 (SPA)
+    │
+    ▼
+Operador / Supervisor / Admin
+```
 
-### Backend (`vitrine_backend/`)
+### Backend
+
+O backend segue **arquitetura em camadas** com separação clara de responsabilidades:
 
 ```
 app/
-├── domain/
-│   ├── models/              # Entidades ORM (SQLAlchemy)
-│   │   ├── cache_status.py
-│   │   ├── configuracao.py
-│   │   ├── inventario.py
-│   │   ├── produto.py
-│   │   └── usuario.py
-│   ├── value_objects/       # Objetos de valor (ex: validação de códigos)
-│   │   └── codigo.py
-│   └── enums.py             # RolesEnum (escalável para SaaS)
-├── application/
-│   ├── services/            # Regras de negócio
-│   │   ├── auth_service.py
-│   │   └── produto_service.py
-│   ├── bi/                  # Business Intelligence (relatórios)
-│   │   ├── domain/          # Domínios de negócio (vendas, trocas, etc.)
-│   │   ├── queries/         # SQLs externos
-│   │   └── reporting/       # Relatórios por dimensão
-│   ├── etl/
-│   │   ├── extract/         # Extração do Postgres
-│   │   ├── transform/       # Transformação para DTOs
-│   │   ├── load/            # Persistência no SQLite
-│   │   ├── queries/         # Queries SQL (QueryLoader)
-│   │   ├── dto.py
-│   │   ├── interfaces.py
-│   │   ├── pipeline.py      # Orquestrador ETL
-│   │   └── query_loader.py
-│   ├── loaders/
-│   │   └── query_loader.py  # BaseQueryLoader
-│   ├── scheduler_manager.py # Agendamento dinâmico (ETL + relatórios)
-│   └── utils/
-│       ├── jwt_handler.py
-│       └── security.py
-├── infrastructure/
-│   ├── db/                  # SQLAlchemy setup + session factory
-│   │   ├── bootstrap.py
-│   │   ├── database.py
-│   │   └── session.py
-│   ├── repositories/        # Acesso a dados
-│   │   ├── interfaces.py
-│   │   ├── produto_repository.py
-│   │   └── usuario_repository.py
-│   └── postgres/            # Executor de queries
-│       └── loader.py
-├── api/
-│   ├── deps.py              # Injeção de dependência + require_role helper
-│   └── routes/              # Endpoints FastAPI
-│       ├── admin.py
-│       ├── auth.py
-│       ├── bi.py            # Business Intelligence (todos os endpoints)
-│       ├── cache_status.py
-│       ├── configuracoes.py
-│       ├── inventario.py    # Inventário multi-usuário com sessões
-│       └── produtos.py
-├── core/
-│   ├── config.py            # Settings (pydantic-settings)
-│   ├── error_handler.py
-│   ├── logging_config.py
-│   └── timer.py
-├── schemas/                 # Schemas Pydantic (contratos da API)
-│   ├── auth_schema.py
-│   ├── bi_schema.py         # DTOs de BI
-│   ├── configuracao_schema.py
-│   ├── inventario_schema.py
-│   ├── produto_schema.py
-│   ├── sync_schema.py
-│   └── usuario_schema.py
-├── cli.py                   # CLI (create-admin)
-├── main.py
-└── etl/
-    └── run_etl.py
+├── domain/              # Entidades ORM + Value Objects + Enums
+│   ├── models/          # SQLAlchemy models
+│   ├── value_objects/   # Codigo (validação EAN/PLU)
+│   └── enums.py         # RolesEnum
+├── application/         # Casos de uso
+│   ├── services/        # Regras de negócio
+│   ├── bi/              # Business Intelligence
+│   ├── etl/             # Pipeline de sincronização
+│   └── scheduler/       # Agendamento dinâmico
+├── infrastructure/      # Banco, repositórios, PostgreSQL
+├── api/                 # Rotas FastAPI + injeção de dependência
+├── core/                # Config, logging, error handling
+└── schemas/             # Pydantic DTOs (contratos da API)
 ```
 
-### Frontend (`vitrine_frontend/`)
+### Frontend
+
+Organização modular por funcionalidade com componentes reutilizáveis:
 
 ```
 src/
-├── api/                     # Cliente HTTP + funções por módulo
-│   ├── client.ts            # Axios instance + interceptors (auth, 401 redirect)
-│   ├── admin.ts             # Sync, configurações, inventário (sessões + itens)
-│   ├── auth.ts              # Login
-│   ├── bi.ts                # KPIs, receita, ranking, SKU, trocas, etc.
-│   ├── produtos.ts          # Consulta de produtos por código/nome
-│   └── usuarios.ts          # CRUD de usuários
-├── components/              # Componentes reutilizáveis
-│   ├── AdminHeader.tsx      # Header com nav grid, dropdown, logo, dark mode
-│   ├── LeitorCodigo.tsx     # Leitor de código de barras via câmera
-│   ├── ProtectedRoute.tsx   # Guard de rota por role
-│   ├── ToastContainer.tsx
-│   ├── bi/                  # Componentes de BI
-│   │   ├── BiSubNav.tsx
-│   │   ├── KpiCard.tsx      # KPI opcional com badge de variação (▲▼ YoY)
-│   │   └── PeriodoForm.tsx  # Seletor de período com presets
-│   └── ui/
-│       ├── ScrollToTop.tsx
-│       └── Skeleton.tsx
-├── hooks/                   # Hooks customizados
-│   ├── useAuth.ts           # Auth context (JWT decode, role, expiração)
-│   ├── useCountUp.ts        # Animação de contagem
-│   ├── useLocalStorage.ts
-│   └── useToast.tsx         # Sistema de toast (feedback visual)
-├── pages/                   # Páginas
-│   ├── Admin.tsx            # Sync ETL
-│   ├── Busca.tsx            # Consulta de produtos por código/nome
-│   ├── Configuracoes.tsx    # Configurações do sistema (admin)
-│   ├── Etiquetas.tsx        # Geração de etiquetas
-│   ├── Home.tsx             # Pós-login com cards de navegação
-│   ├── Inventario.tsx       # Inventário multi-usuário com sessões
-│   ├── Login.tsx
-│   ├── NotFound.tsx
-│   ├── Usuarios.tsx         # Gestão de usuários (admin)
-│   └── bi/                  # BI (Dashboard, Receita, Ranking, etc.)
-│       ├── Dashboard.tsx    # Dashboard com toggle YoY
-│       └── ...
-├── stores/
-│   └── biCache.tsx          # Cache de requests BI (abort + stale-while-revalidate)
-├── types/                   # Tipos TypeScript
-│   ├── admin.ts
-│   ├── auth.ts
-│   ├── bi.ts
-│   ├── index.ts
-│   ├── inventario.ts
-│   └── produto.ts
-└── utils/
-    ├── csv.ts
-    └── formatters.ts
+├── api/          # Axios instance + módulos de endpoint
+├── components/   # Componentes reutilizáveis (UI, BI, leitor)
+├── hooks/        # Custom hooks (auth, toast, countUp)
+├── pages/        # Páginas (consulta, admin, BI, login)
+├── stores/       # Cache frontend (stale-while-revalidate)
+├── types/        # TypeScript interfaces
+└── utils/        # Formatadores, CSV
 ```
 
-**Fluxo de uma requisição:**
+### Fluxo de requisição
 
 ```
 Usuário (câmera / input)
-    └─► React (Busca.tsx)
+    └─► React (consulta)
             └─► Axios GET /api/produtos/{codigo}
-                    └─► FastAPI Route (produtos.py)
-                            └─► ProdutoService
-                                    └─► Codigo (valida e normaliza o código)
-                                    └─► ProdutoRepository
-                                            └─► SQLite (cache)
-                                    └─► ProdutoResponse (Pydantic)
-                            └─► JSON Response
+                    └─► Caddy reverse proxy (produção) / Vite proxy (dev)
+                            └─► FastAPI Route → Service → Repository → SQLite
+                    └─► JSON Response
             └─► React renderiza resultado
 ```
 
 ---
 
-## Endpoints da API
-
-| Método | Rota | Descrição | Acesso |
-|---|---|---|---|
-| `POST` | `/auth/token` | Login e geração de token JWT | Público |
-| `POST` | `/auth/register` | Criar novo usuário | Admin |
-| `GET` | `/auth/usuarios` | Lista todos os usuários | Admin |
-| `PATCH` | `/auth/usuarios/{usuario_id}` | Atualiza dados de um usuário | Admin |
-| `DELETE` | `/auth/usuarios/{usuario_id}` | Exclui um usuário | Admin |
-| `GET` | `/produtos/` | Lista produtos com paginação | Autenticado |
-| `GET` | `/produtos/busca` | Busca produtos por nome (`?q=`, `limit`, `offset`) | Autenticado |
-| `GET` | `/produtos/{codigo}` | Busca produto por EAN ou PLU | Autenticado |
-| `GET` | `/produtos/{codigo}/completo` | Busca produto com custo, markup e margem | Supervisor/Admin |
-| `POST` | `/produtos/nao-encontrado` | Registra produto não encontrado | Autenticado |
-| `GET` | `/status/` | Data/hora da última atualização do cache | Público |
-| `POST` | `/admin/sync` | Dispara sync em background | Admin |
-| `GET` | `/admin/sync/{job_id}` | Verifica status de um job | Admin |
-| `GET` | `/admin/sync/` | Lista histórico de jobs | Admin |
-| `GET` | `/admin/scheduler/jobs` | Lista jobs do scheduler com próxima execução | Admin |
-| `GET` | `/bi/kpis` | KPIs financeiros do período | Supervisor/Admin |
-| `GET` | `/bi/kpis/comparativo` | KPIs com comparação YoY (ano anterior) | Supervisor/Admin |
-| `GET` | `/bi/receita` | Receita por dimensão | Supervisor/Admin |
-| `GET` | `/bi/quantidade` | Quantidade vendida por dimensão | Supervisor/Admin |
-| `GET` | `/bi/curva-abc` | Classificação ABC por dimensão | Supervisor/Admin |
-| `GET` | `/bi/ranking` | Ranking de produtos | Supervisor/Admin |
-| `GET` | `/bi/sku` | Análise detalhada de SKU | Supervisor/Admin |
-| `GET` | `/bi/trocas` | Relatório de trocas | Supervisor/Admin |
-| `GET` | `/bi/perdas` | Relatório de perdas | Supervisor/Admin |
-| `GET` | `/bi/consumo` | Relatório de consumo | Supervisor/Admin |
-| `GET` | `/bi/diario` | Série diária de receita/quantidade | Supervisor/Admin |
-| `GET` | `/bi/diario/produto` | Série diária de um produto | Supervisor/Admin |
-| `GET` | `/bi/temporal/hora` | Distribuição por hora | Supervisor/Admin |
-| `GET` | `/bi/temporal/dia-semana` | Distribuição por dia da semana | Supervisor/Admin |
-| `GET` | `/bi/exportar/excel` | Exporta relatório como `.xlsx` | Supervisor/Admin |
-| `GET` | `/admin/inventario/sessoes` | Lista sessões ativas | Autenticado |
-| `POST` | `/admin/inventario/sessoes` | Cria nova sessão | Supervisor/Admin |
-| `POST` | `/admin/inventario/sessoes/entrar` | Entrar em sessão por código de convite | Autenticado |
-| `PATCH` | `/admin/inventario/sessoes/{id}` | Encerrar sessão | Supervisor/Admin |
-| `GET` | `/admin/inventario/sessoes/{id}/itens` | Lista itens da sessão | Autenticado |
-| `POST` | `/admin/inventario/sessoes/{id}/itens` | Adicionar/bipar item | Autenticado |
-| `PATCH` | `/admin/inventario/sessoes/{id}/itens/{codigo}` | Atualizar quantidade | Autenticado |
-| `DELETE` | `/admin/inventario/sessoes/{id}/itens` | Limpar itens do usuário | Autenticado |
-| `GET` | `/admin/inventario/consolidado-geral` | Soma de todas as sessões ativas | Supervisor/Admin |
-
-### Parâmetros de listagem
-
-| Parâmetro | Tipo | Padrão | Descrição |
-|---|---|---|---|
-| `limit` | int | 50 | Máximo de resultados (clamped entre 1–100) |
-| `offset` | int | 0 | Paginação por offset |
-
-### Exemplo de resposta — `GET /produtos/{codigo}`
-
-```json
-{
-  "codigo_chamada": "000123",
-  "nome": "Smartphone XYZ",
-  "grupo": "Eletrônicos",
-  "familia": "Smartphones",
-  "preco_venda": 1599.90,
-  "preco_custo": 980.00,
-  "estoque": 42.0,
-  "markup": 0.6326,
-  "margem": 0.3876,
-  "codigo_buscado": "7891234567890"
-}
-```
-
-### Códigos de status
-
-| Status | Situação |
-|---|---|
-| `200` | Produto encontrado |
-| `400` | Código inválido (formato não reconhecido) |
-| `404` | Produto não encontrado no cache |
-
----
-
-## Rotas do Frontend
-
-| Rota | Página | Descrição | Acesso |
-|---|---|---|---|
-| `/login` | Login | Autenticação do usuário | Público |
-| `/` | Home | Cards de navegação por role | Autenticado |
-| `/busca` | Busca | Consulta de produtos por código/nome | Autenticado |
-| `/etiquetas` | Etiquetas | Geração de etiquetas | Supervisor/Admin |
-| `/inventario` | Inventário | Sessões de contagem multi-usuário | Autenticado |
-| `/configuracoes` | Configurações | Upload de logo, nome do mercado, ETL (min), schedule WhatsApp/Email | Admin |
-| `/admin` | Admin | Sync ETL manual | Admin |
-| `/usuarios` | Usuários | CRUD de usuários | Admin |
-| `/bi/dashboard` | Dashboard | KPIs financeiros com toggle YoY | Supervisor/Admin |
-| `/bi/receita` | Receita | Receita por dimensão | Supervisor/Admin |
-| `/bi/ranking` | Ranking | Top N produtos | Supervisor/Admin |
-| `/bi/curva-abc` | Curva ABC | Classificação A/B/C | Supervisor/Admin |
-| `/bi/sku` | Análise SKU | Detalhamento por produto | Supervisor/Admin |
-| `/bi/trocas` | Trocas | Relatório de trocas | Supervisor/Admin |
-| `/bi/perdas` | Perdas | Relatório de perdas | Supervisor/Admin |
-| `/bi/consumo` | Consumo | Relatório de consumo | Supervisor/Admin |
-
----
-
-## Validação de códigos
-
-A classe `Codigo` em `app/domain/value_objects/codigo.py` valida e normaliza automaticamente os formatos suportados:
-
-| Formato | Tamanho | Validação |
-|---|---|---|
-| EAN-13 | 13 dígitos | Checksum módulo 10 |
-| EAN-12 | 12 dígitos | Checksum módulo 10 |
-| EAN-8 | 8 dígitos | Checksum módulo 10 |
-| PLU-6 | 6 dígitos | Apenas numérico |
-
-Espaços e hífens são removidos automaticamente na normalização. O campo `codigo_buscado` na resposta reflete o código após normalização.
-
----
-
-## Autenticação
-
-A API utiliza **JWT (JSON Web Token)** para controle de acesso. O fluxo é:
-
-1. **Login** — `POST /auth/token` com `username` e `password` retorna o `access_token`
-2. **Uso** — informe o token no header `Authorization: Bearer <token>`
-
-### Roles e Permissões
-
-O sistema usa `RolesEnum` (enum escalável) para controle de acesso:
-
-| Role | Descrição | Permissões |
-|---|---|---|
-| `operador` | Consulta básica | Vê preço, estoque (sem custo/margem), inventário (apenas bipar) |
-| `supervisor` | Gerência | Consulta completa + relatórios + inventário completo |
-| `admin` | Administrador | Tudo + gerenciamento de usuários + configurações |
-
-O `require_role()` helper centraliza a lógica de permissões, eliminando strings hardcoded.
-
-### Criando o primeiro admin
+## Quick start (desenvolvimento)
 
 ```bash
-cd vitrine_backend
-uv run python -m app.cli admin "Administrador" sua_senha
-```
-
----
-
-## Inventário Multi-usuário
-
-O módulo de inventário permite contagem colaborativa com sessões:
-
-### Conceito
-
-- **Supervisor** cria uma sessão, obtém um código de convite de 6 caracteres e distribui para os operadores
-- **Operadores** entram na sessão pelo código e bipam produtos — cada um vê apenas seus próprios itens
-- **Consolidado** — supervisor vê a soma total de todos os operadores dentro da sessão
-- **Relatório Geral** (`GET /consolidado-geral`) — soma todos os itens de **todas as sessões ativas**, agrupando por código
-
-### Regras de negócio
-
-- Mesmo código bipado **pelo mesmo usuário** na mesma sessão → soma (upsert)
-- Mesmo código bipado **por usuários diferentes** → soma apenas no consolidado
-- Quantidade `≤ 0` na atualização → remove o item
-- Apenas o **criador** pode encerrar a sessão
-- Sessão encerrada não aparece na lista, mas os dados persistem
-
-### Exportação
-
-| Formato | Onde | Conteúdo | Uso |
-|---|---|---|---|
-| `.txt` | Dentro da sessão | `codigo;quantidade` | Coletor / sistema legado |
-| `.xlsx` | Dentro da sessão | `código \| grupo \| família \| produto` | Planilha Excel |
-| `.txt` | Consolidado Geral | `codigo;quantidade` | ERP (ajuste de estoque apurado) |
-| `.xlsx` | Consolidado Geral | `código \| produto \| grupo \| família \| quantidade` | Análise humana |
-
----
-
-## Configuração
-
-### Backend (`.env` em `vitrine_backend/`)
-
-```env
-POSTGRES_URL=postgresql://usuario:senha@host:5432/banco
-SQLITE_URL=sqlite:///./data/vitrine.db
-CACHE_REFRESH_INTERVAL=3600
-JWT_SECRET=sua-chave-secreta-grande-e-aleatoria
-ACCESS_TOKEN_EXPIRE_MINUTES=60
-ALLOWED_ORIGINS=["http://localhost:5173"]
-ALLOW_ORIGIN_REGEX=https://.*\.trycloudflare\.com
-```
-
-| Variável | Obrigatória | Descrição |
-|---|---|---|
-| `POSTGRES_URL` | Sim (para ETL) | Connection string do banco de origem |
-| `SQLITE_URL` | Sim | Caminho do banco SQLite local |
-| `CACHE_REFRESH_INTERVAL` | Não | Intervalo de refresh do cache em segundos (padrão: 3600). **Nota:** substituído pelo valor configurado na UI (`etl_interval_minutes`) |
-| `JWT_SECRET` | Sim | Chave secreta para assinar tokens JWT |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | Não | Tempo de expiração do token (padrão: 60) |
-| `ALLOWED_ORIGINS` | Sim | Lista de origens permitidas para CORS |
-| `ALLOW_ORIGIN_REGEX` | Não | Regex de origens permitidas para CORS (ex: tunnel Cloudflare) |
-
-### Frontend (`.env` em `vitrine_frontend/`)
-
-```env
-VITE_API_URL=/api
-```
-
-- Em desenvolvimento, o Vite faz proxy de `/api` para `http://localhost:8000` e `/static` para `http://localhost:8000/static`
-- Em produção, a API e os arquivos estáticos devem estar no mesmo domínio ou atrás de um reverse proxy
-
----
-
-## Instalação e execução
-
-### Desenvolvimento
-
-```bash
-# Clone o repositório
+# Clone
 git clone https://github.com/PedroLucasSinuso/vitrine.git
 cd vitrine
 
 # Backend
 cd vitrine_backend
-uv sync                             # Instala dependências
-cp .env.example .env                # Configure o .env
-uv run python -m app.etl.run_etl    # Popula o cache SQLite
+cp .env.example .env        # Configure suas credenciais
+uv sync                     # Instala dependências
+uv run python -m app.etl.run_etl  # Popula cache SQLite
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 # Frontend (outro terminal)
 cd vitrine_frontend
-npm install                         # Instala dependências
-npm run dev                         # Dev server em localhost:5173
+npm install
+npm run dev                 # → http://localhost:5173
 ```
-
-### Produção (Windows Server)
-
-Deploy em servidor Windows limpo, sem necessidade de instalar Python, Node ou Docker:
-
-| Componente | Função |
-|---|---|
-| **Python Embedded** | Runtime Python portátil (~30MB, sem instalação) |
-| **Caddy** | Servidor web (1 .exe, zero config, HTTPS automático) |
-| **NSSM** | Registra processos como serviços Windows (iniciam com o sistema) |
-| **Cloudflare Tunnel** | Acesso HTTPS público sem abrir porta no roteador |
-
-```bash
-# Setup completo (roda 1x no servidor)
-deploy\setup.bat
-
-# Serviços iniciados automaticamente com o Windows
-# Frontend: http://localhost:8080
-```
-
-> Instruções detalhadas em [`deploy/README.md`](deploy/README.md)
 
 ---
 
-### Backend
+## Deploy em produção (Windows Server)
+
+Deploy automatizado em servidor Windows limpo — sem precisar instalar Python, Node ou Docker manualmente:
+
+| Componente | Função |
+|-----------|--------|
+| **Python Embedded** | Runtime portátil (~30 MB) |
+| **Caddy** | Servidor web (1 .exe, zero config) |
+| **NSSM** | Serviços Windows que iniciam com o sistema |
+| **Cloudflare Tunnel** | Acesso HTTPS público (opcional) |
+
+```powershell
+# No PC de desenvolvimento, gere o pacote:
+.\deploy\package.ps1
+# → gera vitrine-deploy.zip
+
+# No servidor, extraia e execute:
+.\deploy\install.ps1
+# → tudo automático: Git, Python, Caddy, NSSM, clone, deps, serviços
+```
+
+> 📖 Instruções detalhadas em [`deploy/README.md`](deploy/README.md)
+
+---
+
+## API
+
+A documentação interativa da API (Swagger UI) fica disponível em:
+
+```
+http://localhost:8000/docs
+```
+
+### Endpoints principais
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| `POST` | `/auth/token` | Login (JWT) |
+| `GET` | `/produtos/{codigo}` | Consulta por EAN ou PLU |
+| `GET` | `/produtos/busca?q=` | Busca por nome |
+| `GET` | `/bi/kpis` | KPIs financeiros |
+| `GET` | `/bi/kpis/comparativo` | KPIs com YoY |
+| `GET` | `/bi/receita` | Receita por dimensão |
+| `GET` | `/bi/curva-abc` | Classificação ABC |
+| `GET` | `/bi/sku` | Análise detalhada de SKU |
+| `POST` | `/admin/sync` | Disparar ETL manual |
+
+> 🔗 Lista completa de endpoints e parâmetros: [`docs/API.md`](docs/API.md) _(em breve)_ ou diretamente no Swagger UI.
+
+### Autenticação
+
+A API utiliza **JWT** com 3 níveis de acesso:
+
+| Role | Acesso |
+|------|--------|
+| `operador` | Consulta, inventário (apenas bipar) |
+| `supervisor` | Consulta completa + BI + inventário completo |
+| `admin` | Tudo + gestão de usuários + configurações |
+
+```bash
+# Criar primeiro admin via CLI
+cd vitrine_backend
+uv run python -m app.cli admin "Admin" sua_senha
+```
+
+---
+
+## Testes
 
 ```bash
 cd vitrine_backend
 uv run pytest
 ```
 
-A suíte cobre: validação de códigos (EAN/PLU), métricas do model (markup, margem, edge cases), serialização do schema Pydantic, regras de negócio do service (mock de repositório, clamp de paginação, código inválido) e transformação ETL, além de segurança (hash de senhas) e autenticação JWT.
-
-#### Testes de Integração API
-
-```
-tests/
-├── api/
-│   ├── conftest.py              # Fixtures (client, usuários, tokens)
-│   ├── test_api.py              # 26 casos (autenticação, CRUD, sync)
-│   ├── test_bi_endpoints.py     # 29 casos (relatórios BI)
-│   └── test_inventario.py       # 13 casos (sessões, itens, consolidado)
-├── etl/
-│   └── test_transform.py
-├── models/
-│   └── test_produto_model.py
-├── schemas/
-│   └── test_produto_schema.py
-├── services/
-│   ├── test_produto_service.py
-│   └── test_auth_service.py
-└── utils/
-    ├── test_codigo.py
-    └── test_security.py
-```
-
 | Categoria | Casos |
-|---|---|
-| Autenticação (token) | Validação, credenciais inválidas, usuário inexistente, campos vazios |
-| Registro de usuário | Admin cria usuário, sem autenticação, role inválida |
-| Listagem de produtos | Autenticado, sem autenticação, paginação |
-| Busca de produto | Por código válido, inexistente, código inválido |
-| Detalhes completos | Supervisor/Admin acessa, Operador bloqueado, sem autenticação |
-| Status do cache | Acesso público |
-| Admin Sync | Trigger, permissões, histórico, status de job |
-| CORS | Headers em requisições OPTIONS |
-| BI Endpoints | KPIs, receita, ranking, curva ABC, SKU, trocas, perdas, consumo, temporal, exportação |
+|-----------|-------|
+| Autenticação | Token, credenciais, registro, permissões |
+| Produtos | Busca por código/nome, paginação, detalhes |
+| Códigos | Validação EAN-13/8, PLU, checksum |
+| BI | KPIs, receita, ranking, curva ABC, SKU, trocas, exportação |
 | Inventário | Sessões, itens, consolidado multi-usuário |
-
-### Frontend
-
-```bash
-cd vitrine_frontend
-npm run build      # TypeScript check + Vite build
-```
+| ETL | Transformação de dados |
+| CORS | Headers em requisições OPTIONS |
 
 ---
 
 ## Business Intelligence
 
-O módulo BI permite análise de vendas com relatórios analíticos e exportação:
+### Relatórios disponíveis
 
-### Relatórios Disponíveis
-
-- **Dashboard** — KPIs financeiros + ranking de produtos do período
-- **Receita por Dimensão** — Receita e quantidade vendida agrupadas por grupo, família ou produto, com filtros hierárquicos
+- **Dashboard** — KPIs financeiros + ranking do período
+- **Receita por dimensão** — grupo, família ou produto, com filtros hierárquicos
 - **Ranking** — Top N produtos por receita ou quantidade
-- **Curva ABC** — Classificação automática A/B/C por dimensão
-- **Análise de SKU** — Detalhamento por produto (receita diária, distribuição por hora, ranking de dias)
-- **Trocas** — Total e taxa de troca, produtos mais trocados
-- **Perdas e Consumo** — Produtos com maior perda e consumo
-- **Distribuição Temporal** — Série por hora e por dia da semana
+- **Curva ABC** — Classificação A/B/C automática
+- **Análise SKU** — Receita diária, distribuição por hora, ranking de dias
+- **Trocas** — Total, taxa e produtos mais trocados
+- **Perdas e consumo** — Produtos com maior perda/consumo
+- **Distribuição temporal** — Por hora e dia da semana
+- **Exportação** — Todos os relatórios em `.xlsx`
 
-### Comparação YoY (Ano contra Ano)
+### YoY (comparação ano contra ano)
 
-O **diferencial mais poderoso** do Vitrine: o dashboard de BI permite comparar KPIs do período atual com o mesmo período do ano anterior, revelando sazonalidade, tendências de crescimento e oportunidades de ajuste.
+O dashboard compara KPIs do período atual com o mesmo período do ano anterior:
 
-**Como funciona:**
-- Endpoint `GET /bi/kpis/comparativo` retorna os mesmos KPIs do período atual lado a lado com os do ano anterior
-- Cada KPI inclui um campo `variacao` (percentual) — positivo (▲ verde) ou negativo (▼ vermelho)
-- O frontend exibe badges intuitivos: ▲ 12.5% ou ▼ -3.2%
-
-| KPI | Período Atual | Período Anterior | Variação |
-|---|---|---|---|
+| KPI | Atual | Anterior | Variação |
+|-----|-------|----------|----------|
 | Receita Total | R$ 1.250.000 | R$ 1.100.000 | ▲ 13.6% |
 | Ticket Médio | R$ 47,80 | R$ 45,20 | ▲ 5.8% |
 | Itens por Venda | 8.2 | 8.5 | ▼ -3.5% |
 | Margem Média | 34.2% | 33.8% | ▲ 1.2% |
 
-**Arquitetura:**
-- `app/application/bi/factory.py` → `criar_dominio_comparativo()` isola a lógica de espelhar períodos
-- `app/application/bi/reporting/relatorio.py` → `comparar_kpis()` calcula as variações
-- `app/schemas/bi_schema.py` → `KpisComparativoDTO`, `VariacaoKpi` (schemas tipados)
-- `app/api/routes/bi.py` → `GET /bi/kpis/comparativo` (endpoint dedicado)
-- Frontend: `Dashboard.tsx` com toggle "Comparar com ano anterior" e `KpiCard.tsx` com badge de variação
-
-### Arquitetura
-
-```
-app/application/bi/
-├── domain/          # Domínios de negócio (vendas, trocas, perdas, consumo)
-├── queries/         # SQLs externos (BiQueryLoader)
-└── reporting/       # Relatórios por dimensão
-```
-
-- SQLs organizados em `bi/queries/` com `BiQueryLoader` (herda de `BaseQueryLoader`)
-- Relatórios implementados em `app/application/bi/reporting/` com interface padronizada
-- Endpoints REST em `app/api/routes/bi.py`
-- Schemas Pydantic em `app/schemas/bi_schema.py`
-- Exportação Excel via `app/application/bi/reporting/exportador.py`
-- Cache de resultados com `TTLCache` em `app/application/bi/loader.py` (invalidado via `limpar_cache_bi()`)
+> Endpoint dedicado `GET /bi/kpis/comparativo` com `VariacaoKpi` tipado e badges visuais no frontend (▲ verde / ▼ vermelho).
 
 ---
 
 ## ETL
 
-O pipeline ETL sincroniza dados do PostgreSQL para o SQLite local. Pode ser executado manualmente ou via scheduler interno com intervalo configurável (mín. 10 minutos) pela interface de configurações — sem necessidade de restart.
+Pipeline de sincronização do PostgreSQL para o SQLite local:
+
+1. **Extract** — queries SQL externas no Postgres
+2. **Transform** — agrupa códigos, converte para DTOs
+3. **Load** — trunca e reinsere no SQLite, registra timestamp
 
 ```bash
 cd vitrine_backend
 uv run python -m app.etl.run_etl
 ```
 
-**Fases:**
-
-1. **Extract** — `ProdutoExtractor` executa as queries SQL externas no Postgres (via `QueryLoader`)
-2. **Transform** — agrupa códigos de barras por produto, converte para DTOs
-3. **Load** — trunca e reinsere produtos e códigos no SQLite, registra timestamp em `CacheStatus`
-
-> Queries SQL foram extraídas para arquivos `.sql` seguindo padrão DRY com `BaseQueryLoader`.
+Pode ser executado manualmente, via scheduler interno (intervalo configurável pela UI, mínimo 10 min) ou via API (`POST /admin/sync`).
 
 ---
 
-## Scripts
+## Design decisions
 
-### Backend
-
-| Comando | Descrição |
-|---|---|
-| `uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000` | Servidor de desenvolvimento |
-| `uv run python -m app.cli <username> <nome> <senha>` | Criar admin via CLI |
-| `uv run python -m app.etl.run_etl` | Executar ETL manualmente |
-| `uv run pytest` | Rodar testes |
-
-### Frontend
-
-| Comando | Descrição |
-|---|---|
-| `npm run dev` | Dev server (Vite, proxy `/api` → `localhost:8000`) |
-| `npm run build` | TypeScript check + Vite build |
-| `npm run preview` | Preview do build de produção |
+| Decisão | Motivo |
+|---------|--------|
+| **SQLite como cache** | Desacopla API da disponibilidade do PostgreSQL. Consultas locais são rápidas e não geram carga no banco operacional |
+| **Separação Model / Schema** | `Produto` (ORM) ≠ `ProdutoResponse` (Pydantic). Métricas computadas (`markup`, `margem`) como `@property` no model |
+| **Camadas domain/application/infrastructure** | Isola regras de negócio de detalhes técnicos (SOLID) |
+| **Injeção de dependência** | Sessão gerenciada por `Depends` do FastAPI, repositório desacoplado do ciclo de vida da request |
+| **Value Object `Codigo`** | Encapsula validação e normalização de EAN/PLU, isolando do service |
+| **Cache frontend com AbortController** | Stale-while-revalidate com cancelamento de requests duplicadas (evita waterfall em navegação de BI) |
+| **Componentização do BI** | `KpiCard`, `PeriodoForm`, `BiSubNav` — componentes puros e reutilizáveis |
 
 ---
 
-## Decisões de design
+## Licença
 
-**SQLite como cache** — desacopla a API da disponibilidade do banco de origem. Consultas locais são rápidas e não geram carga no Postgres operacional.
-
-**Separação Model / Schema** — `Produto` (SQLAlchemy) representa a entidade persistida; `ProdutoResponse` (Pydantic) define o contrato da API. Métricas computadas (`markup`, `margem`) ficam como `@property` no model e são expostas pelo schema via `from_attributes`.
-
-**Arquitetura em camadas** — o backend segue a estrutura domain/application/infrastructure, isolando regras de negócio de detalhes técnicos.
-
-**Injeção de dependência** — a sessão do banco é gerenciada pelo `Depends` do FastAPI (`deps.py`), mantendo o repositório desacoplado do ciclo de vida da request.
-
-**Transform puro** — a camada de transformação ETL recebe apenas DTOs (não dicts), garantindo tipagem consistente e testes mais confiáveis.
-
-**Classe `Codigo`** — encapsula validação, normalização e detecção de tipo de código de barras como Value Object imutável, isolando essa lógica do service.
-
-**Cache frontend com AbortController** — o hook `biCache.tsx` implementa stale-while-revalidate com cancelamento de requests duplicadas, evitando waterfall em navegação rápida entre abas de BI.
-
-**Componentização do BI** — `KpiCard`, `PeriodoForm`, `BiSubNav` são componentes puros e reutilizáveis, permitindo composição flexível dos dashboards.
-
-**Leitor de código de barras via câmera** — `@zxing/browser` + `@zxing/library` permitem leitura em tempo real sem dependência de hardware dedicado.
+Distribuído sob licença **MIT**. Veja [`LICENSE`](LICENSE) para mais informações.
 
 ---
 
-## Melhorias planejadas
-
-- [x] Testes de integração da API com `TestClient` e banco SQLite em memória
-- [x] Refatoração SQL (BaseQueryLoader + Herança)
-- [x] RolesEnum para escalabilidade SaaS
-- [x] Proxy Vite para tunnel único (Cloudflare)
-- [x] Logging detalhado por fase ETL
-- [x] Endpoint de busca por nome (`GET /produtos/busca?q=`)
-- [x] Endpoints de BI (receita, ranking, curva-abc, sku, trocas, perdas, consumo, temporal, exportação Excel)
-- [x] Comparação YoY (ano contra ano) no dashboard
-- [x] Relatórios agendados via WhatsApp e Email (agendas individuais)
-- [x] Agendamento dinâmico — alterações na UI têm efeito imediato (sem restart)
-- [x] Leitor de código de barras contínuo (não fecha após cada leitura)
-- [x] ETL configurável em minutos (mín. 10) via interface
-- [ ] Filtros por grupo e família em `GET /produtos/`
-- [ ] Frontend mobile (PWA)
-- [ ] Endpoint para cancelar job em andamento
-- [ ] Notificação (WebSocket) ao completar sync
-- [ ] Cache distribuído (Redis) para múltiplas instâncias
-
----
-
-## Lições Aprendidas
-
-- SQL hardcoded é um pesadelo de manutenção → refatorei para arquivos externos com herança
-- Strings hardcoded de roles limitam escalabilidade → criei RolesEnum
-- Testes não são opcionais → cobrem 55+ casos de uso
-- Documentação é parte do código → README vivo e atualizado
-- Comparação YoY transforma dados operacionais em insight estratégico — um período isolado não conta a história completa
-
----
-
-## Autor
-
-Desenvolvido por **Pedro Lucas** como case técnico de backend Python / análise de dados.
-
-- Contato: pedrolucas.sinuso@gmail.com
-- LinkedIn: [linkedin.com/in/pedro-sinuso](https://www.linkedin.com/in/pedro-sinuso)
-- GitHub: [github.com/PedroLucasSinuso](https://github.com/PedroLucasSinuso)
-
-> Gostou do projeto? Deixe uma estrela e me conte o que melhoraria!
+<div align="center">
+  <br />
+  <p>
+    Desenvolvido por <strong>Pedro Lucas</strong>
+    <br />
+    <a href="mailto:pedrolucas.sinuso@gmail.com">pedrolucas.sinuso@gmail.com</a>
+    &nbsp;·&nbsp;
+    <a href="https://linkedin.com/in/pedro-sinuso">LinkedIn</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/PedroLucasSinuso">GitHub</a>
+  </p>
+  <p>
+    <sub>Gostou do projeto? ⭐ Deixe uma estrela no repositório!</sub>
+  </p>
+  <br />
+</div>

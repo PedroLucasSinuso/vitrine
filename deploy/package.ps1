@@ -38,12 +38,33 @@ Pop-Location
 Write-Host "[OK] Frontend buildado" -ForegroundColor Green
 Write-Host ""
 
-Write-Host ">>> [2/4] Preparando arquivos..." -ForegroundColor Cyan
+Write-Host ">>> [2/4] Baixando binarios e preparando arquivos..." -ForegroundColor Cyan
 if (Test-Path $TEMP_ZIP_DIR) {
     Remove-Item -Recurse $TEMP_ZIP_DIR -Force
 }
 New-Item -ItemType Directory -Path "$TEMP_ZIP_DIR\deploy" -Force | Out-Null
 
+# Baixa Caddy e inclui no bundle
+Write-Host "  Baixando Caddy..."
+try {
+    Invoke-WebRequest -Uri "https://github.com/caddyserver/caddy/releases/download/v2.11.3/caddy_2.11.3_windows_amd64.zip" -OutFile "$env:TEMP\caddy.zip" -TimeoutSec 60
+    Expand-Archive -Path "$env:TEMP\caddy.zip" -DestinationPath "$TEMP_ZIP_DIR\deploy" -Force
+    Remove-Item "$env:TEMP\caddy.zip" -Force
+    Write-Host "  [OK] Caddy baixado" -ForegroundColor Green
+} catch {
+    Write-Host "  [AVISO] Falha ao baixar Caddy ($($_.Exception.Message))" -ForegroundColor Yellow
+}
+
+# Baixa NSSM e inclui no bundle
+Write-Host "  Baixando NSSM..."
+try {
+    Invoke-WebRequest -Uri "https://github.com/plossys/nssm/releases/download/v2.24.8/nssm.exe" -OutFile "$TEMP_ZIP_DIR\deploy\nssm.exe" -TimeoutSec 60
+    Write-Host "  [OK] NSSM baixado" -ForegroundColor Green
+} catch {
+    Write-Host "  [AVISO] Falha ao baixar NSSM ($($_.Exception.Message))" -ForegroundColor Yellow
+}
+
+# Copia scripts do deploy
 Copy-Item -Recurse "$DEPLOY_DIR\*" "$TEMP_ZIP_DIR\deploy\"
 
 $envSource = "$BACKEND_DIR\.env"

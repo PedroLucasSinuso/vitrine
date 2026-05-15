@@ -1,7 +1,8 @@
 @echo off
 title Vitrine - Parando
+set VITRINE=C:\Vitrine
 echo Parando servicos Vitrine...
-nssm stop VitrineFrontend
-nssm stop VitrineBackend
+%VITRINE%\bin\nssm.exe stop VitrineFrontend
+%VITRINE%\bin\nssm.exe stop VitrineBackend
 echo Servicos parados.
 pause
