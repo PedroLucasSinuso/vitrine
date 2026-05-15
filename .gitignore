@@ -35,7 +35,7 @@ nginx.conf
 # Build
 *.exe
 *.pem
-scripts/
+dev_utils/
 
 # Cobertura de teste
 .coverage
