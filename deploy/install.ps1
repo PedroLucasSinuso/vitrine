@@ -5,9 +5,8 @@
     Instala o Vitrine em Windows Server - Python, Caddy, NSSM, backend e frontend.
 
 .PARAMETER DistPath
-    Caminho do pendrive contendo .env, price_checker.db e a pasta dist\.
-    Exemplo: D:\
-    Se omitido, .env e dist/ precisam ser copiados manualmente depois.
+    Caminho com .env, dist\ e price_checker.db.
+    Se omitido, usa a pasta pai de deploy\ (extração do zip).
 
 .EXAMPLE
     .\install.ps1 -DistPath D:\
@@ -20,17 +19,19 @@ param(
 
 # ---------- CONFIG ----------
 $VITRINE = "C:\Vitrine"
+$BIN = "$VITRINE\bin"
 $CODE = "$VITRINE\code"
 $PYTHON_DIR = "$VITRINE\python"
 $DATA_DIR = "$VITRINE\data"
 $LOGS_DIR = "$DATA_DIR\logs"
 $BACKEND_DIR = "$CODE\vitrine_backend"
 $FRONTEND_DIR = "$CODE\vitrine_frontend"
-$DEPLOY_DIR = "$CODE\deploy"
 
+$CaddyVersion = "v2.11.3"
 $PythonVersion = "3.11.9"
+
 $PythonUrl = "https://www.python.org/ftp/python/$PythonVersion/python-$PythonVersion-embed-amd64.zip"
-$CaddyUrl = "https://github.com/caddyserver/caddy/releases/latest/download/caddy_windows_amd64.zip"
+$CaddyUrl = "https://github.com/caddyserver/caddy/releases/download/$CaddyVersion/caddy_$($CaddyVersion.Substring(1))_windows_amd64.zip"
 $NssmUrl = "https://nssm.cc/release/nssm-2.24.zip"
 $GitUrl = "https://github.com/git-for-windows/git/releases/latest/download/Git-2.48.1-64-bit.exe"
 $RepoUrl = "https://github.com/PedroLucasSinuso/vitrine.git"
@@ -41,7 +42,13 @@ $ProgressPreference = "SilentlyContinue"
 function Write-Step { param($Msg) Write-Host ">>> $Msg" -ForegroundColor Cyan }
 function Write-OK   { Write-Host "  [OK] $($args -join ' ')" -ForegroundColor Green }
 function Write-Warn { Write-Host "  [!] $($args -join ' ')" -ForegroundColor Yellow }
-function Write-Err  { Write-Host "  [ERRO] $($args -join ' ')" -ForegroundColor Red; exit 1 }
+
+# ---------- 0. DISTPATH ----------
+if (-not $DistPath) {
+    $scriptParent = Split-Path -Parent $MyInvocation.MyCommand.Path
+    $DistPath = Resolve-Path "$scriptParent\.."
+    Write-OK "DistPath auto-detected: $DistPath"
+}
 
 # ---------- 1. GIT ----------
 Write-Step "1/13 - Verificando Git..."
@@ -63,7 +70,7 @@ Write-OK "Git: $gitVer"
 
 # ---------- 2. PASTAS ----------
 Write-Step "2/13 - Criando estrutura de pastas..."
-@($CODE, $PYTHON_DIR, $LOGS_DIR) | ForEach-Object {
+@($BIN, $CODE, $PYTHON_DIR, $LOGS_DIR) | ForEach-Object {
     New-Item -ItemType Directory -Path $_ -Force | Out-Null
 }
 Write-OK "Pastas criadas em $VITRINE"
@@ -81,25 +88,26 @@ if (!(Test-Path "$PYTHON_DIR\python.exe")) {
 
 # ---------- 4. CADDY ----------
 Write-Step "4/13 - Baixando Caddy..."
-$caddyPath = "$CODE\caddy.exe"
+$caddyPath = "$BIN\caddy.exe"
 if (!(Test-Path $caddyPath)) {
     $caddyZip = "$env:TEMP\caddy.zip"
     try {
         Invoke-WebRequest -Uri $CaddyUrl -OutFile $caddyZip -TimeoutSec 60
-        Expand-Archive -Path $caddyZip -DestinationPath $CODE -Force
+        Expand-Archive -Path $caddyZip -DestinationPath $BIN -Force
         Remove-Item $caddyZip -Force
         Write-OK "Caddy baixado e extraido"
     } catch {
         Write-Warn "Falha ao baixar Caddy ($($_.Exception.Message))"
-        Write-Warn "Baixe manualmente de $CaddyUrl, extraia caddy.exe e salve em $caddyPath"
+        Write-Warn "Baixe manualmente: $CaddyUrl"
+        Write-Warn "Extraia caddy.exe para $caddyPath"
     }
 } else {
-    Write-OK "Caddy ja existe"
+    Write-OK "Caddy ja existe em $caddyPath"
 }
 
 # ---------- 5. NSSM ----------
 Write-Step "5/13 - Verificando NSSM..."
-$nssmPath = "$CODE\nssm.exe"
+$nssmPath = "$BIN\nssm.exe"
 $nssmGlobal = Get-Command nssm -ErrorAction SilentlyContinue
 if ($nssmGlobal) {
     $nssmPath = $nssmGlobal.Source
@@ -110,10 +118,15 @@ if ($nssmGlobal) {
     Write-Host "  Baixando NSSM..."
     $nssmZip = "$env:TEMP\nssm-2.24.zip"
     $nssmTemp = "$env:TEMP\nssm"
-    Invoke-WebRequest -Uri $NssmUrl -OutFile $nssmZip
-    Expand-Archive -Path $nssmZip -DestinationPath $nssmTemp -Force
-    Copy-Item "$nssmTemp\nssm-2.24\win64\nssm.exe" $nssmPath -Force
-    Write-OK "NSSM baixado para $nssmPath"
+    try {
+        Invoke-WebRequest -Uri $NssmUrl -OutFile $nssmZip -TimeoutSec 60
+        Expand-Archive -Path $nssmZip -DestinationPath $nssmTemp -Force
+        Copy-Item "$nssmTemp\nssm-2.24\win64\nssm.exe" $nssmPath -Force
+        Write-OK "NSSM baixado para $nssmPath"
+    } catch {
+        Write-Warn "Falha ao baixar NSSM ($($_.Exception.Message))"
+        Write-Warn "Baixe manualmente de $NssmUrl e extraia nssm.exe para $nssmPath"
+    }
 }
 $NSSM = $nssmPath
 
@@ -124,11 +137,17 @@ if (Test-Path "$CODE\.git") {
     Push-Location $CODE
     git pull
     Pop-Location
+} elseif ((Test-Path $CODE) -and (@(Get-ChildItem $CODE).Count -gt 0)) {
+    Write-Warn "$CODE ja existe e nao esta vazio (mas nao e um clone git)"
+    Write-Warn "Remova manualmente o conteudo de $CODE e reexecute, ou clone manualmente:"
+    Write-Warn "  git clone $RepoUrl $CODE"
 } else {
     git clone $RepoUrl $CODE
     Write-OK "Repositorio clonado"
 }
-git config --global --add safe.directory $CODE 2>$null
+if (Test-Path "$CODE\.git") {
+    git config --global --add safe.directory $CODE 2>$null
+}
 
 # ---------- 7. SITE-PACKAGES ----------
 Write-Step "7/13 - Habilitando site-packages no Python..."
@@ -151,9 +170,13 @@ Write-Step "8/13 - Instalando pip..."
 $pipCheck = & "$PYTHON_DIR\python.exe" -m pip --version 2>&1
 if ($LASTEXITCODE -ne 0) {
     $getPip = "$env:TEMP\get-pip.py"
-    Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" -OutFile $getPip
-    & "$PYTHON_DIR\python.exe" $getPip --no-warn-script-location
-    Write-OK "pip instalado"
+    try {
+        Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" -OutFile $getPip -TimeoutSec 60
+        & "$PYTHON_DIR\python.exe" $getPip --no-warn-script-location
+        Write-OK "pip instalado"
+    } catch {
+        Write-Warn "Falha ao baixar/instalar pip ($($_.Exception.Message))"
+    }
 } else {
     Write-OK "pip ja instalado ($($pipCheck.Trim()))"
 }
@@ -164,19 +187,30 @@ $reqFile = "$CODE\deploy\requirements.txt"
 if (Test-Path $reqFile) {
     & "$PYTHON_DIR\python.exe" -m pip install -r $reqFile --no-warn-script-location
     Write-OK "Dependencias instaladas"
+} elseif (Test-Path "$BACKEND_DIR\pyproject.toml") {
+    Write-OK "Usando pyproject.toml para dependencias..."
+    Push-Location $BACKEND_DIR
+    & "$PYTHON_DIR\python.exe" -m pip install . --no-warn-script-location
+    Pop-Location
 } else {
-    Write-Warn "requirements.txt nao encontrado em $reqFile - ignorando"
+    Write-Warn "requirements.txt e pyproject.toml nao encontrados"
 }
 
 # ---------- 10. CONFIGS ----------
 Write-Step "10/13 - Copiando configuracoes..."
-Copy-Item "$CODE\deploy\Caddyfile" "$CODE\Caddyfile" -Force
-Write-OK "Caddyfile copiado"
+if (Test-Path "$BACKEND_DIR\..\deploy\Caddyfile") {
+    Copy-Item "$BACKEND_DIR\..\deploy\Caddyfile" "$BIN\Caddyfile" -Force
+    Write-OK "Caddyfile copiado para $BIN"
+} else {
+    Write-Warn "Caddyfile nao encontrado"
+}
 
 # ---------- 11. .ENV + DADOS ----------
 Write-Step "11/13 - Copiando .env e dados..."
 if ($DistPath -and (Test-Path $DistPath)) {
     if (Test-Path "$DistPath\.env") {
+        if (-not (Test-Path $BACKEND_DIR)) { New-Item -ItemType Directory -Path $BACKEND_DIR -Force | Out-Null }
+        Copy-Item "$DistPath\.env" "$BACKEND_DIR\.env" -Force
         Copy-Item "$DistPath\.env" "$DATA_DIR\.env" -Force
         Write-OK ".env copiado de $DistPath"
     } else {
@@ -187,15 +221,13 @@ if ($DistPath -and (Test-Path $DistPath)) {
         Write-OK "price_checker.db copiado"
     }
 } else {
-    Write-Warn "DistPath nao informado. Copie .env para $DATA_DIR\.env manualmente."
-}
-if (Test-Path "$DATA_DIR\.env") {
-    Copy-Item "$DATA_DIR\.env" "$BACKEND_DIR\.env" -Force
+    Write-Warn "DistPath nao informado. Copie .env para $BACKEND_DIR\.env manualmente."
 }
 
 # ---------- 12. FRONTEND ----------
 Write-Step "12/13 - Copiando frontend..."
 if ($DistPath -and (Test-Path "$DistPath\dist")) {
+    if (-not (Test-Path $FRONTEND_DIR)) { New-Item -ItemType Directory -Path $FRONTEND_DIR -Force | Out-Null }
     $distDest = "$FRONTEND_DIR\dist"
     if (Test-Path $distDest) {
         Remove-Item -Recurse $distDest -Force
@@ -203,14 +235,14 @@ if ($DistPath -and (Test-Path "$DistPath\dist")) {
     Copy-Item -Recurse "$DistPath\dist" $distDest
     Write-OK "Frontend dist copiado de $DistPath"
 } else {
-    Write-Warn "dist nao encontrado. Copie manualmente para $FRONTEND_DIR\dist\ depois."
+    Write-Warn "dist nao encontrado em $DistPath. Copie manualmente para $FRONTEND_DIR\dist\ depois."
 }
 
 # ---------- 13. SERVICOS ----------
 Write-Step "13/13 - Registrando servicos Windows..."
 if (!(Test-Path $NSSM)) {
     Write-Warn "NSSM nao encontrado em $NSSM. Registro de servicos pulado."
-    Write-Warn "Baixe manualmente de $NssmUrl e extraia nssm.exe para $CODE"
+    Write-Warn "Baixe manualmente de $NssmUrl e extraia nssm.exe para $BIN"
 } else {
     & $NSSM stop VitrineBackend 2>$null
     & $NSSM remove VitrineBackend confirm 2>$null
@@ -229,20 +261,26 @@ if (!(Test-Path $NSSM)) {
     Write-OK "Servico VitrineBackend registrado"
 
     # Frontend (Caddy)
-    & $NSSM install VitrineFrontend "$CODE\caddy.exe" "run --config $CODE\Caddyfile"
-    & $NSSM set VitrineFrontend AppDirectory $CODE
-    & $NSSM set VitrineFrontend AppStdout "$LOGS_DIR\caddy.log"
-    & $NSSM set VitrineFrontend AppStderr "$LOGS_DIR\caddy-error.log"
-    & $NSSM set VitrineFrontend Start SERVICE_AUTO_START
-    & $NSSM set VitrineFrontend ObjectName LocalSystem
-    & $NSSM set VitrineFrontend AppRestartDelay 5000
-    Write-OK "Servico VitrineFrontend registrado"
+    if (Test-Path $caddyPath) {
+        & $NSSM install VitrineFrontend "$caddyPath" "run --config $BIN\Caddyfile"
+        & $NSSM set VitrineFrontend AppDirectory $FRONTEND_DIR
+        & $NSSM set VitrineFrontend AppStdout "$LOGS_DIR\caddy.log"
+        & $NSSM set VitrineFrontend AppStderr "$LOGS_DIR\caddy-error.log"
+        & $NSSM set VitrineFrontend Start SERVICE_AUTO_START
+        & $NSSM set VitrineFrontend ObjectName LocalSystem
+        & $NSSM set VitrineFrontend AppRestartDelay 5000
+        Write-OK "Servico VitrineFrontend registrado"
+    } else {
+        Write-Warn "Caddy nao encontrado em $caddyPath - servico VitrineFrontend pulado"
+    }
 
     # ---------- INICIAR ----------
     Write-Step "- Iniciando servicos..."
     & $NSSM start VitrineBackend
     Start-Sleep -Seconds 3
-    & $NSSM start VitrineFrontend
+    if (Test-Path $caddyPath) {
+        & $NSSM start VitrineFrontend
+    }
 }
 
 Write-Host ""
@@ -253,4 +291,14 @@ Write-Host ""
 Write-Host "  Frontend: http://localhost:8080"
 Write-Host "  Backend:  http://localhost:8000"
 Write-Host "  Logs:     $LOGS_DIR"
+Write-Host ""
+Write-Host "  Binarios:        $BIN (caddy.exe, nssm.exe)"
+Write-Host "  Repositorio:     $CODE"
+Write-Host "  Python:          $PYTHON_DIR"
+Write-Host "  Dados (.env):    $DATA_DIR"
+Write-Host ""
+Write-Host "Comandos rapidos:"
+Write-Host "  restart.bat      -> reinicia servicos"
+Write-Host "  update.bat       -> git pull + copia configs"
+Write-Host "  uninstall.ps1    -> remove tudo"
 Write-Host ""
