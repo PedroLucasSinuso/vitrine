@@ -5,11 +5,15 @@ import BiPageLayout from '../../components/bi/BiPageLayout'
 import ExportButtons from '../../components/bi/ExportButtons'
 import BiTooltip from '../../components/bi/BiTooltip'
 import EmptyState from '../../components/ui/EmptyState'
+import ErrorBanner from '../../components/ui/ErrorBanner'
+import Card from '../../components/ui/Card'
 import { fetchTemporalHora, fetchTemporalDiaSemana, exportarExcelBI } from '../../api/bi'
 import { baixarCSVdeArray } from '../../utils/csv'
 import type { PontoHoraDTO, PontoDiaSemanaDTO, PeriodoBi, Metrica } from '../../types'
+import { CHART } from '../../utils/colors'
 import { useBiCache } from '../../stores/biCache'
 import { useToast } from '../../hooks/useToast'
+import { Clock } from 'lucide-react'
 import Skeleton from '../../components/ui/Skeleton'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -36,18 +40,19 @@ export default function Temporal() {
   const [porHora, setPorHora] = useState<PontoHoraDTO[]>([])
   const [porDia, setPorDia] = useState<PontoDiaSemanaDTO[]>([])
   const [loading, setLoading] = useState(false)
-  const [erro, setErro] = useState('')
+  const [erro, setErro] = useState<string | null>(null)
   const cache = useBiCache()
   const { toast } = useToast()
 
+  const cacheKey = `temporal_${metrica}`
+
   const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false) => {
     const p = periodoOverride ?? periodo
-    const cacheKey = `temporal_${metrica}`
     if (!force) {
       const cached = cache.get<{ hora: PontoHoraDTO[]; dia: PontoDiaSemanaDTO[] }>(cacheKey, p)
       if (cached) { setPorHora(cached.hora); setPorDia(cached.dia); return }
     }
-    setErro('')
+    setErro(null)
     setLoading(true)
     try {
       const [hora, dia] = await Promise.all([
@@ -64,12 +69,12 @@ export default function Temporal() {
     } finally {
       setLoading(false)
     }
-  }, [periodo, metrica, cache])
+  }, [periodo, metrica, cache]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { const t = setTimeout(() => buscar()); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleBuscar(periodoOverride?: PeriodoBi) {
-    cache.clear()
+    cache.invalidate(cacheKey)
     buscar(periodoOverride, true)
   }
 
@@ -81,42 +86,47 @@ export default function Temporal() {
 
   return (
     <BiPageLayout titulo="Distribuição Temporal" breadcrumb={[{ label: 'BI', path: '/bi' }, { label: 'Temporal' }]}>
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5 flex flex-col gap-4">
-        <PeriodoForm value={periodo} onChange={setPeriodo} onBuscar={handleBuscar} loading={loading} presets={PRESETS_TEMPORAL} />
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-500 dark:text-gray-400">Métrica</label>
-          <select
-            className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-40"
-            value={metrica}
-            onChange={(e) => setMetrica(e.target.value as Metrica)}
-          >
-            <option value="receita_produto">Receita</option>
-            <option value="qtd_item">Quantidade</option>
-          </select>
+      <Card variant="bordered">
+        <div className="flex flex-col gap-4">
+          <PeriodoForm value={periodo} onChange={setPeriodo} onBuscar={handleBuscar} loading={loading} presets={PRESETS_TEMPORAL} />
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-500 dark:text-slate-400">Métrica</label>
+            <select
+              className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-40"
+              value={metrica}
+              onChange={(e) => setMetrica(e.target.value as Metrica)}
+            >
+              <option value="receita_produto">Receita</option>
+              <option value="qtd_item">Quantidade</option>
+            </select>
+          </div>
+          {erro && <ErrorBanner message={erro} />}
+          <ExportButtons
+            onExcel={() => { exportarExcelBI(periodo, 'diario', { metrica }); toast({ type: 'success', message: 'Excel exportado' }) }}
+            onCsv={() => { baixarCSVdeArray(aba === 'hora' ? porHora : porDia, `temporal-${aba}`); toast({ type: 'success', message: 'CSV exportado' }) }}
+            disabled={!temDados}
+          />
         </div>
-        {erro && <p className="text-red-500 text-sm">{erro}</p>}
-        <ExportButtons
-          onExcel={() => { exportarExcelBI(periodo, 'diario', { metrica }); toast({ type: 'success', message: 'Excel exportado' }) }}
-          onCsv={() => { baixarCSVdeArray(aba === 'hora' ? porHora : porDia, `temporal-${aba}`); toast({ type: 'success', message: 'CSV exportado' }) }}
-          disabled={!temDados}
-        />
-      </div>
+      </Card>
 
       {loading && !temDados && (
-        <Skeleton className="h-[340px] rounded-2xl" />
+        <Card variant="bordered">
+          <Skeleton className="h-5 w-40 mb-4" />
+          <Skeleton variant="chart" />
+        </Card>
       )}
       {!loading && !temDados && (
         <EmptyState title="Nenhum dado no período" description="Tente ampliar o período ou alterar os filtros." />
       )}
       {temDados && (
         <>
-          <div className="flex gap-1 bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-1 w-fit">
+          <div className="flex gap-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-1 w-fit">
             {([['hora', 'Por Hora'], ['dia_semana', 'Por Dia da Semana']] as [Aba, string][]).map(([a, label]) => (
               <button
                 key={a}
                 onClick={() => setAba(a)}
                 className={`px-5 py-2 rounded-xl text-sm font-semibold transition ${
-                  aba === a ? 'bg-primary text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  aba === a ? 'bg-primary text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
               >
                 {label}
@@ -124,13 +134,20 @@ export default function Temporal() {
             ))}
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
-            <ResponsiveContainer width="100%" minHeight={280}>
+          <Card variant="bordered">
+            <div className="flex items-center gap-2 mb-4">
+              <Clock size={16} className="text-primary" />
+              <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                {aba === 'hora' ? 'Por Hora' : 'Por Dia da Semana'}
+              </h2>
+            </div>
+            <div className="w-full aspect-[16/9] md:aspect-[21/9]">
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dadosGrafico} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#059669" stopOpacity={0.9} />
-                    <stop offset="100%" stopColor="#059669" stopOpacity={0.3} />
+                  <linearGradient id="barGradientTemporal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={CHART.green} stopOpacity={0.9} />
+                    <stop offset="100%" stopColor={CHART.green} stopOpacity={0.25} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
@@ -141,10 +158,11 @@ export default function Temporal() {
                   width={40}
                 />
                 <Tooltip content={<BiTooltip />} />
-                <Bar dataKey="valor" fill="url(#barGradient)" radius={[4, 4, 0, 0]} animationBegin={0} animationDuration={600} />
+                <Bar dataKey="valor" fill="url(#barGradientTemporal)" radius={[4, 4, 0, 0]} animationBegin={0} animationDuration={600} />
               </BarChart>
             </ResponsiveContainer>
-          </div>
+            </div>
+          </Card>
         </>
       )}
     </BiPageLayout>

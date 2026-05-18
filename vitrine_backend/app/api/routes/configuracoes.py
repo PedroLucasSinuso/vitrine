@@ -2,8 +2,8 @@
 import shutil
 import logging
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, UploadFile, File
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from sqlalchemy import select, create_engine, text
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, require_admin
@@ -24,6 +24,14 @@ from app.application.notifications.scheduler_notifications import (
     _enviar_relatorio_whatsapp,
     _enviar_relatorio_email,
 )
+from app.application.config_service import (
+    set_many,
+    invalidar_cache,
+    get as get_config,
+    is_sensitive,
+    CHAVES_EDITAVEIS,
+)
+from app.core.error_handler import sanitizar_erro
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +49,14 @@ def listar_configuracoes(
     stmt = select(Configuracao)
     results = db.execute(stmt).scalars().all()
     return ConfiguracaoResponse(
-        configuracoes={r.chave: r.valor for r in results}
+        configuracoes={
+            r.chave: (
+                "***configurado***"
+                if is_sensitive(r.chave) and r.valor
+                else r.valor
+            )
+            for r in results
+        }
     )
 
 
@@ -52,19 +67,7 @@ def atualizar_configuracoes(
     _admin: Usuario = Depends(require_admin),
 ):
     init_db()
-    now = datetime.now(timezone.utc)
-    for chave, valor in body.valores.items():
-        existing = db.execute(
-            select(Configuracao).where(Configuracao.chave == chave)
-        ).scalar_one_or_none()
-
-        if existing:
-            existing.valor = valor
-            existing.atualizado_em = now
-        else:
-            db.add(Configuracao(chave=chave, valor=valor, atualizado_em=now))
-
-    db.commit()
+    set_many(db, body.valores)
 
     valores = body.valores
 
@@ -76,8 +79,8 @@ def atualizar_configuracoes(
 
     if "report_day" in valores or "report_time" in valores:
         try:
-            dia = _read_or_default(db, "report_day", "fri")
-            time_str = _read_or_default(db, "report_time", "18:00")
+            dia = get_config(db, "report_day", "fri")
+            time_str = get_config(db, "report_time", "18:00")
             hora, minuto = map(int, time_str.split(":"))
             reagendar_relatorio_whatsapp(dia, hora, minuto, _enviar_relatorio_whatsapp)
         except Exception as e:
@@ -85,8 +88,8 @@ def atualizar_configuracoes(
 
     if "report_email_day" in valores or "report_email_time" in valores:
         try:
-            dia = _read_or_default(db, "report_email_day", "fri")
-            time_str = _read_or_default(db, "report_email_time", "18:00")
+            dia = get_config(db, "report_email_day", "fri")
+            time_str = get_config(db, "report_email_time", "18:00")
             hora, minuto = map(int, time_str.split(":"))
             reagendar_relatorio_email(dia, hora, minuto, _enviar_relatorio_email)
         except Exception as e:
@@ -95,20 +98,66 @@ def atualizar_configuracoes(
     stmt = select(Configuracao)
     results = db.execute(stmt).scalars().all()
     return ConfiguracaoResponse(
-        configuracoes={r.chave: r.valor for r in results}
+        configuracoes={
+            r.chave: (
+                "***configurado***"
+                if is_sensitive(r.chave) and r.valor
+                else r.valor
+            )
+            for r in results
+        }
     )
 
 
-def _read_or_default(db: Session, key: str, default: str) -> str:
-    r = db.execute(
-        select(Configuracao).where(Configuracao.chave == key)
-    ).scalar_one_or_none()
-    return r.valor.strip() if r and r.valor else default
+@router.post("/configuracoes/testar-erp")
+def testar_conexao_erp(
+    db: Session = Depends(get_db),
+    _admin: Usuario = Depends(require_admin),
+):
+    """Testa a conexão com o banco do ERP com as credenciais atuais."""
+    url = get_config(db, "erp_postgres_url")
+    if not url:
+        raise HTTPException(status_code=400, detail="URL do ERP não configurada")
+    try:
+        engine = create_engine(url, connect_args={"connect_timeout": 5})
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return {"status": "ok", "mensagem": "Conexão estabelecida com sucesso"}
+    except Exception as e:
+        return {"status": "erro", "mensagem": sanitizar_erro(e)}
+
+
+@router.post("/configuracoes/testar-whatsapp")
+def testar_whatsapp(
+    db: Session = Depends(get_db),
+    _admin: Usuario = Depends(require_admin),
+):
+    """Envia um relatório de teste via WhatsApp para os contatos configurados."""
+    sid = get_config(db, "twilio_account_sid")
+    token = get_config(db, "twilio_auth_token")
+    if not sid or not token:
+        raise HTTPException(status_code=400, detail="WhatsApp não configurado")
+    _enviar_relatorio_whatsapp()
+    return {"status": "ok", "mensagem": "Relatório de teste enviado via WhatsApp"}
+
+
+@router.post("/configuracoes/testar-email")
+def testar_email(
+    db: Session = Depends(get_db),
+    _admin: Usuario = Depends(require_admin),
+):
+    """Envia um relatório de teste por e-mail para os contatos configurados."""
+    smtp_host = get_config(db, "smtp_host")
+    if not smtp_host:
+        raise HTTPException(status_code=400, detail="SMTP não configurado")
+    _enviar_relatorio_email()
+    return {"status": "ok", "mensagem": "Relatório de teste enviado por e-mail"}
 
 
 @router.post("/configuracoes/logo", response_model=LogoUploadResponse, status_code=201)
 def upload_logo(
     file: UploadFile = File(...),
+    db: Session = Depends(get_db),
     _admin: Usuario = Depends(require_admin),
 ):
     os.makedirs(STATIC_DIR, exist_ok=True)
@@ -122,21 +171,6 @@ def upload_logo(
 
     logo_url = f"/static/{filename}"
 
-    init_db()
-    from app.infrastructure.db.session import SqliteSession
-    db = SqliteSession()
-    try:
-        existing = db.execute(
-            select(Configuracao).where(Configuracao.chave == "logo_url")
-        ).scalar_one_or_none()
-        now = datetime.now(timezone.utc)
-        if existing:
-            existing.valor = logo_url
-            existing.atualizado_em = now
-        else:
-            db.add(Configuracao(chave="logo_url", valor=logo_url, atualizado_em=now))
-        db.commit()
-    finally:
-        db.close()
+    set_many(db, {"logo_url": logo_url})
 
     return {"logo_url": logo_url}

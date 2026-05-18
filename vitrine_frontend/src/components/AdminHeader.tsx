@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { getConfigsCache } from '../stores/configStore'
-import { RefreshCw, Tags, ClipboardList, Users, Settings, Search, BarChart3, Sun, Moon, ArrowLeft } from 'lucide-react'
+import { RefreshCw, Tags, ClipboardList, Users, Settings, Search, BarChart3, Sun, Moon, ArrowLeft, ChevronRight, LogOut } from 'lucide-react'
+import NotificationCenter from './NotificationCenter'
 import type { LucideIcon } from 'lucide-react'
 
 interface Breadcrumb {
@@ -43,16 +44,16 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
   const { logout, getRole, getNomeExibicao, getExpiresInMs } = useAuth()
   const role = getRole()
 
-  const [dark, setDark] = useState(() => localStorage.getItem('darkMode') === 'true')
+  const [dark, setDark] = useState(() => localStorage.getItem('app_darkMode') === 'true')
   const [menuOpen, setMenuOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const logoUrl = localStorage.getItem('marketLogoUrl')
-  const marketName = localStorage.getItem('marketName')
+  const logoUrl = localStorage.getItem('app_marketLogoUrl')
+  const marketName = localStorage.getItem('app_marketName')
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
-    localStorage.setItem('darkMode', String(dark))
+    localStorage.setItem('app_darkMode', String(dark))
   }, [dark])
 
   useEffect(() => {
@@ -98,67 +99,92 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
 
   return (
     <div className="w-full max-w-5xl relative">
+      {/* Breadcrumb */}
       {breadcrumb && breadcrumb.length > 0 && (
-        <nav className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex gap-1 flex-wrap">
+        <nav className="text-xs text-slate-400 dark:text-slate-500 mb-2 flex items-center gap-0.5 flex-wrap" aria-label="Breadcrumb">
           {breadcrumb.map((b, i) => (
-            <span key={i}>
-              {i > 0 && <ArrowLeft className="mx-1 opacity-30 inline" size={10} />}
+            <span key={i} className="flex items-center gap-0.5">
+              {i > 0 && <ChevronRight size={10} className="opacity-40" />}
               {b.path
-                ? <button onClick={() => navigate(b.path!)} className="hover:text-primary dark:hover:text-primary-light transition">{b.label}</button>
-                : <span className="text-gray-600 dark:text-gray-300">{b.label}</span>
+                ? <button onClick={() => navigate(b.path!)} className="hover:text-primary dark:hover:text-primary-light transition font-medium">{b.label}</button>
+                : <span className="text-slate-600 dark:text-slate-300 font-medium">{b.label}</span>
               }
             </span>
           ))}
         </nav>
       )}
-      <div className="flex justify-between items-start mb-4 gap-2">
-        <div className="flex items-center gap-3 min-w-0 flex-wrap">
+
+      {/* Main header row — mobile: stacked, desktop: single row */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        {/* Left: branding + page info */}
+        <div className="flex items-center gap-3 min-w-0">
           {hideNav && (
             <button
               onClick={() => setMenuOpen((prev) => !prev)}
-              className="flex items-center gap-1 text-xs font-semibold text-primary dark:text-primary-light bg-white dark:bg-gray-800 rounded-xl px-3 py-2 shadow-sm hover:bg-primary-lighter dark:hover:bg-gray-700 transition whitespace-nowrap shrink-0"
+              className="flex items-center gap-1 text-xs font-semibold text-primary dark:text-primary-light bg-white dark:bg-slate-800 rounded-xl px-3 py-2 shadow-sm hover:bg-primary-lighter dark:hover:bg-slate-700 transition whitespace-nowrap shrink-0"
               aria-label="Abrir navegação admin"
             >
               <ArrowLeft size={14} /> Admin
             </button>
           )}
-          <img src="/vitrine_logo.svg" alt="Vitrine" className="h-7 w-auto shrink-0" />
+          {/* Logo with dark mode invert */}
+          <img src="/vitrine_logo.svg" alt="Vitrine" className="h-6 w-auto shrink-0 dark:invert" />
           {logoUrl ? (
-            <img src={logoUrl} alt={marketName ?? 'Logo'} className="h-12 w-auto rounded shrink-0" />
+            <img src={logoUrl} alt={marketName ?? 'Logo'} className="h-10 w-auto rounded-lg shrink-0" />
           ) : (
-            <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center text-white font-bold shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary font-bold shrink-0">
               {logoFallback}
             </div>
           )}
           <div className="min-w-0">
             {marketName && (
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate leading-tight">{marketName}</p>
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate leading-tight">{marketName}</p>
             )}
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{titulo}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{titulo}</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+
+        {/* Right: user actions */}
+        <div className="flex items-center gap-2 shrink-0 sm:pl-3 sm:border-l sm:border-slate-200 sm:dark:border-slate-700">
           {expiringBadge && (
-            <span className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300 font-semibold px-2 py-1 rounded-full">
-              Token expira em {expiringMin}min
+            <span className="hidden sm:inline-flex text-[10px] bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-medium px-2 py-1 rounded-full border border-amber-200 dark:border-amber-800">
+              Expira em {expiringMin}min
             </span>
           )}
+          <NotificationCenter />
           <button
             onClick={() => setDark((prev) => !prev)}
-            className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
             aria-label="Alternar tema"
             title={dark ? 'Modo claro' : 'Modo escuro'}
           >
-            {dark ? <Sun size={16} /> : <Moon size={16} />}
+            {dark ? <Sun size={15} /> : <Moon size={15} />}
           </button>
-          <span className="text-xs text-gray-400 dark:text-gray-500">
-            {getNomeExibicao()}
-          </span>
-          <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition">
-            Sair
+          {/* User info + role — hidden on mobile */}
+          <div className="hidden sm:flex items-center gap-1.5">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              {getNomeExibicao()}
+            </span>
+            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
+              role === 'admin' ? 'bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'
+              : role === 'supervisor' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+              : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+            }`}>
+              {role === 'admin' ? 'Admin' : role === 'supervisor' ? 'Sup.' : 'Op.'}
+            </span>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+            aria-label="Sair"
+            title="Sair"
+          >
+            <LogOut size={15} />
           </button>
         </div>
       </div>
+
+      {/* Admin nav links grid */}
       <div
         className={`grid ${cols} gap-2 transition-all duration-300 ease-in-out overflow-hidden ${
           hideNav
@@ -175,7 +201,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
               className={`rounded-xl py-2 px-1 text-xs font-semibold transition flex flex-col items-center gap-0.5 truncate ${
                 ativo
                   ? 'bg-primary text-white shadow-sm'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-primary-lighter dark:hover:bg-gray-700 hover:text-primary shadow-sm'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-primary-lighter dark:hover:bg-slate-700 hover:text-primary shadow-sm'
               }`}
             >
               <Icon size={16} />
@@ -184,12 +210,14 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
           )
         })}
       </div>
+
+      {/* Mobile dropdown menu */}
       {hideNav && menuOpen && (
         <div ref={dropdownRef} className="absolute left-0 top-full z-50 w-full mt-2 animate-fade-in-up">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 flex flex-col gap-1">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-3 flex flex-col gap-1">
             {(isAdmin || supervisorAdminLinks.length > 0) && (
               <>
-                <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide px-2 py-1">
+                <div className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide px-2 py-1">
                   Administração
                 </div>
                 <div className="grid grid-cols-2 gap-1">
@@ -202,7 +230,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
                         className={`rounded-xl py-2 px-2 text-xs font-semibold transition flex items-center gap-2 ${
                           ativo
                             ? 'bg-primary text-white shadow-sm'
-                            : 'text-gray-600 dark:text-gray-300 hover:bg-primary-lighter dark:hover:bg-gray-700 hover:text-primary'
+                            : 'text-slate-600 dark:text-slate-300 hover:bg-primary-lighter dark:hover:bg-slate-700 hover:text-primary'
                         }`}
                       >
                         <Icon size={16} />
@@ -211,10 +239,10 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
                     )
                   })}
                 </div>
-                <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+                <div className="border-t border-slate-200 dark:border-slate-700 my-1" />
               </>
             )}
-            <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide px-2 py-1">
+            <div className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide px-2 py-1">
               Geral
             </div>
             <div className="grid grid-cols-2 gap-1">
@@ -227,7 +255,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
                     className={`rounded-xl py-2 px-2 text-xs font-semibold transition flex items-center gap-2 ${
                       ativo
                         ? 'bg-primary text-white shadow-sm'
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-primary-lighter dark:hover:bg-gray-700 hover:text-primary'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-primary-lighter dark:hover:bg-slate-700 hover:text-primary'
                     }`}
                   >
                     <Icon size={16} />

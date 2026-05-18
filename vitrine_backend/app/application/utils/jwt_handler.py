@@ -1,14 +1,14 @@
 ﻿from datetime import datetime, timedelta, timezone
 import jwt
 from jwt import InvalidTokenError
-from app.core.config import settings
+from app.core.config import settings, ACCESS_TOKEN_EXPIRE_MINUTES
 
 ALGORITHM = "HS256"
 
 
 def create_access_token(data: dict) -> str:
     payload = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     payload["exp"] = expire
     return jwt.encode(payload, settings.jwt_secret, algorithm=ALGORITHM)
 

@@ -6,6 +6,9 @@ class DatabaseType(str, Enum):
     POSTGRES = "postgres"
     SQLITE = "sqlite"
 
+# Constante: 7 dias (não configurável via .env)
+ACCESS_TOKEN_EXPIRE_MINUTES = 10080
+
 class Settings(BaseSettings):
     postgres_url: str = ""
     sqlite_url: str = ""
@@ -17,8 +20,10 @@ class Settings(BaseSettings):
     allow_origin_regex: str | None = None
 
     jwt_secret: str = ""
-    access_token_expire_minutes: int = 60 # em minutos
 
+    # As variáveis abaixo permanecem no Settings para fallback
+    # durante a migração para o banco. Em produção, o ConfigService
+    # lê do SQLite primeiro e cai pra cá se não encontrar.
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
     twilio_from_number: str = ""

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, UserPlus, Edit2, Users } from 'lucide-react'
 import AdminHeader from '../components/AdminHeader'
 import {
   listarUsuarios,
@@ -16,9 +16,15 @@ import type { Role } from '../types'
 const ROLES: Role[] = ['operador', 'supervisor', 'admin']
 
 const roleBadgeClass: Record<Role, string> = {
-  operador: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
-  supervisor: 'bg-primary-lighter text-primary dark:bg-primary dark:text-primary-lighter',
-  admin: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
+  operador: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  supervisor: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  admin: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+}
+
+const roleLabels: Record<Role, string> = {
+  operador: 'Operador',
+  supervisor: 'Supervisor',
+  admin: 'Admin',
 }
 
 interface ModalEdicao {
@@ -27,6 +33,23 @@ interface ModalEdicao {
   role: Role
   loading: boolean
   erro: string
+}
+
+function UserAvatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' | 'lg' }) {
+  const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+  const sizeClass = size === 'sm' ? 'w-8 h-8 text-xs' : size === 'lg' ? 'w-12 h-12 text-base' : 'w-10 h-10 text-sm'
+  const colors = [
+    'bg-primary/10 text-primary dark:bg-primary/20',
+    'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  ]
+  const colorIdx = name.charCodeAt(0) % colors.length
+  return (
+    <div className={`${sizeClass} rounded-xl ${colors[colorIdx]} flex items-center justify-center font-bold shrink-0`}>
+      {initials}
+    </div>
+  )
 }
 
 export default function Usuarios() {
@@ -61,6 +84,7 @@ export default function Usuarios() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     carregar()
   }, [])
 
@@ -108,48 +132,46 @@ export default function Usuarios() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex flex-col items-center px-4 py-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-hidden">
 
       {/* Modal de edição */}
       {modal && (
-        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 px-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-5 w-full max-w-sm flex flex-col gap-4">
-            <div>
-              <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Editar usuário</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{modal.usuario.nome_exibicao} ({modal.usuario.username})</p>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <div>
-                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Nova senha (opcional)</label>
-                <input
-                  type="password"
-                  className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Deixe em branco para não alterar"
-                  value={modal.password}
-                  onChange={(e) => setModal(m => m ? { ...m, password: e.target.value } : null)}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Role</label>
-                <select
-                  className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  value={modal.role}
-                  onChange={(e) => setModal(m => m ? { ...m, role: e.target.value as Role } : null)}
-                >
-                  {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-              </div>
-            </div>
-
-            {modal.erro && <p className="text-red-500 text-sm">{modal.erro}</p>}
-
-            <div className="flex gap-2">
+        <Modal
+          open={!!modal}
+          onClose={() => setModal(null)}
+          title={`Editar: ${modal.usuario.nome_exibicao}`}
+          actions={
+            <>
               <Button variant="ghost" onClick={() => setModal(null)} fullWidth>Cancelar</Button>
               <Button onClick={handleAtualizar} loading={modal.loading} fullWidth>Salvar</Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            <p className="text-xs text-slate-400 dark:text-slate-500">{modal.usuario.username}</p>
+            <div>
+              <label className="text-xs text-slate-500 dark:text-slate-400 mb-1.5 block">Nova senha (opcional)</label>
+              <input
+                type="password"
+                className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Deixe em branco para não alterar"
+                value={modal.password}
+                onChange={(e) => setModal(m => m ? { ...m, password: e.target.value } : null)}
+              />
             </div>
+            <div>
+              <label className="text-xs text-slate-500 dark:text-slate-400 mb-1.5 block">Permissão</label>
+              <select
+                className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                value={modal.role}
+                onChange={(e) => setModal(m => m ? { ...m, role: e.target.value as Role } : null)}
+              >
+                {ROLES.map(r => <option key={r} value={r}>{roleLabels[r]}</option>)}
+              </select>
+            </div>
+            {modal.erro && <p className="text-red-500 text-sm">{modal.erro}</p>}
           </div>
-        </div>
+        </Modal>
       )}
 
       <AdminHeader titulo="Usuários" paginaAtual="usuarios" />
@@ -157,18 +179,26 @@ export default function Usuarios() {
       <div className="w-full max-w-2xl flex flex-col gap-5">
 
         {/* Formulário de criação */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-5">
-          <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Novo usuário</h2>
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
+              <UserPlus size={20} className="text-primary" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">Novo usuário</h2>
+              <p className="text-xs text-slate-400 dark:text-slate-500">Adicione um novo membro à equipe</p>
+            </div>
+          </div>
           <div className="flex flex-col gap-3">
             <div className="flex flex-col sm:flex-row gap-3">
               <input
-                className="w-full sm:flex-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full sm:flex-1 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="Username"
                 value={novoUsername}
                 onChange={(e) => setNovoUsername(e.target.value)}
               />
               <input
-                className="w-full sm:flex-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full sm:flex-1 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="Nome de exibição"
                 value={novoNome}
                 onChange={(e) => setNovoNome(e.target.value)}
@@ -177,18 +207,18 @@ export default function Usuarios() {
             <div className="flex flex-col sm:flex-row gap-3">
               <input
                 type="password"
-                className="w-full sm:flex-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full sm:flex-1 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="Senha"
                 value={novoPassword}
                 onChange={(e) => setNovoPassword(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleCriar()}
               />
               <select
-                className="w-full sm:w-auto border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full sm:w-auto border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 value={novoRole}
                 onChange={(e) => setNovoRole(e.target.value as Role)}
               >
-                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                {ROLES.map(r => <option key={r} value={r}>{roleLabels[r]}</option>)}
               </select>
               <Button onClick={handleCriar} loading={criando}>
                 Criar
@@ -199,31 +229,39 @@ export default function Usuarios() {
         </div>
 
         {/* Lista de usuários */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-5">
-          <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">
-            Usuários
-            {!carregando && (
-              <span className="text-gray-400 dark:text-gray-500 font-normal text-sm ml-2">({usuarios.length})</span>
-            )}
-          </h2>
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+              <Users size={20} className="text-slate-500 dark:text-slate-400" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">
+                Equipe
+              </h2>
+              {!carregando && (
+                <p className="text-xs text-slate-400 dark:text-slate-500">{usuarios.length} membro(s)</p>
+              )}
+            </div>
+          </div>
 
           {erroGeral && <p className="text-red-500 text-sm mb-3">{erroGeral}</p>}
-          {carregando && <p className="text-sm text-gray-400 dark:text-gray-500">Carregando...</p>}
+          {carregando && <p className="text-sm text-slate-400 dark:text-slate-500">Carregando...</p>}
 
           {!carregando && (
             <div className="flex flex-col gap-2">
               {usuarios.map(usuario => (
-                <div key={usuario.id} className="flex justify-between items-center border dark:border-gray-700 rounded-lg px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{usuario.nome_exibicao}</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500">{usuario.username}</p>
+                <div key={usuario.id} className="flex justify-between items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition group">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <UserAvatar name={usuario.nome_exibicao} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{usuario.nome_exibicao}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 font-mono">{usuario.username}</p>
                     </div>
-                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${roleBadgeClass[usuario.role]}`}>
-                      {usuario.role}
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${roleBadgeClass[usuario.role]}`}>
+                      {roleLabels[usuario.role]}
                     </span>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
                     <button
                       onClick={() => setModal({
                         usuario,
@@ -232,16 +270,18 @@ export default function Usuarios() {
                         loading: false,
                         erro: '',
                       })}
-                      className="text-sm text-gray-500 hover:text-primary transition"
+                      className="text-slate-400 hover:text-primary transition p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
+                      aria-label={`Editar ${usuario.nome_exibicao}`}
                     >
-                      Editar
+                      <Edit2 size={14} />
                     </button>
                     <button
                       onClick={() => setExcluirUsuarioObj(usuario)}
                       disabled={usuario.username === meuUsername}
-                      className="text-sm text-gray-300 hover:text-red-500 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="text-slate-400 hover:text-red-500 transition disabled:opacity-30 disabled:cursor-not-allowed p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                      aria-label={`Excluir ${usuario.nome_exibicao}`}
                     >
-                      Excluir
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </div>

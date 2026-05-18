@@ -14,8 +14,8 @@ interface Props {
 
 const variants: Record<string, string> = {
   primary: 'bg-primary hover:bg-primary-hover text-white shadow-sm',
-  secondary: 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200',
-  ghost: 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800',
+  secondary: 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-gray-600 text-slate-700 dark:text-slate-200',
+  ghost: 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800',
   danger: 'bg-red-500 hover:bg-red-600 text-white shadow-sm',
   outline: 'border border-primary text-primary hover:bg-primary hover:text-white',
 }

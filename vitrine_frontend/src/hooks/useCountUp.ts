@@ -6,6 +6,7 @@ export function useCountUp(target: number, duration = 600, enabled = true): numb
 
   useEffect(() => {
     if (!enabled || target === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: skip animation for disabled/zero targets
       setValue(target)
       return
     }

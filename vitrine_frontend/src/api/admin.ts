@@ -37,6 +37,31 @@ export async function uploadLogo(file: File): Promise<{ logo_url: string }> {
   return response.data
 }
 
+export async function testarConexaoErp(): Promise<{ status: string; mensagem: string }> {
+  const response = await api.post('/admin/configuracoes/testar-erp')
+  return response.data
+}
+
+export async function testarWhatsApp(): Promise<{ status: string; mensagem: string }> {
+  const response = await api.post('/admin/configuracoes/testar-whatsapp')
+  return response.data
+}
+
+export async function testarEmail(): Promise<{ status: string; mensagem: string }> {
+  const response = await api.post('/admin/configuracoes/testar-email')
+  return response.data
+}
+
+export async function getStatus(): Promise<{ last_updated: string }> {
+  const response = await api.get('/status/')
+  return response.data
+}
+
+export async function getCacheStatus(): Promise<Record<string, unknown>> {
+  const response = await api.get('/admin/cache/status')
+  return response.data
+}
+
 import type { SessaoInventario, ItemInventario, ItemInventarioSubmit } from '../types/inventario'
 
 export async function getSessoesInventario(): Promise<SessaoInventario[]> {

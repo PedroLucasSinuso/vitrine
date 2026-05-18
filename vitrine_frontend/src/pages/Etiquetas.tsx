@@ -3,7 +3,7 @@ import { buscarProduto } from '../api/produtos'
 import AdminHeader from '../components/AdminHeader'
 import LeitorCodigo from '../components/LeitorCodigo'
 import { gerarCSV, baixarCSV, type CsvRow } from '../utils/csv'
-import { Camera } from 'lucide-react'
+import { Camera, Tag, Trash2, Download, Plus } from 'lucide-react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 
 interface ItemEtiqueta {
@@ -57,7 +57,7 @@ export default function Etiquetas() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex flex-col items-center px-4 py-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-hidden">
       {camera && (
         <LeitorCodigo
           onLeitura={(codigo) => { setCamera(false); setTimeout(() => handleCodigo(codigo), 50) }}
@@ -69,21 +69,29 @@ export default function Etiquetas() {
 
       <div className="w-full max-w-2xl flex flex-col gap-5">
 
-        {/* Input */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-5">
-          <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Bipar produtos</h2>
+        {/* Input card */}
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
+              <Tag size={20} className="text-primary" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">Bipar produtos</h2>
+              <p className="text-xs text-slate-400 dark:text-slate-500">Adicione produtos à lista de etiquetas</p>
+            </div>
+          </div>
           <div className="flex gap-2">
             <input
               ref={inputRef}
               aria-label="Código do produto"
-              className="flex-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+              className="flex-1 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="Digite ou bipe o código"
               onKeyDown={handleKeyDown}
               autoFocus
             />
             <button
               onClick={() => setCamera(true)}
-              className="md:hidden bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-lg transition"
+              className="md:hidden bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 px-3 py-2 rounded-xl transition"
               aria-label="Ler código de barras"
             >
               <Camera size={18} />
@@ -92,42 +100,50 @@ export default function Etiquetas() {
           {erro && <p className="text-red-500 text-sm mt-2" role="alert">{erro}</p>}
         </div>
 
-        {/* Lista */}
+        {/* Lista card */}
         {itens.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-5">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200">
-                Lista <span className="text-gray-400 dark:text-gray-500 font-normal text-sm">({itens.length} produtos)</span>
-              </h2>
+              <div className="flex items-center gap-2">
+                <Plus size={16} className="text-slate-400" />
+                <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">
+                  Lista <span className="text-slate-400 dark:text-slate-500 font-normal text-sm">({itens.length} produtos)</span>
+                </h2>
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setItens([])}
-                  className="text-sm text-gray-400 hover:text-red-500 transition"
+                  className="text-sm text-slate-400 hover:text-red-500 transition inline-flex items-center gap-1"
                 >
-                  Limpar
+                  <Trash2 size={13} /> Limpar
                 </button>
                 <button
                   onClick={handleExportar}
-                  className="bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition"
+                  className="bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-4 py-1.5 rounded-xl transition inline-flex items-center gap-1.5"
                 >
-                  Exportar CSV
+                  <Download size={13} /> Exportar
                 </button>
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               {itens.map(item => (
-                <div key={item.codigo} className="flex justify-between items-center border dark:border-gray-700 rounded-lg px-4 py-2">
-                  <div>
-                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{item.codigo}</span>
-                    <span className="text-sm text-gray-400 dark:text-gray-500 ml-3">{item.nome}</span>
+                <div key={item.codigo} className="flex justify-between items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition group">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                      <Tag size={14} className="text-slate-400 dark:text-slate-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 font-mono">{item.codigo}</span>
+                      <span className="text-sm text-slate-400 dark:text-slate-500 ml-2 truncate">{item.nome}</span>
+                    </div>
                   </div>
                   <button
                     onClick={() => remover(item.codigo)}
-                    className="text-gray-300 hover:text-red-500 transition text-lg leading-none"
+                    className="text-slate-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100 p-1"
                     aria-label={`Remover ${item.nome}`}
                   >
-                    ×
+                    <Trash2 size={14} />
                   </button>
                 </div>
               ))}

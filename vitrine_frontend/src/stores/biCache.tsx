@@ -11,6 +11,7 @@ interface CacheEntry {
 interface BiCacheContextType {
   get: <T>(key: string, periodo: PeriodoBi) => T | null
   set: (key: string, periodo: PeriodoBi, data: unknown) => void
+  invalidate: (key: string) => void
   clear: () => void
   getTimestamp: (key: string, periodo: PeriodoBi) => number | null
 }
@@ -38,6 +39,10 @@ export function BiCacheProvider({ children }: { children: ReactNode }) {
     cacheRef.current.set(key, { data, periodoKey: periodoKey(periodo), timestamp: Date.now() })
   }, [])
 
+  const invalidate = useCallback((key: string) => {
+    cacheRef.current.delete(key)
+  }, [])
+
   const clear = useCallback(() => {
     cacheRef.current.clear()
   }, [])
@@ -53,7 +58,7 @@ export function BiCacheProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <BiCacheContext.Provider value={{ get, set, clear, getTimestamp }}>
+    <BiCacheContext.Provider value={{ get, set, invalidate, clear, getTimestamp }}>
       {children}
     </BiCacheContext.Provider>
   )

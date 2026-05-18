@@ -1,14 +1,13 @@
 import logging
 from twilio.rest import Client
-from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 
 class WhatsAppClient:
-    def __init__(self):
-        self.client = Client(settings.twilio_account_sid, settings.twilio_auth_token)
-        self.from_number = f"whatsapp:{settings.twilio_from_number}"
+    def __init__(self, sid: str, token: str, from_number: str):
+        self.client = Client(sid, token)
+        self.from_number = f"whatsapp:{from_number}" if from_number else ""
 
     def enviar_texto(self, numero: str, mensagem: str) -> bool:
         try:

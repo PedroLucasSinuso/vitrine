@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import * as XLSX from 'xlsx'
 import { Camera, Plus, Minus, Download, Trash2, LogOut, Check } from 'lucide-react'
 import { buscarProduto } from '../api/produtos'
@@ -30,7 +30,6 @@ export default function Inventario() {
   const [sessoes, setSessoes] = useState<SessaoInventario[]>([])
   const [sessaoAtiva, setSessaoAtiva] = useState<SessaoInventario | null>(null)
   const [itens, setItens] = useState<ItemInventario[]>([])
-  const [consolidado, setConsolidado] = useState(false)
 
   const [erro, setErro] = useState('')
   const [camera, setCamera] = useState(false)
@@ -49,8 +48,28 @@ export default function Inventario() {
   const scrollPosRef = useRef(0)
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const { getUsername } = useAuth()
   const { toast } = useToast()
+
+  // Consolidated data from all sessions (auto-refreshed)
+  const [consolidadoItems, setConsolidadoItems] = useState<ItemInventario[]>([])
+  const [consolidadoLoading, setConsolidadoLoading] = useState(false)
+
+  const fetchConsolidado = useCallback(async () => {
+    if (!isSupervisor) return
+    setConsolidadoLoading(true)
+    try {
+      const items = await getConsolidadoGeral()
+      setConsolidadoItems(items)
+    } catch { /* ignore */ }
+    finally { setConsolidadoLoading(false) }
+  }, [isSupervisor])
+
+  useEffect(() => {
+    if (sessaoAtiva && isSupervisor) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Mount/dependency-triggered fetch
+      fetchConsolidado()
+    }
+  }, [sessaoAtiva, isSupervisor, fetchConsolidado])
 
   useEffect(() => {
     getSessoesInventario()
@@ -61,9 +80,7 @@ export default function Inventario() {
 
   useEffect(() => {
     if (!sessaoAtiva) return
-    const isCriador = sessaoAtiva.criado_por === getUsername()
-    setConsolidado(isCriador)
-    getItensInventario(sessaoAtiva.id, isCriador)
+    getItensInventario(sessaoAtiva.id, false)
       .then(setItens)
       .catch(() => setErro('Erro ao carregar itens'))
   }, [sessaoAtiva])
@@ -86,14 +103,13 @@ export default function Inventario() {
   }
 
   function haptico() {
-    try { navigator.vibrate?.(20) } catch {}
+    try { navigator.vibrate?.(20) } catch { /* vibrate not supported */ }
   }
 
   function handleVoltar() {
     scrollPosRef.current = window.scrollY
     setSessaoAtiva(null)
     setItens([])
-    setConsolidado(false)
     setEditando({})
     setCamera(false)
     getSessoesInventario().then(setSessoes).catch(() => {})
@@ -210,6 +226,7 @@ export default function Inventario() {
       if (inputRef.current) inputRef.current.value = ''
       haptico()
       mostrarFeedback(produto.nome)
+      fetchConsolidado()
     } catch (e: unknown) {
       const error = e as { response?: { status?: number } }
       let msg = 'Erro ao consultar.'
@@ -236,7 +253,10 @@ export default function Inventario() {
       const novaQtd = Math.max(0, item.quantidade + delta)
       if (novaQtd > 0) {
         atualizarItemInventario(sessaoAtiva.id, codigo, novaQtd).catch(() => {})
+      } else {
+        atualizarItemInventario(sessaoAtiva.id, codigo, 0).catch(() => {})
       }
+      fetchConsolidado()
     }
   }
 
@@ -251,7 +271,10 @@ export default function Inventario() {
     )
     if (n > 0) {
       atualizarItemInventario(sessaoAtiva.id, codigo, n).catch(() => {})
+    } else {
+      atualizarItemInventario(sessaoAtiva.id, codigo, 0).catch(() => {})
     }
+    fetchConsolidado()
   }
 
   async function handleLimpar() {
@@ -260,6 +283,7 @@ export default function Inventario() {
       await limparItensInventario(sessaoAtiva.id)
       setItens([])
       setConfirmarLimpar(false)
+      fetchConsolidado()
     } catch {
       setErro('Erro ao limpar itens')
     }
@@ -287,29 +311,13 @@ export default function Inventario() {
     XLSX.writeFile(wb, `inventario_${new Date().toISOString().slice(0, 10)}.xlsx`)
   }
 
-  async function handleToggleConsolidado() {
-    if (!sessaoAtiva) return
-    const novo = !consolidado
-    setConsolidado(novo)
-    if (novo) {
-      try {
-        const items = await getItensInventario(sessaoAtiva.id, true)
-        setItens(items)
-      } catch {
-        setErro('Erro ao carregar consolidado')
-      }
-    } else {
-      const items = await getItensInventario(sessaoAtiva.id)
-      setItens(items)
-    }
-  }
-
   const totalItens = itens.reduce((acc, i) => acc + i.quantidade, 0)
+  const totalConsolidado = consolidadoItems.reduce((acc, i) => acc + i.quantidade, 0)
 
   /* ─── Estado A: Seleção de sessão ─── */
   if (!sessaoAtiva) {
     return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex flex-col items-center px-4 py-6">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-hidden">
         <AdminHeader titulo="Inventário" paginaAtual="inventario" />
         <div className="w-full max-w-2xl flex flex-col gap-5">
 
@@ -323,18 +331,18 @@ export default function Inventario() {
           ) : (
             <>
               {sessoes.length > 0 && (
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-5">
-                  <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Sessões ativas</h2>
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-5">
+                  <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-4">Sessões ativas</h2>
                   <div className="flex flex-col gap-2">
                     {sessoes.map(s => (
                       <button
                         key={s.id}
                         onClick={() => setSessaoAtiva(s)}
-                        className="flex items-center justify-between border dark:border-gray-700 rounded-xl px-4 py-3 text-left hover:bg-primary-lighter dark:hover:bg-gray-700 transition"
+                        className="flex items-center justify-between border dark:border-slate-700 rounded-xl px-4 py-3 text-left hover:bg-primary-lighter dark:hover:bg-slate-700 transition"
                       >
                         <div>
-                          <p className="font-semibold text-sm text-gray-800 dark:text-gray-100">{s.nome}</p>
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                          <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">{s.nome}</p>
+                          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                             Código: <span className="font-mono font-bold text-primary">{s.codigo_convite}</span>
                             {' · '}{s.total_operadores} operador(es) · {s.total_itens} item(ns)
                           </p>
@@ -356,7 +364,7 @@ export default function Inventario() {
                   <input
                     ref={conviteRef}
                     placeholder="Código da sessão"
-                    className="flex-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary uppercase"
+                    className="flex-1 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary uppercase"
                     onKeyDown={(e) => e.key === 'Enter' && handleEntrarSessao()}
                   />
                   <Button onClick={handleEntrarSessao}>
@@ -400,7 +408,7 @@ export default function Inventario() {
               onChange={(e) => setNovaSessaoNome(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCriarSessao()}
               placeholder="Nome da sessão"
-              className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </Modal>
 
@@ -411,7 +419,7 @@ export default function Inventario() {
 
   /* ─── Estado B/C: Bipagem / Consolidado ─── */
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex flex-col items-center px-4 py-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-hidden">
       {camera && (
         <LeitorCodigo
           continuo
@@ -427,23 +435,15 @@ export default function Inventario() {
         {/* Info da sessão */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
-            <button onClick={handleVoltar} className="text-sm text-gray-500 hover:text-primary transition shrink-0">
+            <button onClick={handleVoltar} className="text-sm text-slate-500 hover:text-primary transition shrink-0">
               ← Voltar
             </button>
             <div className="min-w-0">
-              <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">{sessaoAtiva.nome}</h2>
-              <p className="text-xs text-gray-400 dark:text-gray-500 font-mono">Código: {sessaoAtiva.codigo_convite}</p>
+              <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{sessaoAtiva.nome}</h2>
+              <p className="text-xs text-slate-400 dark:text-slate-500 font-mono">Código: {sessaoAtiva.codigo_convite}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {isSupervisor && (
-              <button
-                onClick={handleToggleConsolidado}
-                className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition ${consolidado ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-              >
-                {consolidado ? 'Consolidado' : 'Meus itens'}
-              </button>
-            )}
             {isSupervisor && (
               <button onClick={() => setConfirmarEncerrar(true)} className="text-xs text-red-500 hover:text-red-700 transition flex items-center gap-1">
                 <LogOut size={12} /> Encerrar
@@ -452,22 +452,21 @@ export default function Inventario() {
           </div>
         </div>
 
-        {/* Input de bipagem (oculto no consolidado) */}
-        {!consolidado && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-5">
-            <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Bipar produtos</h2>
+        {/* Input de bipagem */}
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-5">
+            <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-4">Bipar produtos</h2>
             <div className="flex gap-2">
               <input
                 ref={inputRef}
                 aria-label="Código do produto"
-                className="flex-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                className="flex-1 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="Digite ou bipe o código"
                 onKeyDown={handleKeyDown}
                 autoFocus
               />
               <button
                 onClick={() => setCamera(true)}
-                className="md:hidden bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-lg transition"
+                className="md:hidden bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-gray-600 text-slate-700 dark:text-slate-300 px-3 py-2 rounded-lg transition"
                 aria-label="Ler código de barras"
               >
                 <Camera size={18} />
@@ -480,25 +479,22 @@ export default function Inventario() {
             )}
             {erro && <p className="text-red-500 text-sm mt-2" role="alert">{erro}</p>}
           </div>
-        )}
 
         {/* Lista de itens */}
         {itens.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-5">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-5">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200">
-                {consolidado ? 'Consolidado' : 'Contagem'}
-                <span className="text-gray-400 dark:text-gray-500 font-normal text-sm ml-2">
+              <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
+                Contagem
+                <span className="text-slate-400 dark:text-slate-500 font-normal text-sm ml-2">
                   ({itens.length} produtos · {totalItens} unidades)
                 </span>
               </h2>
               <div className="flex gap-2">
-                {!consolidado && (
-                  <button onClick={() => setConfirmarLimpar(true)} className="text-sm text-gray-400 hover:text-red-500 transition flex items-center gap-1">
-                    <Trash2 size={14} /> Limpar
-                  </button>
-                )}
-                <button onClick={handleExportarTxt} className="text-sm text-gray-500 hover:text-primary transition flex items-center gap-1">
+                <button onClick={() => setConfirmarLimpar(true)} className="text-sm text-slate-400 hover:text-red-500 transition flex items-center gap-1">
+                  <Trash2 size={14} /> Limpar
+                </button>
+                <button onClick={handleExportarTxt} className="text-sm text-slate-500 hover:text-primary transition flex items-center gap-1">
                   <Download size={14} /> TXT
                 </button>
                 <Button size="sm" onClick={handleExportarExcel}>
@@ -511,53 +507,95 @@ export default function Inventario() {
               {itens.map(item => (
                 <div
                   key={item.codigo}
-                  onClick={() => !consolidado && setEditSheetItem(item)}
-                  className="flex justify-between items-center border dark:border-gray-700 rounded-lg px-4 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition"
+                  onClick={() => setEditSheetItem(item)}
+                  className="flex justify-between items-center border dark:border-slate-700 rounded-lg px-4 py-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition"
                 >
                   <div className="min-w-0 flex-1">
-                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{item.codigo}</span>
-                    <span className="text-xs text-gray-400 dark:text-gray-500 ml-2 truncate block sm:inline">
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{item.codigo}</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500 ml-2 truncate block sm:inline">
                       {item.nome} {item.grupo && item.familia ? `• ${item.grupo} / ${item.familia}` : ''}
                     </span>
                   </div>
-                  {consolidado ? (
-                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 w-14 text-center">{item.quantidade}</span>
-                  ) : (
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); ajustarQuantidade(item.codigo, -1) }}
-                        className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-bold transition flex items-center justify-center"
-                      >
-                        <Minus size={14} />
-                      </button>
-                      <input
-                        type="number"
-                        min="0"
-                        value={editando[item.codigo] ?? item.quantidade}
-                        onChange={(e) => setEditando(prev => ({ ...prev, [item.codigo]: e.target.value }))}
-                        onBlur={(e) => definirQuantidade(item.codigo, e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') definirQuantidade(item.codigo, (e.target as HTMLInputElement).value)
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-14 text-center text-sm font-semibold text-gray-700 dark:text-gray-200 bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-1 py-1 focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                      <button
-                        onClick={(e) => { e.stopPropagation(); ajustarQuantidade(item.codigo, 1) }}
-                        className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-bold transition flex items-center justify-center"
-                      >
-                        <Plus size={14} />
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); ajustarQuantidade(item.codigo, -1) }}
+                      className="w-7 h-7 rounded-full bg-slate-50 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 font-bold transition flex items-center justify-center"
+                    >
+                      <Minus size={14} />
+                    </button>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editando[item.codigo] ?? item.quantidade}
+                      onChange={(e) => setEditando(prev => ({ ...prev, [item.codigo]: e.target.value }))}
+                      onBlur={(e) => definirQuantidade(item.codigo, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') definirQuantidade(item.codigo, (e.target as HTMLInputElement).value)
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-14 text-center text-sm font-semibold text-slate-700 dark:text-slate-200 bg-transparent border border-slate-300 dark:border-slate-600 rounded-lg px-1 py-1 focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); ajustarQuantidade(item.codigo, 1) }}
+                      className="w-7 h-7 rounded-full bg-slate-50 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 font-bold transition flex items-center justify-center"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {!consolidado && itens.length === 0 && (
-          <p className="text-sm text-gray-400 dark:text-gray-500 text-center">Nenhum item bipado ainda</p>
+        {itens.length === 0 && (
+          <p className="text-sm text-slate-400 dark:text-slate-500 text-center">Nenhum item bipado ainda</p>
+        )}
+
+        {/* Consolidado Geral — auto-refreshed */}
+        {isSupervisor && (
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-5">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
+                Consolidado Geral
+                <span className="text-slate-400 dark:text-slate-500 font-normal text-sm ml-2">
+                  ({consolidadoItems.length} produtos · {totalConsolidado} unidades)
+                </span>
+              </h2>
+              {consolidadoLoading && (
+                <span className="text-xs text-slate-400 flex items-center gap-1">
+                  <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Atualizando...
+                </span>
+              )}
+            </div>
+
+            {consolidadoItems.length === 0 && !consolidadoLoading && (
+              <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4">Nenhum item em nenhuma sessão</p>
+            )}
+
+            {consolidadoItems.length > 0 && (
+              <div className="flex flex-col gap-1.5 max-h-60 overflow-y-auto">
+                {consolidadoItems.slice(0, 20).map(item => (
+                  <div key={item.codigo} className="flex justify-between items-center px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-700/50">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-mono text-slate-500 dark:text-slate-400">{item.codigo}</span>
+                      <span className="text-xs text-slate-400 dark:text-slate-500 ml-2 truncate">{item.nome}</span>
+                    </div>
+                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200 w-12 text-right">{item.quantidade}</span>
+                  </div>
+                ))}
+                {consolidadoItems.length > 20 && (
+                  <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-2">
+                    +{consolidadoItems.length - 20} produtos
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Modal Editar Item (bottom-sheet) */}
@@ -573,12 +611,12 @@ export default function Inventario() {
         >
           {editSheetItem && (
             <div>
-              <p className="font-semibold text-gray-800 dark:text-gray-100">{editSheetItem.codigo}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{editSheetItem.nome}</p>
+              <p className="font-semibold text-slate-800 dark:text-slate-100">{editSheetItem.codigo}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{editSheetItem.nome}</p>
               <div className="flex items-center gap-6 mt-5 justify-center">
                 <button
                   onClick={() => ajustarQuantidade(editSheetItem.codigo, -1)}
-                  className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-bold transition flex items-center justify-center"
+                  className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-gray-600 text-slate-600 dark:text-slate-300 font-bold transition flex items-center justify-center"
                 >
                   <Minus size={22} />
                 </button>
@@ -597,12 +635,12 @@ export default function Inventario() {
                       setEditSheetItem(null)
                     }
                   }}
-                  className="w-20 text-center text-xl font-bold text-gray-800 dark:text-gray-100 bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-20 text-center text-xl font-bold text-slate-800 dark:text-slate-100 bg-transparent border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
                   autoFocus
                 />
                 <button
                   onClick={() => ajustarQuantidade(editSheetItem.codigo, 1)}
-                  className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-bold transition flex items-center justify-center"
+                  className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-gray-600 text-slate-600 dark:text-slate-300 font-bold transition flex items-center justify-center"
                 >
                   <Plus size={22} />
                 </button>

@@ -21,51 +21,56 @@ export default function BiSubNav() {
   const navigate = useNavigate()
   const location = useLocation()
   const [visible, setVisible] = useState(false)
-  const [indicator, setIndicator] = useState({ left: 0, width: 0 })
-  const containerRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 50)
     return () => clearTimeout(t)
   }, [])
 
+  // Scroll active tab into view within the scroll container
   useEffect(() => {
     const activeIndex = TABS.findIndex((tab) => location.pathname === tab.path)
-    const container = containerRef.current
+    const container = scrollRef.current
     if (!container || activeIndex < 0) return
-    const activeEl = container.children[activeIndex] as HTMLElement
-    if (activeEl) {
-      const cr = container.getBoundingClientRect()
-      const er = activeEl.getBoundingClientRect()
-      setIndicator({ left: er.left - cr.left, width: er.width })
-    }
+
+    const activeEl = container.children[0]?.children[activeIndex] as HTMLElement
+    if (!activeEl) return
+
+    const targetScroll = activeEl.offsetLeft - container.offsetWidth / 2 + activeEl.offsetWidth / 2
+    container.scrollTo({ left: targetScroll, behavior: 'smooth' })
   }, [location.pathname])
 
   return (
     <div
-      className={`w-full max-w-5xl mb-6 transition-all duration-300 ease-in-out ${
+      className={`w-full mb-4 transition-all duration-300 ease-in-out ${
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
       }`}
     >
-      <div className="relative">
-        <div
-          className="absolute bottom-1 h-0.5 bg-white rounded-full transition-all duration-300 ease-in-out pointer-events-none"
-          style={{ left: indicator.left, width: indicator.width }}
-        />
-        <div
-          ref={containerRef}
-          className="flex gap-2 overflow-x-auto pb-1 scrollbar-none"
-        >
+      {/* Outer scroll container — block element, overflow triggers scroll */}
+      <div
+        ref={scrollRef}
+        className="overflow-x-auto pb-2"
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehaviorX: 'contain',
+          msOverflowStyle: 'none',
+          scrollbarWidth: 'none',
+        }}
+      >
+        {/* Inner wrapper — inline-flex sizes to content, forcing overflow */}
+        <div style={{ display: 'inline-flex', gap: '8px', whiteSpace: 'nowrap' }}>
           {TABS.map((tab) => {
             const ativo = location.pathname === tab.path
             return (
               <button
                 key={tab.path}
                 onClick={() => navigate(tab.path)}
-                className={`rounded-xl py-2 px-3 text-xs font-semibold transition whitespace-nowrap shrink-0 ${
+                style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+                className={`rounded-xl py-2 px-3 text-xs font-semibold transition shadow-sm ${
                   ativo
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-primary-lighter dark:hover:bg-gray-700 hover:text-primary shadow-sm'
+                    ? 'bg-primary text-white'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                 }`}
               >
                 {tab.label}

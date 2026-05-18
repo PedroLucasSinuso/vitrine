@@ -23,6 +23,7 @@ import { BiCacheProvider } from './stores/biCache'
 import { ToastProvider } from './hooks/useToast'
 import ToastContainer from './components/ToastContainer'
 import ScrollToTop from './components/ui/ScrollToTop'
+import CmdK from './components/ui/CmdK'
 
 function HomeRouter() {
   const { getRole } = useAuth()
@@ -34,7 +35,7 @@ function HomeRouter() {
 
 function App() {
   useEffect(() => {
-    const saved = localStorage.getItem('darkMode')
+    const saved = localStorage.getItem('app_darkMode')
     if (saved === 'true') document.documentElement.classList.add('dark')
   }, [])
 
@@ -62,6 +63,7 @@ function App() {
             <Route path="/bi/sku" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiSku /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <CmdK />
           <ScrollToTop />
           <ToastContainer />
         </ToastProvider>

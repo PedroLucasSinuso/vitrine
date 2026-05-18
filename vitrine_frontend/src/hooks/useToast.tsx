@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- Hook + Context + Provider must coexist in one file to avoid circular imports and breaking 10+ consumers */
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
 
 type ToastType = 'success' | 'error' | 'info'

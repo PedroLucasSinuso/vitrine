@@ -62,7 +62,7 @@ export default function PeriodoForm({ value, onChange, onBuscar, loading, preset
                 className={`text-xs px-2.5 py-1 rounded-full transition ${
                   ativo
                     ? 'bg-primary text-white shadow-sm'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-primary-lighter hover:text-primary dark:hover:text-primary'
+                    : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-primary-lighter hover:text-primary dark:hover:text-primary'
                 }`}
               >
                 {p.label}
@@ -73,19 +73,19 @@ export default function PeriodoForm({ value, onChange, onBuscar, loading, preset
       )}
       <div className="flex flex-wrap gap-2 items-end">
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-500 dark:text-gray-400">De</label>
+          <label className="text-xs text-slate-500 dark:text-slate-400">De</label>
           <input
             type="date"
-            className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             value={value.data_inicio}
             onChange={(e) => onChange({ ...value, data_inicio: e.target.value })}
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-500 dark:text-gray-400">Até</label>
+          <label className="text-xs text-slate-500 dark:text-slate-400">Até</label>
           <input
             type="date"
-            className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             value={value.data_fim}
             onChange={(e) => onChange({ ...value, data_fim: e.target.value })}
           />

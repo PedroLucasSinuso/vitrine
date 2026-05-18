@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 interface VariacaoInfo {
   valor: number
@@ -8,7 +9,6 @@ interface VariacaoInfo {
 interface Props {
   label: string
   valor: string
-  destaque?: boolean
   delay?: number
   pulseKey?: number
   variacao?: VariacaoInfo | null
@@ -16,47 +16,51 @@ interface Props {
   valorAnterior?: string
 }
 
-export default function KpiCard({ label, valor, destaque, delay = 0, pulseKey, variacao, invertVariation, valorAnterior }: Props) {
+export default function KpiCard({ label, valor, delay = 0, pulseKey, variacao, invertVariation, valorAnterior }: Props) {
   const [pulsing, setPulsing] = useState(false)
+  const pulseTimer = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => {
     if (pulseKey === undefined) return
+    if (pulseTimer.current) clearTimeout(pulseTimer.current)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPulsing(true)
-    const t = setTimeout(() => setPulsing(false), 800)
-    return () => clearTimeout(t)
+    pulseTimer.current = setTimeout(() => setPulsing(false), 800)
+    return () => { if (pulseTimer.current) clearTimeout(pulseTimer.current) }
   }, [pulseKey])
 
   const varColor = variacao
     ? invertVariation
-      ? variacao.direcao === 'negativo' ? 'text-green-600'
-        : variacao.direcao === 'positivo' ? 'text-red-600' : 'text-gray-400'
-      : variacao.direcao === 'positivo' ? 'text-green-600'
-        : variacao.direcao === 'negativo' ? 'text-red-600' : 'text-gray-400'
+      ? variacao.direcao === 'negativo' ? 'text-green-600 dark:text-green-400'
+        : variacao.direcao === 'positivo' ? 'text-red-600 dark:text-red-400' : 'text-slate-400'
+      : variacao.direcao === 'positivo' ? 'text-green-600 dark:text-green-400'
+        : variacao.direcao === 'negativo' ? 'text-red-600 dark:text-red-400' : 'text-slate-400'
     : ''
+
+  const VarIcon = variacao
+    ? variacao.direcao === 'positivo' ? TrendingUp
+      : variacao.direcao === 'negativo' ? TrendingDown : Minus
+    : Minus
 
   return (
     <div
-      className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5 flex flex-col items-center text-center animate-fade-in-up ${pulsing ? 'animate-pulse-glow' : ''}`}
+      className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/50 p-4 md:p-5 flex flex-col animate-fade-in-up ${pulsing ? 'animate-pulse-glow' : ''}`}
       style={{ animationDelay: `${delay}ms` }}
     >
-      <p className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">{label}</p>
-      <p className={`font-bold break-words ${destaque ? 'text-xl md:text-3xl text-primary dark:text-primary-light' : 'text-base md:text-xl text-gray-800 dark:text-gray-100'}`}>
+      <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mb-1.5">{label}</p>
+      <p className="text-base md:text-xl font-bold text-slate-800 dark:text-slate-100 break-words mb-2">
         {valor}
       </p>
       {variacao && (
-        <span className={`flex items-center justify-center gap-0.5 text-sm font-semibold ${varColor}`}>
-          {variacao.direcao === 'positivo' ? '▲' : variacao.direcao === 'negativo' ? '▼' : '◆'}
+        <span className={`flex items-center gap-1 text-xs font-semibold ${varColor}`}>
+          <VarIcon size={12} strokeWidth={2.5} />
           {Math.abs(variacao.valor).toFixed(1)}%
         </span>
       )}
-      {valorAnterior && (
-        <>
-          <hr className="my-1.5 border-gray-100 dark:border-gray-700 w-3/4 mx-auto" />
-          <div className="flex items-center justify-center gap-1.5 text-xs">
-            <span className="text-gray-400">Ano passado</span>
-            <span className="text-gray-500 font-medium">{valorAnterior}</span>
-          </div>
-        </>
+      {valorAnterior && !variacao && (
+        <span className="text-xs text-slate-400 dark:text-slate-500 mt-auto">
+          Ano passado: <span className="font-medium text-slate-500 dark:text-slate-300">{valorAnterior}</span>
+        </span>
       )}
     </div>
   )

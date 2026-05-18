@@ -21,42 +21,42 @@ export default function Home() {
   const { logout, getRole, getNomeExibicao } = useAuth()
   const role = getRole()
 
-  const [dark, setDark] = useState(() => localStorage.getItem('darkMode') === 'true')
+  const [dark, setDark] = useState(() => localStorage.getItem('app_darkMode') === 'true')
 
-  const logoUrl = localStorage.getItem('marketLogoUrl')
-  const marketName = localStorage.getItem('marketName')
+  const logoUrl = localStorage.getItem('app_marketLogoUrl')
+  const marketName = localStorage.getItem('app_marketName')
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
-    localStorage.setItem('darkMode', String(dark))
+    localStorage.setItem('app_darkMode', String(dark))
   }, [dark])
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex flex-col items-center px-4 py-6">
-      <div className="w-full max-w-md flex flex-col gap-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-8 overflow-x-hidden">
+      <div className="w-full max-w-lg flex flex-col gap-8">
 
         {/* Header */}
         <div className="flex justify-between items-center">
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <img src="/vitrine_logo.svg" alt="Vitrine" className="h-7 w-auto shrink-0" />
+            <div className="flex items-center gap-3">
+              <img src="/vitrine_logo.svg" alt="Vitrine" className="h-7 w-auto shrink-0 dark:invert" />
               {logoUrl ? (
-                <img src={logoUrl} alt={marketName ?? 'Logo'} className="h-12 w-auto rounded shrink-0" />
+                <img src={logoUrl} alt={marketName ?? 'Logo'} className="h-10 w-auto rounded-lg shrink-0" />
               ) : (
-                <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center text-white font-bold shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary font-bold shrink-0">
                   {marketName ? marketName.charAt(0).toUpperCase() : 'M'}
                 </div>
               )}
               {marketName && (
-                <h1 className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{marketName}</h1>
+                <h1 className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{marketName}</h1>
               )}
             </div>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{getNomeExibicao()}</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{getNomeExibicao()}</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setDark((prev) => !prev)}
-              className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
               aria-label="Alternar tema"
               title={dark ? 'Modo claro' : 'Modo escuro'}
             >
@@ -64,14 +64,16 @@ export default function Home() {
             </button>
             <button
               onClick={() => { logout(); navigate('/login') }}
-              className="text-sm text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition"
+              className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+              aria-label="Sair"
+              title="Sair"
             >
               <LogOut size={16} />
             </button>
           </div>
         </div>
 
-        {/* Cards */}
+        {/* Main cards */}
         <div className="flex flex-col gap-3">
           {CARDS.map((card) => {
             const Icon = card.icon
@@ -79,24 +81,24 @@ export default function Home() {
               <button
                 key={card.path}
                 onClick={() => navigate(card.path)}
-                className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5 text-left hover:shadow-md hover:ring-1 hover:ring-primary-lighter dark:hover:ring-primary transition flex items-start gap-4"
+                className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-5 text-left hover:shadow-md hover:border-primary/30 dark:hover:border-primary/30 transition flex items-start gap-4"
               >
-                <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0">
+                <div className="w-11 h-11 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0">
                   <Icon size={22} className="text-primary" />
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-800 dark:text-gray-100">{card.label}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{card.desc}</p>
+                  <p className="font-semibold text-slate-800 dark:text-slate-100">{card.label}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{card.desc}</p>
                 </div>
               </button>
             )
           })}
         </div>
 
-        {/* Cards admin / supervisor / operador */}
+        {/* Admin cards */}
         {(role === 'admin' || role === 'supervisor' || role === 'operador') && (
           <div>
-            <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">Administração</h2>
+            <h2 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-3">Administração</h2>
             <div className="flex flex-col gap-3">
               {ADMIN_CARDS.filter(c => role === 'admin' || (role === 'operador' ? c.path === '/admin/inventario' : ['/admin/etiquetas', '/admin/inventario'].includes(c.path))).map((card) => {
                 const Icon = card.icon
@@ -104,14 +106,14 @@ export default function Home() {
                   <button
                     key={card.path}
                     onClick={() => navigate(card.path)}
-                    className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5 text-left hover:shadow-md hover:ring-1 hover:ring-primary-lighter dark:hover:ring-primary transition flex items-start gap-4"
+                    className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-5 text-left hover:shadow-md hover:border-primary/30 dark:hover:border-primary/30 transition flex items-start gap-4"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0">
+                    <div className="w-11 h-11 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0">
                       <Icon size={22} className="text-primary" />
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-800 dark:text-gray-100">{card.label}</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{card.desc}</p>
+                      <p className="font-semibold text-slate-800 dark:text-slate-100">{card.label}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{card.desc}</p>
                     </div>
                   </button>
                 )

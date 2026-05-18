@@ -17,6 +17,8 @@ dist-ssr
 # IDE
 .vscode
 .idea
+.opencode
+deploy
 
 # Dados locais
 data/
@@ -30,7 +32,6 @@ logs/
 # Uploads (logo do mercado)
 vitrine_backend/app/static/logo.*
 iniciar.ps1
-nginx.conf
 
 # Build
 *.exe

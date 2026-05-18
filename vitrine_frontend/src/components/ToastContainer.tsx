@@ -26,8 +26,8 @@ export default function ToastContainer() {
           className={`flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border ${bgColors[toast.type]} animate-fade-in-up`}
         >
           {icons[toast.type]}
-          <p className="text-sm font-medium text-gray-800 dark:text-gray-100 flex-1">{toast.message}</p>
-          <button onClick={() => remove(toast.id)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition">
+          <p className="text-sm font-medium text-slate-800 dark:text-slate-100 flex-1">{toast.message}</p>
+          <button onClick={() => remove(toast.id)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition">
             <X size={14} />
           </button>
         </div>

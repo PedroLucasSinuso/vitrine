@@ -5,13 +5,17 @@ import PeriodoForm, { type Preset } from '../../components/bi/PeriodoForm'
 import BiPageLayout from '../../components/bi/BiPageLayout'
 import ExportButtons from '../../components/bi/ExportButtons'
 import EmptyState from '../../components/ui/EmptyState'
+import ErrorBanner from '../../components/ui/ErrorBanner'
+import Card from '../../components/ui/Card'
+import SectionHeader from '../../components/ui/SectionHeader'
 import KpiCard from '../../components/bi/KpiCard'
 import { fetchTrocas, exportarExcelBI } from '../../api/bi'
 import { baixarCSVdeArray } from '../../utils/csv'
 import type { TrocasDTO, PeriodoBi } from '../../types'
-import { formatCurrency } from '../../utils/formatters'
+import { formatCurrency, formatNumber } from '../../utils/formatters'
 import { useBiCache } from '../../stores/biCache'
 import { useToast } from '../../hooks/useToast'
+import { useCountUp } from '../../hooks/useCountUp'
 import Skeleton from '../../components/ui/Skeleton'
 
 const PRESETS_TROCAS: Preset[] = [
@@ -28,12 +32,16 @@ function periodoInicial(): PeriodoBi {
 }
 
 export default function Trocas() {
+  const navigate = useNavigate()
   const [periodo, setPeriodo] = useState<PeriodoBi>(periodoInicial)
   const [dados, setDados] = useState<TrocasDTO | null>(null)
   const [loading, setLoading] = useState(false)
-  const [erro, setErro] = useState('')
+  const [erro, setErro] = useState<string | null>(null)
   const cache = useBiCache()
   const { toast } = useToast()
+
+  const animTrocas = useCountUp(dados?.total_trocas ?? 0, 600, !!dados)
+  const animTaxa = useCountUp(dados?.taxa_troca_pct ?? 0, 600, !!dados)
 
   const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false) => {
     const p = periodoOverride ?? periodo
@@ -41,7 +49,7 @@ export default function Trocas() {
       const cached = cache.get<TrocasDTO>('trocas', p)
       if (cached) { setDados(cached); return }
     }
-    setErro('')
+    setErro(null)
     setLoading(true)
     try {
       const data = await fetchTrocas(p)
@@ -58,18 +66,17 @@ export default function Trocas() {
 
   useEffect(() => { const t = setTimeout(() => buscar()); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const navigate = useNavigate()
-
   function handleBuscar(periodoOverride?: PeriodoBi) {
-    cache.clear()
+    cache.invalidate('trocas')
     buscar(periodoOverride, true)
   }
 
   return (
     <BiPageLayout titulo="Trocas" breadcrumb={[{ label: 'BI', path: '/bi' }, { label: 'Trocas' }]}>
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
+      {/* Filters */}
+      <Card variant="bordered">
         <PeriodoForm value={periodo} onChange={setPeriodo} onBuscar={handleBuscar} loading={loading} presets={PRESETS_TROCAS} />
-        {erro && <p className="text-red-500 text-sm mt-3">{erro}</p>}
+        {erro && <div className="mt-3"><ErrorBanner message={erro} /></div>}
         <div className="mt-3">
           <ExportButtons
             onExcel={() => { exportarExcelBI(periodo, 'trocas'); toast({ type: 'success', message: 'Excel exportado' }) }}
@@ -77,38 +84,43 @@ export default function Trocas() {
             disabled={!dados}
           />
         </div>
-      </div>
+      </Card>
 
+      {/* Loading skeleton */}
       {loading && !dados && (
-        <div className="grid grid-cols-2 gap-4">
-          <Skeleton className="h-24 rounded-2xl" />
-          <Skeleton className="h-24 rounded-2xl" />
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton variant="kpi" />
+          <Skeleton variant="kpi" />
         </div>
       )}
+
+      {/* Empty state */}
       {!loading && !dados && !erro && (
         <EmptyState title="Nenhum dado no período" description="Tente ampliar o período." />
       )}
+
+      {/* Data */}
       {dados && (
         <>
-          <div className="grid grid-cols-2 gap-4">
-            <KpiCard label="Total de Trocas" valor={formatCurrency(dados.total_trocas)} destaque />
-            <KpiCard label="Taxa de Troca" valor={`${dados.taxa_troca_pct.toFixed(2)}%`} destaque />
+          <div className="grid grid-cols-2 gap-3">
+            <KpiCard label="Total de Trocas" valor={formatNumber(animTrocas)} />
+            <KpiCard label="Taxa de Troca" valor={`${animTaxa.toFixed(2)}%`} />
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5">
-            <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">
-              Por produto <span className="text-gray-400 dark:text-gray-500 font-normal text-sm">({dados.por_produto.length})</span>
-            </h2>
+          <Card variant="bordered">
+            <SectionHeader>
+              Por produto <span className="text-slate-400 dark:text-slate-500 font-normal">({dados.por_produto.length})</span>
+            </SectionHeader>
             {dados.por_produto.length === 0 ? (
-              <p className="text-sm text-gray-400 dark:text-gray-500">Nenhuma troca no período.</p>
+              <p className="text-sm text-slate-400 dark:text-slate-500">Nenhuma troca no período.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm table-fixed">
                   <thead>
-                    <tr className="border-b dark:border-gray-700 text-left">
-                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium w-28">Código</th>
-                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium w-full">Produto</th>
-                      <th className="pb-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right w-28">Valor</th>
+                    <tr className="border-b dark:border-slate-700 text-left">
+                      <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium w-28">Código</th>
+                      <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium w-full">Produto</th>
+                      <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium text-right w-28">Valor</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -116,18 +128,18 @@ export default function Trocas() {
                         <tr
                           key={i}
                           onClick={() => navigate(`/bi/sku?codigo=${item.codigo}`)}
-                          className="border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                          className="border-b dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer"
                         >
-                          <td className="py-2 text-gray-400 dark:text-gray-500 font-mono truncate" title={item.codigo}>{item.codigo}</td>
-                          <td className="py-2 text-gray-700 dark:text-gray-300 truncate" title={item.produto}>{item.produto}</td>
-                          <td className="py-2 text-right font-semibold text-gray-800 dark:text-gray-100">{formatCurrency(item.receita)}</td>
+                          <td className="py-2 text-slate-400 dark:text-slate-500 font-mono truncate" title={item.codigo}>{item.codigo}</td>
+                          <td className="py-2 text-slate-700 dark:text-slate-300 truncate" title={item.produto}>{item.produto}</td>
+                          <td className="py-2 text-right font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(item.receita)}</td>
                         </tr>
                       ))}
                   </tbody>
                 </table>
               </div>
             )}
-          </div>
+          </Card>
         </>
       )}
     </BiPageLayout>

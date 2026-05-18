@@ -9,6 +9,19 @@
   --color-accent: #f59e0b;
   --color-accent-hover: #d97706;
   --color-accent-light: #fde68a;
+
+  /* Semantic palette */
+  --color-info: #3b82f6;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+
+  /* Chart colors for data viz */
+  --color-chart-1: #059669;
+  --color-chart-2: #f59e0b;
+  --color-chart-3: #6366f1;
+  --color-chart-4: #06b6d4;
+  --color-chart-5: #64748b;
 }
 
 html {
@@ -29,11 +42,11 @@ html {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: #cbd5e1;
   border-radius: 3px;
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: #4b5563;
+  background: #475569;
 }
 
 /* Animations */
@@ -62,6 +75,44 @@ html {
 
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.4s ease-out both;
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Page transition */
+@keyframes page-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-page-in {
+  animation: page-fade-in 0.3s ease-out both;
+}
+
+/* Exit animations */
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slide-down {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(20px); }
+}
+
+.animate-fade-out {
+  animation: fade-out 0.2s ease-in both;
+}
+
+.animate-slide-down {
+  animation: slide-down 0.2s ease-in both;
 }
 
 /* Card hover lift */

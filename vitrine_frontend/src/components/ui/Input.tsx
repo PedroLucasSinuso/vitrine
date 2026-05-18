@@ -15,21 +15,21 @@ const Input = forwardRef<HTMLInputElement, Props>(
     return (
       <div className={`${fullWidth ? 'w-full' : ''}`}>
         {label && (
-          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">{label}</label>
+          <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{label}</label>
         )}
         <div className="relative">
           {icon && (
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
               {icon}
             </div>
           )}
           <input
             ref={ref}
             {...props}
-            className={`w-full border rounded-lg px-4 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary transition ${
+            className={`w-full border rounded-lg px-4 py-2 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary transition ${
               error
                 ? 'border-red-400 dark:border-red-500'
-                : 'border-gray-300 dark:border-gray-600'
+                : 'border-slate-300 dark:border-slate-600'
             } ${icon ? 'pl-10' : ''} ${loading ? 'opacity-60' : ''} ${className}`}
           />
           {loading && (
@@ -39,7 +39,7 @@ const Input = forwardRef<HTMLInputElement, Props>(
           )}
         </div>
         {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
-        {helperText && !error && <p className="text-xs text-gray-400 mt-1">{helperText}</p>}
+        {helperText && !error && <p className="text-xs text-slate-400 mt-1">{helperText}</p>}
       </div>
     )
   }
