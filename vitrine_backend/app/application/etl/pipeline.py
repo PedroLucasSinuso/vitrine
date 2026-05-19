@@ -36,9 +36,9 @@ def run_etl() -> EtlResult:
             logger.info("Transform concluído | total=%s", len(produtos))
 
             try:
-                with session.begin():
-                    produtos_count, codigos_count = carregar_produtos(session, produtos)
-                    atualizar_cache(session)
+                produtos_count, codigos_count = carregar_produtos(session, produtos)
+                atualizar_cache(session)
+                session.commit()
 
                 logger.info("Load concluído com sucesso | produtos=%s codigos=%s", produtos_count, codigos_count)
 

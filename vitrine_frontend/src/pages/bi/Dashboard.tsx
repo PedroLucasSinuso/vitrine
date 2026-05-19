@@ -189,9 +189,9 @@ export default function Dashboard() {
             <KpiCard label="Faturamento Líquido" valor={formatCurrency(animFatLiq)} delay={80}
               variacao={kpisComp ? variacaoInfo(kpisComp.faturamento_liquido.variacao_pct) : null}
               valorAnterior={kpisComp?.faturamento_liquido.anterior != null ? formatCurrency(kpisComp.faturamento_liquido.anterior) : undefined} />
-            <KpiCard label="Total de Trocas" valor={Math.round(animTrocas).toLocaleString('pt-BR')} delay={160}
+            <KpiCard label="Total de Trocas" valor={formatCurrency(animTrocas)} delay={160}
               variacao={kpisComp ? variacaoInfo(kpisComp.total_trocas.variacao_pct) : null} invertVariation
-              valorAnterior={kpisComp?.total_trocas.anterior != null ? Math.round(kpisComp.total_trocas.anterior).toLocaleString('pt-BR') : undefined} />
+              valorAnterior={kpisComp?.total_trocas.anterior != null ? formatCurrency(kpisComp.total_trocas.anterior) : undefined} />
             <KpiCard label="Tickets" valor={Math.round(animTickets).toLocaleString('pt-BR')} delay={240}
               variacao={kpisComp ? variacaoInfo(kpisComp.qtd_tickets.variacao_pct) : null}
               valorAnterior={kpisComp?.qtd_tickets.anterior != null ? Math.round(kpisComp.qtd_tickets.anterior).toLocaleString('pt-BR') : undefined} />
