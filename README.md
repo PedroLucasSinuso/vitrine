@@ -29,6 +29,9 @@ Além da consulta rápida, oferece:
 - 📋 **Inventário multi-usuário** — contagem colaborativa com sessões, convites e consolidado
 - 🏷️ **Geração de etiquetas** — formatação profissional para impressão
 - 📱 **Leitor de código de barras via câmera** — sem hardware dedicado
+- ⚙️ **Configurações via UI** — 6 abas com encriptação Fernet, fallback `.env` e teste de conexão
+- 📧 **Notificações agendadas** — relatórios por WhatsApp (Twilio) e Email (SMTP) com templates Jinja2
+- 🏠 **Enriquecimento de endereço** — consulta automática a BrasilAPI + ViaCEP (IBGE, DDD, coordenadas)
 
 > Projeto desenvolvido para um problema real: operadores precisam de informações rápidas sem depender do banco principal.
 
@@ -43,10 +46,13 @@ Além da consulta rápida, oferece:
 | API | **FastAPI** |
 | ORM | **SQLAlchemy 2.0** (mapped columns, relationships) |
 | Validação | **Pydantic v2** |
-| Config | **pydantic-settings** + `.env` |
+| Config | **pydantic-settings** + `.env` + **SQLite** (UI editável) |
 | Cache | **SQLite** (offline-first) |
 | Fonte | **PostgreSQL** |
 | Auth | **JWT** (PyJWT) + **bcrypt** |
+| Scheduler | **APScheduler** (ETL + notificações dinâmicas) |
+| Notificações | **Twilio** (WhatsApp) + **SMTP** (email) + **Jinja2** (templates) |
+| Encriptação | **Fernet** (cryptography) — senhas em repouso |
 | Testes | **pytest** |
 | Gerenciador | **uv** |
 
@@ -60,9 +66,11 @@ Além da consulta rápida, oferece:
 | Estilos | **Tailwind v4** (`@theme` custom, dark mode) |
 | Gráficos | **Recharts** |
 | HTTP | **Axios** |
+| Ícones | **Lucide React** |
 | Planilhas | **SheetJS** (xlsx) |
 | Código de barras | **@zxing/browser** + **@zxing/library** |
 | Cache | AbortController + stale-while-revalidate |
+| Componentes | Design system próprio (Button, Card, Input, Modal, Skeleton, CmdK…) |
 
 ---
 
@@ -74,10 +82,15 @@ Além da consulta rápida, oferece:
 | 🏷️ **Etiquetas** | Geração de etiquetas profissionais para impressão |
 | 📋 **Inventário** | Sessões multi-usuário, código de convite, consolidado geral |
 | 📊 **BI** | Dashboard, receita, ranking, curva ABC, análise SKU, trocas, perdas, consumo, distribuição temporal |
-| 📈 **YoY** | Comparação ano contra ano nos KPIs do dashboard |
+| 📈 **YoY** | Comparação ano contra ano com alinhamento de dia da semana (offset ±3d) e fallback 29/fev |
 | 📎 **Exportação** | Excel (.xlsx) para todos os relatórios de BI e inventário |
 | 📱 **Câmera** | Leitura contínua de código de barras via câmera do dispositivo |
-| ⏰ **Agendamento** | ETL e relatórios agendados via WhatsApp/Email com intervalo configurável pela UI |
+| ⚙️ **Configurações** | 6 abas (Geral, Endereço, ERP, WhatsApp, Email, Sistema) com encriptação Fernet + fallback `.env` |
+| 🔬 **Teste de conexão** | Testa ERP (PostgreSQL), WhatsApp, Email, Anthropic com feedback visual |
+| 🏠 **Endereço** | Enriquecimento automático via BrasilAPI + ViaCEP (IBGE, DDD, coordenadas) |
+| 📧 **Notificações** | Relatórios agendados via WhatsApp (Twilio) e Email (SMTP) com templates Jinja2 |
+| 🔄 **ETL** | Pipeline PostgreSQL → Transform → SQLite com agendamento configurável (mín. 10 min) |
+| ⏰ **Scheduler** | Jobs dinâmicos via APScheduler com intervalo definido pela UI |
 | 🔐 **Auth** | JWT com 3 roles (operador, supervisor, admin) |
 
 ---
@@ -112,34 +125,38 @@ O backend segue **arquitetura em camadas** com separação clara de responsabili
 
 ```
 app/
-├── domain/              # Entidades ORM + Value Objects + Enums
+├── domain/              # Entidades ORM + Value Objects + Enums + Domain Services
 │   ├── models/          # SQLAlchemy models
-│   ├── value_objects/   # Codigo (validação EAN/PLU)
+│   ├── value_objects/   # Codigo (EAN/PLU), Endereco (CEP, UF, 3 níveis de dados)
+│   ├── services/        # enriquecer_endereco (BrasilAPI + ViaCEP)
 │   └── enums.py         # RolesEnum
 ├── application/         # Casos de uso
-│   ├── services/        # Regras de negócio
-│   ├── bi/              # Business Intelligence
-│   ├── etl/             # Pipeline de sincronização
-│   └── scheduler/       # Agendamento dinâmico
-├── infrastructure/      # Banco, repositórios, PostgreSQL
+│   ├── services/        # Regras de negócio (auth, produto, config)
+│   ├── bi/              # Business Intelligence (factory, loader, analytics, reporting)
+│   ├── etl/             # Pipeline de sincronização (Extract → Transform → Load)
+│   ├── scheduler/       # Agendamento dinâmico (APScheduler)
+│   └── notifications/   # Email (SMTP), WhatsApp (Twilio), templates (Jinja2)
+├── infrastructure/      # Banco (SQLite), repositórios, PostgreSQL loader
 ├── api/                 # Rotas FastAPI + injeção de dependência
-├── core/                # Config, logging, error handling
+├── core/                # Config, logging, error handling, rate limiter
 └── schemas/             # Pydantic DTOs (contratos da API)
 ```
 
 ### Frontend
 
-Organização modular por funcionalidade com componentes reutilizáveis:
+Organização modular por funcionalidade com design system próprio:
 
 ```
 src/
-├── api/          # Axios instance + módulos de endpoint
-├── components/   # Componentes reutilizáveis (UI, BI, leitor)
-├── hooks/        # Custom hooks (auth, toast, countUp)
-├── pages/        # Páginas (consulta, admin, BI, login)
-├── stores/       # Cache frontend (stale-while-revalidate)
-├── types/        # TypeScript interfaces
-└── utils/        # Formatadores, CSV
+├── api/          # Axios instance + módulos de endpoint (admin, auth, bi, produtos, …)
+├── components/   # Design system (ui/) + feature-specific (bi/, scanner, admin)
+│   └── ui/       # Button, Card, Input, Modal, Skeleton, CmdK, EmptyState…
+├── hooks/        # Custom hooks (useAuth, useToast, useCountUp, useLocalStorage)
+├── pages/        # Páginas (consulta, admin, BI, login, configurações, …)
+│   └── bi/       # Dashboard, Ranking, Receita, CurvaAbc, Sku, Trocas, PerdasConsumo, Temporal
+├── stores/       # Cache frontend (biCache com stale-while-revalidate + configStore)
+├── types/        # TypeScript interfaces (admin, auth, bi, inventario, produto)
+└── utils/        # Formatadores, cores, CSV
 ```
 
 ### Fluxo de requisição
@@ -224,6 +241,15 @@ http://localhost:8000/docs
 | `GET` | `/bi/curva-abc` | Classificação ABC |
 | `GET` | `/bi/sku` | Análise detalhada de SKU |
 | `POST` | `/admin/sync` | Disparar ETL manual |
+| `GET` | `/admin/cache/status` | Status do cache (último sync, TTL) |
+| `POST` | `/admin/testar-anthropic` | Testar conexão com Anthropic |
+| `PATCH` | `/admin/endereco` | Atualizar endereço da loja |
+| `GET` | `/config` | Listar configurações (admin) |
+| `PUT` | `/config` | Atualizar configurações |
+| `GET` | `/contatos/email` | Listar contatos de email |
+| `POST` | `/contatos/email` | Adicionar contato de email |
+| `GET` | `/contatos/whatsapp` | Listar contatos de WhatsApp |
+| `POST` | `/contatos/whatsapp` | Adicionar contato de WhatsApp |
 
 > 🔗 Lista completa de endpoints e parâmetros: [`docs/API.md`](docs/API.md) _(em breve)_ ou diretamente no Swagger UI.
 
@@ -256,11 +282,16 @@ uv run pytest
 |-----------|-------|
 | Autenticação | Token, credenciais, registro, permissões |
 | Produtos | Busca por código/nome, paginação, detalhes |
-| Códigos | Validação EAN-13/8, PLU, checksum |
+| Códigos | Validação EAN-13/8/12, PLU-6, checksum |
 | BI | KPIs, receita, ranking, curva ABC, SKU, trocas, exportação |
 | Inventário | Sessões, itens, consolidado multi-usuário |
 | ETL | Transformação de dados |
 | CORS | Headers em requisições OPTIONS |
+| Config Service | CRUD, encriptação Fernet, fallback `.env`, senhas sensíveis |
+| Cache Status | Admin com/sem registro, supervisor 403, operador 403, sem auth 401 |
+| Contatos Email | CRUD completo |
+| Contatos WhatsApp | CRUD completo |
+| Value Objects | Endereco (CEP, UF, formatação, 3 níveis de dados) |
 
 ---
 
@@ -291,6 +322,8 @@ O dashboard compara KPIs do período atual com o mesmo período do ano anterior:
 
 > Endpoint dedicado `GET /bi/kpis/comparativo` com `VariacaoKpi` tipado e badges visuais no frontend (▲ verde / ▼ vermelho).
 
+**Ajustes de qualidade:** A data comparativa é calculada com `_ajustar_mesmo_dia_semana()` que desloca ±3 dias para alinhar ao mesmo dia da semana do período atual — padrão de indústria para varejo. Datas 29/fevereiro têm fallback automático para 28/fevereiro em ano não bissexto. O filtro de hora futura é aplicado simetricamente nos dois períodos (antes só no anterior, o que inflava o resultado atual).
+
 ---
 
 ## ETL
@@ -318,9 +351,16 @@ Pode ser executado manualmente, via scheduler interno (intervalo configurável p
 | **Separação Model / Schema** | `Produto` (ORM) ≠ `ProdutoResponse` (Pydantic). Métricas computadas (`markup`, `margem`) como `@property` no model |
 | **Camadas domain/application/infrastructure** | Isola regras de negócio de detalhes técnicos (SOLID) |
 | **Injeção de dependência** | Sessão gerenciada por `Depends` do FastAPI, repositório desacoplado do ciclo de vida da request |
-| **Value Object `Codigo`** | Encapsula validação e normalização de EAN/PLU, isolando do service |
+| **Value Objects (`Codigo`, `Endereco`)** | Encapsulam validação e invariantes do domínio (EAN/PLU, CEP/UF) sem poluir o service |
+| **Domain Services (`enriquecer_endereco`)** | Orquestra chamadas externas (BrasilAPI → ViaCEP) mantendo o VO imutável |
+| **Fernet para senhas em repouso** | ConfigService encripta valores sensíveis (senha ERP) com chave de `ERPS_ENCRYPTION_KEY` — única proteção em DB SQLite sem segredo |
+| **Sentinel `***configurado***`** | A UI exibe `••••••` em vez de retornar a senha descriptada; o valor enviado de volta é ignorado pelo backend se igual ao sentinel |
+| **ConfigService com fallback `.env`** | Lê de `.env` se a chave não existe no banco; ao salvar pela UI, escreve no SQLite e sobrescreve o `.env` |
+| **Templates Jinja2 para relatórios** | `relatorio_email.j2` / `relatorio_semanal.j2` permitem customizar o HTML sem recompilar |
+| **APScheduler para jobs dinâmicos** | ETL e notificações agendados com intervalo configurável pela UI (mín. 10 min), sem reiniciar o servidor |
 | **Cache frontend com AbortController** | Stale-while-revalidate com cancelamento de requests duplicadas (evita waterfall em navegação de BI) |
-| **Componentização do BI** | `KpiCard`, `PeriodoForm`, `BiSubNav` — componentes puros e reutilizáveis |
+| **Componentização do BI** | `KpiCard`, `PeriodoForm`, `BiSubNav`, `BiSideRail` — componentes puros e reutilizáveis |
+| **Design system próprio (`ui/`)** | `Button`, `Card`, `Input`, `Modal`, `Skeleton`, `CmdK` — consistência visual sem dependência pesada de UI library |
 
 ---
 
