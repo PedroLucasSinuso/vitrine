@@ -36,7 +36,7 @@ function periodoInicial(): PeriodoBi {
 const CURVA_BADGE: Record<CurvaAbc, string> = {
   A: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
   B: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
-  C: 'bg-slate-50 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  C: 'bg-slate-100 text-slate-700 dark:bg-slate-600 dark:text-slate-200',
 }
 
 export default function CurvaAbc() {
@@ -115,7 +115,7 @@ export default function CurvaAbc() {
           <div className="flex flex-col gap-1">
             <label className="text-xs text-slate-500 dark:text-slate-400">Dimensão</label>
             <select
-              className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-40"
+              className="border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-40"
               value={dimensao}
               onChange={(e) => { const val = e.target.value as Dimensao; setDimensao(val); syncParams(val) }}
             >
@@ -145,7 +145,7 @@ export default function CurvaAbc() {
       )}
       {dados.length > 0 && (
         <>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {statsPorCurva.map(({ curva, qtd, receita, pctReceita }) => (
               <Card key={curva} variant="bordered" className="flex flex-col items-center text-center gap-1 p-4">
                 <span className={`text-xs font-semibold px-2 py-1 rounded-full ${CURVA_BADGE[curva]}`}>
@@ -200,6 +200,13 @@ export default function CurvaAbc() {
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 da receita está em {statsPorCurva[0]?.qtd ?? 0} itens da Curva A
               </p>
+              {/* Visual gauge */}
+              <div className="mt-4 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-primary to-primary-light rounded-full transition-all duration-700"
+                  style={{ width: `${statsPorCurva[0]?.pctReceita ?? 0}%` }}
+                />
+              </div>
               <div className="mt-3 flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-400">
                 <p>· Curva A: {statsPorCurva[0]?.qtd ?? 0} itens · {statsPorCurva[0]?.pctReceita.toFixed(1) ?? 0}% receita</p>
                 <p>· Curva B: {statsPorCurva[1]?.qtd ?? 0} itens · {statsPorCurva[1]?.pctReceita.toFixed(1) ?? 0}% receita</p>
@@ -212,7 +219,7 @@ export default function CurvaAbc() {
             <SectionHeader>
               Classificação completa <span className="text-slate-400 dark:text-slate-500 font-normal">({dados.length})</span>
             </SectionHeader>
-            <div className="overflow-x-auto max-h-96 overflow-y-auto">
+            <div className="overflow-x-auto max-h-96 overflow-y-auto border border-slate-200 dark:border-slate-700/50 rounded-lg">
               <table className="w-full text-sm table-fixed">
                 <thead>
                   <tr className="border-b dark:border-slate-700 text-left sticky top-0 bg-white dark:bg-slate-800 z-10">

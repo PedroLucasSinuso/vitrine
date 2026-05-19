@@ -3,8 +3,9 @@ from io import BytesIO
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from app.limiter import limiter
-from app.api.deps import require_supervisor
+from app.api.deps import get_db, require_supervisor
 from app.domain.models.usuario import Usuario
+from sqlalchemy.orm import Session
 from app.application.bi.factory import criar_dominio, criar_dominio_comparativo
 from app.application.bi.loader import carregar_fluxo
 from app.application.bi.domain.perdas import Perdas
@@ -51,12 +52,13 @@ def kpis(
     request: Request,
     data_inicio: date = Query(...),
     data_fim: date = Query(...),
+    db: Session = Depends(get_db),
     _usuario: Usuario = Depends(require_supervisor),
 ):
     """Calcula e retorna os KPIs de vendas e trocas para o período informado."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | kpis periodo=%s..%s", data_inicio, data_fim)
-    dominio = criar_dominio(data_inicio, data_fim)
+    dominio = criar_dominio(data_inicio, data_fim, db)
     return Relatorio(dominio.vendas, dominio.trocas).kpis()
 
 
@@ -66,11 +68,12 @@ def kpis_comparativo(
     request: Request,
     data_inicio: date = Query(...),
     data_fim: date = Query(...),
+    db: Session = Depends(get_db),
     _usuario: Usuario = Depends(require_supervisor),
 ):
     data_inicio, data_fim = _periodo(data_inicio, data_fim, comparar=True)
     logger.info("BI Request | kpis/comparativo periodo=%s..%s", data_inicio, data_fim)
-    dominio_atual, dominio_anterior = criar_dominio_comparativo(data_inicio, data_fim)
+    dominio_atual, dominio_anterior = criar_dominio_comparativo(data_inicio, data_fim, db)
     kpis_atual = Relatorio(dominio_atual.vendas, dominio_atual.trocas).kpis()
     kpis_anterior = (
         Relatorio(dominio_anterior.vendas, dominio_anterior.trocas).kpis()
@@ -91,12 +94,13 @@ def receita_por_dimensao(
     data_inicio: date = Query(...),
     data_fim: date = Query(...),
     dimensao: Dimensao = Query(Dimensao.PRODUTO),
+    db: Session = Depends(get_db),
     _usuario: Usuario = Depends(require_supervisor),
 ):
     """Retorna a receita agregada por dimensão (produto, grupo, família) no período."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | receita periodo=%s..%s dimensao=%s", data_inicio, data_fim, dimensao.value)
-    dominio = criar_dominio(data_inicio, data_fim)
+    dominio = criar_dominio(data_inicio, data_fim, db)
     return Relatorio(dominio.vendas, dominio.trocas).por_dimensao(dimensao, Metrica.RECEITA)
 
 
@@ -107,16 +111,15 @@ def quantidade_por_dimensao(
     data_inicio: date = Query(...),
     data_fim: date = Query(...),
     dimensao: Dimensao = Query(Dimensao.PRODUTO),
+    db: Session = Depends(get_db),
     _usuario: Usuario = Depends(require_supervisor),
 ):
     """Retorna a quantidade vendida agregada por dimensão no período."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | quantidade periodo=%s..%s dimensao=%s", data_inicio, data_fim, dimensao.value)
-    dominio = criar_dominio(data_inicio, data_fim)
+    dominio = criar_dominio(data_inicio, data_fim, db)
     return Relatorio(dominio.vendas, dominio.trocas).por_dimensao(dimensao, Metrica.QUANTIDADE)
 
-
-# â”€â”€ Curva ABC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @router.get("/curva-abc", response_model=list[ItemCurvaAbcDTO])
 @limiter.limit("20/minute")
@@ -125,16 +128,15 @@ def curva_abc(
     data_inicio: date = Query(...),
     data_fim: date = Query(...),
     dimensao: Dimensao = Query(Dimensao.PRODUTO),
+    db: Session = Depends(get_db),
     _usuario: Usuario = Depends(require_supervisor),
 ):
     """Gera a curva ABC de produtos baseada na receita no período informado."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | curva-abc periodo=%s..%s dimensao=%s", data_inicio, data_fim, dimensao.value)
-    dominio = criar_dominio(data_inicio, data_fim)
+    dominio = criar_dominio(data_inicio, data_fim, db)
     return Relatorio(dominio.vendas, dominio.trocas).curva_abc(dimensao)
 
-
-# â”€â”€ Ranking â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @router.get("/ranking", response_model=list[ItemRankingDTO])
 @limiter.limit("20/minute")
@@ -144,16 +146,15 @@ def ranking(
     data_fim: date = Query(...),
     metrica: Metrica = Query(Metrica.RECEITA),
     top: int = Query(default=10, ge=1, le=100),
+    db: Session = Depends(get_db),
     _usuario: Usuario = Depends(require_supervisor),
 ):
     """Retorna o ranking de produtos por métrica (receita ou quantidade) no período."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | ranking periodo=%s..%s metrica=%s top=%s", data_inicio, data_fim, metrica.value, top)
-    dominio = criar_dominio(data_inicio, data_fim)
+    dominio = criar_dominio(data_inicio, data_fim, db)
     return Relatorio(dominio.vendas, dominio.trocas).ranking(metrica, top)
 
-
-# â”€â”€ Trocas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @router.get("/trocas", response_model=TrocasDTO)
 @limiter.limit("20/minute")
@@ -161,12 +162,13 @@ def trocas(
     request: Request,
     data_inicio: date = Query(...),
     data_fim: date = Query(...),
+    db: Session = Depends(get_db),
     _usuario: Usuario = Depends(require_supervisor),
 ):
     """Retorna o resumo de trocas (devoluções) com métricas e breakdown por produto."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | trocas periodo=%s..%s", data_inicio, data_fim)
-    dominio = criar_dominio(data_inicio, data_fim)
+    dominio = criar_dominio(data_inicio, data_fim, db)
     return Relatorio(dominio.vendas, dominio.trocas).trocas_resumo()
 
 
@@ -178,16 +180,15 @@ def perdas(
     request: Request,
     data_inicio: date = Query(...),
     data_fim: date = Query(...),
+    db: Session = Depends(get_db),
     _usuario: Usuario = Depends(require_supervisor),
 ):
     """Retorna o resumo de perdas (quebras de estoque) no período informado."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | perdas periodo=%s..%s", data_inicio, data_fim)
-    df = carregar_fluxo(data_inicio, data_fim)
+    df = carregar_fluxo(data_inicio, data_fim, db)
     return RelatorioMovimento(Perdas(df)).resumo()
 
-
-# â”€â”€ Consumo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @router.get("/consumo", response_model=MovimentoDTO)
 @limiter.limit("20/minute")
@@ -195,16 +196,15 @@ def consumo(
     request: Request,
     data_inicio: date = Query(...),
     data_fim: date = Query(...),
+    db: Session = Depends(get_db),
     _usuario: Usuario = Depends(require_supervisor),
 ):
     """Retorna o resumo de consumo interno (uso próprio) no período informado."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | consumo periodo=%s..%s", data_inicio, data_fim)
-    df = carregar_fluxo(data_inicio, data_fim)
+    df = carregar_fluxo(data_inicio, data_fim, db)
     return RelatorioMovimento(Consumo(df)).resumo()
 
-
-# â”€â”€ Série Temporal Diária â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @router.get("/diario", response_model=list[PontoDiarioDTO])
 @limiter.limit("20/minute")
@@ -213,12 +213,13 @@ def serie_diaria(
     data_inicio: date = Query(...),
     data_fim: date = Query(...),
     metrica: Metrica = Query(Metrica.RECEITA),
+    db: Session = Depends(get_db),
     _usuario: Usuario = Depends(require_supervisor),
 ):
     """Retorna a série temporal diária de vendas para o período informado."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | diario periodo=%s..%s metrica=%s", data_inicio, data_fim, metrica.value)
-    dominio = criar_dominio(data_inicio, data_fim)
+    dominio = criar_dominio(data_inicio, data_fim, db)
     return RelatorioDiario(dominio.vendas).serie_temporal(metrica)
 
 
@@ -230,6 +231,7 @@ def serie_diaria_produto(
     data_fim: date = Query(...),
     codigo: str = Query(...),
     metrica: Metrica = Query(Metrica.RECEITA),
+    db: Session = Depends(get_db),
     _usuario: Usuario = Depends(require_supervisor),
 ):
     """Retorna a série temporal diária de um produto específico no período."""
@@ -240,11 +242,9 @@ def serie_diaria_produto(
         codigo_valido = Codigo(codigo).valor
     except (ValueError, TypeError):
         raise HTTPException(status_code=400, detail=f"Código inválido: {codigo!r}")
-    dominio = criar_dominio(data_inicio, data_fim)
+    dominio = criar_dominio(data_inicio, data_fim, db)
     return RelatorioDiario(dominio.vendas).serie_por_produto(codigo_valido, metrica)
 
-
-# â”€â”€ Distribuição Temporal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @router.get("/temporal/hora", response_model=list[PontoHoraDTO])
 @limiter.limit("20/minute")
@@ -253,12 +253,13 @@ def distribuicao_hora(
     data_inicio: date = Query(...),
     data_fim: date = Query(...),
     metrica: Metrica = Query(Metrica.RECEITA),
+    db: Session = Depends(get_db),
     _usuario: Usuario = Depends(require_supervisor),
 ):
     """Retorna a distribuição de vendas por hora do dia no período informado."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | temporal/hora periodo=%s..%s metrica=%s", data_inicio, data_fim, metrica.value)
-    dominio = criar_dominio(data_inicio, data_fim)
+    dominio = criar_dominio(data_inicio, data_fim, db)
     return RelatorioTemporal(dominio.vendas).por_hora(metrica)
 
 
@@ -269,16 +270,15 @@ def distribuicao_dia_semana(
     data_inicio: date = Query(...),
     data_fim: date = Query(...),
     metrica: Metrica = Query(Metrica.RECEITA),
+    db: Session = Depends(get_db),
     _usuario: Usuario = Depends(require_supervisor),
 ):
     """Retorna a distribuição de vendas por dia da semana no período informado."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | temporal/dia-semana periodo=%s..%s metrica=%s", data_inicio, data_fim, metrica.value)
-    dominio = criar_dominio(data_inicio, data_fim)
+    dominio = criar_dominio(data_inicio, data_fim, db)
     return RelatorioTemporal(dominio.vendas).por_dia_semana(metrica)
 
-
-# â”€â”€ SKU â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @router.get("/sku", response_model=SkuDTO)
 @limiter.limit("20/minute")
@@ -287,6 +287,7 @@ def sku(
     data_inicio: date = Query(...),
     data_fim: date = Query(...),
     codigo: str = Query(...),
+    db: Session = Depends(get_db),
     _usuario: Usuario = Depends(require_supervisor),
 ):
     """Retorna o resumo completo de um SKU (produto) no período informado."""
@@ -297,7 +298,7 @@ def sku(
         codigo_valido = Codigo(codigo).valor
     except (ValueError, TypeError):
         raise HTTPException(status_code=400, detail=f"Código inválido: {codigo!r}")
-    dominio = criar_dominio(data_inicio, data_fim)
+    dominio = criar_dominio(data_inicio, data_fim, db)
     resultado = RelatorioSku(dominio.vendas, codigo_valido).resumo()
     if resultado is None:
         raise HTTPException(status_code=404, detail="Produto não encontrado no período informado")
@@ -317,6 +318,7 @@ def exportar_excel(
     metrica: Metrica = Query(Metrica.RECEITA),
     top: int = Query(default=10, ge=1, le=100),
     codigo: str = Query(default=None),
+    db: Session = Depends(get_db),
     _usuario: Usuario = Depends(require_supervisor),
 ):
     from app.application.bi.reporting.exportador import ExportadorExcel
@@ -339,7 +341,7 @@ def exportar_excel(
     from app.core.timer import temporizador
 
     with temporizador(f"BI Export {relatorio}", logger):
-        dominio = criar_dominio(data_inicio, data_fim)
+        dominio = criar_dominio(data_inicio, data_fim, db)
     rel = Relatorio(dominio.vendas, dominio.trocas)
     exportador = ExportadorExcel()
     dados: dict = {}
@@ -359,12 +361,12 @@ def exportar_excel(
         dados["Trocas Resumo"] = [{"total_trocas": trocas_dto.total_trocas, "taxa_troca_pct": trocas_dto.taxa_troca_pct}]
         dados["Trocas por Produto"] = [i.model_dump() for i in trocas_dto.por_produto]
     elif relatorio == "perdas":
-        df = carregar_fluxo(data_inicio, data_fim)
+        df = carregar_fluxo(data_inicio, data_fim, db)
         perdas_dto = RelatorioMovimento(Perdas(df)).resumo()
         dados["Perdas Resumo"] = [{"total": perdas_dto.total}]
         dados["Perdas por Produto"] = [i.model_dump() for i in perdas_dto.por_produto]
     elif relatorio == "consumo":
-        df = carregar_fluxo(data_inicio, data_fim)
+        df = carregar_fluxo(data_inicio, data_fim, db)
         consumo_dto = RelatorioMovimento(Consumo(df)).resumo()
         dados["Consumo Resumo"] = [{"total": consumo_dto.total}]
         dados["Consumo por Produto"] = [i.model_dump() for i in consumo_dto.por_produto]

@@ -3,14 +3,15 @@ from app.application.etl.query_loader import QueryLoader
 from app.infrastructure.postgres.loader import PostgresLoader
 from app.core.timer import temporizador
 import logging
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
 
 class ProdutoExtractor:
-    def __init__(self):
-        self.produto_loader = PostgresLoader(QueryLoader.load("produto"))
-        self.codigo_loader = PostgresLoader(QueryLoader.load("codigo"))
+    def __init__(self, db: Session):
+        self.produto_loader = PostgresLoader(QueryLoader.load("produto"), db)
+        self.codigo_loader = PostgresLoader(QueryLoader.load("codigo"), db)
 
     def extract(self) -> ExtractResult:
         logger.info("Extraindo dados do Postgres")

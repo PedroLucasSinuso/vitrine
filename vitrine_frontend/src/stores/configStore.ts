@@ -27,8 +27,8 @@ export async function getConfigsCache(): Promise<ConfigCache> {
     marketLogoUrl: c.logo_url ?? '',
   }
   localStorage.setItem('vitrine_config', JSON.stringify(_cache))
-  if (c.market_name) localStorage.setItem('marketName', c.market_name)
-  if (c.logo_url) localStorage.setItem('marketLogoUrl', c.logo_url)
+  if (c.market_name) localStorage.setItem('app_marketName', c.market_name)
+  if (c.logo_url) localStorage.setItem('app_marketLogoUrl', c.logo_url)
   return _cache
 }
 

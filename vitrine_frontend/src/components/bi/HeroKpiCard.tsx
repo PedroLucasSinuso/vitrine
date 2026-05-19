@@ -39,7 +39,7 @@ export default function HeroKpiCard({ label, valor, pulseKey, variacao, valorAnt
 
   return (
     <div
-      className={`relative overflow-hidden bg-gradient-to-br from-primary/5 via-white to-primary/[0.08] dark:from-primary/10 dark:via-gray-800 dark:to-primary/[0.05] rounded-2xl shadow-sm border border-primary/10 dark:border-primary/20 p-6 md:p-8 animate-scale-in ${pulsing ? 'animate-pulse-glow' : ''}`}
+      className={`relative overflow-hidden bg-gradient-to-br from-primary/5 via-white to-primary/[0.08] dark:from-primary/10 dark:via-slate-800 dark:to-primary/[0.05] rounded-2xl shadow-sm border border-primary/10 dark:border-primary/20 p-6 md:p-8 animate-scale-in ${pulsing ? 'animate-pulse-glow' : ''}`}
     >
       <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
       <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">{label}</p>

@@ -86,7 +86,7 @@ export default function Busca() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-auto">
 
       {cameras && (
         <LeitorCodigo onLeitura={handleLeitura} onFechar={() => setCameras(false)} />
@@ -190,7 +190,7 @@ export default function Busca() {
           )}
         </div>
         {searchResults.length > 0 && (
-          <div className="mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700 max-h-60 overflow-y-auto">
+          <div className="mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700 max-h-60 overflow-y-auto absolute left-0 right-0 z-20">
             {searchResults.map((p) => (
               <button
                 key={p.codigo_chamada}

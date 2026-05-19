@@ -32,7 +32,7 @@ export default function Home() {
   }, [dark])
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-8 overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-8 overflow-x-auto">
       <div className="w-full max-w-lg flex flex-col gap-8">
 
         {/* Header */}
@@ -58,6 +58,7 @@ export default function Home() {
               onClick={() => setDark((prev) => !prev)}
               className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
               aria-label="Alternar tema"
+              title={dark ? 'Modo claro' : 'Modo escuro'}
               title={dark ? 'Modo claro' : 'Modo escuro'}
             >
               {dark ? <Sun size={16} /> : <Moon size={16} />}
@@ -98,6 +99,7 @@ export default function Home() {
         {/* Admin cards */}
         {(role === 'admin' || role === 'supervisor' || role === 'operador') && (
           <div>
+            <div className="border-t border-slate-200 dark:border-slate-700/50 mb-3" />
             <h2 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-3">Administração</h2>
             <div className="flex flex-col gap-3">
               {ADMIN_CARDS.filter(c => role === 'admin' || (role === 'operador' ? c.path === '/admin/inventario' : ['/admin/etiquetas', '/admin/inventario'].includes(c.path))).map((card) => {

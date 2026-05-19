@@ -134,7 +134,7 @@ export default function Receita() {
             <div className="flex flex-col gap-1">
               <label className="text-xs text-slate-500 dark:text-slate-400">Dimensão</label>
               <select
-                className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 value={dimensao}
                 onChange={(e) => { const val = e.target.value as Dimensao; setDimensao(val); syncParams(val, metrica) }}
               >
@@ -146,7 +146,7 @@ export default function Receita() {
             <div className="flex flex-col gap-1">
               <label className="text-xs text-slate-500 dark:text-slate-400">Métrica</label>
               <select
-                className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 value={metrica}
                 onChange={(e) => { const val = e.target.value as Metrica; setMetrica(val); syncParams(dimensao, val) }}
               >
@@ -160,7 +160,7 @@ export default function Receita() {
               <div className="flex flex-col gap-1">
                 <label className="text-xs text-slate-500 dark:text-slate-400">Grupo</label>
                 <select
-                  className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   value={filtroGrupo}
                   onChange={(e) => { setFiltroGrupo(e.target.value); setFiltroFamilia('') }}
                 >
@@ -172,7 +172,7 @@ export default function Receita() {
                 <div className="flex flex-col gap-1">
                   <label className="text-xs text-slate-500 dark:text-slate-400">Família</label>
                   <select
-                    className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     value={filtroFamilia}
                     onChange={(e) => setFiltroFamilia(e.target.value)}
                   >
@@ -231,7 +231,7 @@ export default function Receita() {
             <SectionHeader>
               Todos os resultados <span className="text-slate-400 dark:text-slate-500 font-normal">({dadosFiltrados.length})</span>
             </SectionHeader>
-            <div className="overflow-x-auto max-h-96 overflow-y-auto">
+            <div className="overflow-x-auto max-h-96 overflow-y-auto border border-slate-200 dark:border-slate-700/50 rounded-lg">
               <table className="w-full text-sm table-fixed">
                 <thead>
                   <tr className="border-b dark:border-slate-700 text-left sticky top-0 bg-white dark:bg-slate-800 z-10">

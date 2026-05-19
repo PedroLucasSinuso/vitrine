@@ -5,6 +5,8 @@ import AdminHeader from '../components/AdminHeader'
 import type { SyncJob, SyncHistory } from '../types'
 import { formatDate } from '../utils/formatters'
 import { RefreshCw, Clock, CheckCircle2, XCircle, Loader2, Database, Hash, AlertCircle } from 'lucide-react'
+import ErrorBanner from '../components/ui/ErrorBanner'
+import EmptyState from '../components/ui/EmptyState'
 
 function StatusBadge({ status }: { status: SyncJob['status'] }) {
   const styles: Record<string, string> = {
@@ -106,7 +108,7 @@ export default function Admin() {
   useEffect(() => () => pararPolling(), [])
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-auto">
 
       {/* Header */}
       <AdminHeader titulo="Sync ETL" paginaAtual="sync" />
@@ -135,7 +137,7 @@ export default function Admin() {
             {loading ? 'Sincronizando...' : 'Iniciar Sync'}
           </button>
 
-          {erro && <p className="text-red-500 text-sm mt-3" role="alert">{erro}</p>}
+          {erro && <ErrorBanner message={erro} />}
 
           {/* Active job status */}
           {activeJob && (
@@ -193,7 +195,7 @@ export default function Admin() {
           )}
 
           {history && history.jobs.length === 0 && (
-            <p className="text-sm text-slate-400 dark:text-slate-500 py-4">Nenhuma sincronização registrada.</p>
+            <EmptyState title="Nenhuma sincronização registrada" description="Inicie um sync para popular o histórico." />
           )}
 
           {history && history.jobs.length > 0 && (

@@ -1,6 +1,11 @@
 ﻿from app.application.bi.domain.vendas import Vendas
 from app.application.bi.schema import COLUNAS
-from app.schemas.bi_schema import SkuDTO, PontoDiarioDTO, PontoHoraDTO
+from app.schemas.bi_schema import SkuDTO, PontoDiarioDTO, PontoHoraDTO, PontoDiaSemanaDTO
+
+_DIAS_SEMANA = {
+    0: "Segunda", 1: "Terça", 2: "Quarta",
+    3: "Quinta", 4: "Sexta", 5: "Sábado", 6: "Domingo",
+}
 
 
 class RelatorioSku:
@@ -40,6 +45,17 @@ class RelatorioSku:
             .sort_values("_hora")
         )
 
+        self._df["_dia_semana_num"] = self._df[COLUNAS.emissao].apply(
+            lambda data: data.weekday() if hasattr(data, "weekday") else None
+        )
+        df_por_dia_semana = (
+            self._df
+            .groupby("_dia_semana_num")[COLUNAS.receita]
+            .sum()
+            .reset_index()
+            .sort_values("_dia_semana_num")
+        )
+
         info_produto = self._df[[
             COLUNAS.codigo, COLUNAS.produto, COLUNAS.grupo, COLUNAS.familia
         ]].iloc[0]
@@ -66,5 +82,12 @@ class RelatorioSku:
                     valor=round(float(row[COLUNAS.receita]), 2),
                 )
                 for row in df_por_hora.to_dict(orient="records")
+            ],
+            distribuicao_dia_semana=[
+                PontoDiaSemanaDTO(
+                    dia_semana=_DIAS_SEMANA.get(int(row["_dia_semana_num"]), "Desconhecido"),
+                    valor=round(float(row[COLUNAS.receita]), 2),
+                )
+                for row in df_por_dia_semana.to_dict(orient="records")
             ],
         )

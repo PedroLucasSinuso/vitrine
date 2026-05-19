@@ -57,7 +57,7 @@ export default function Etiquetas() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-auto">
       {camera && (
         <LeitorCodigo
           onLeitura={(codigo) => { setCamera(false); setTimeout(() => handleCodigo(codigo), 50) }}
@@ -140,7 +140,7 @@ export default function Etiquetas() {
                   </div>
                   <button
                     onClick={() => remover(item.codigo)}
-                    className="text-slate-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100 p-1"
+                    className="text-slate-300 hover:text-red-500 transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1"
                     aria-label={`Remover ${item.nome}`}
                   >
                     <Trash2 size={14} />

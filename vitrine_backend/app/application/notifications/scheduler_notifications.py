@@ -41,7 +41,7 @@ def _enviar_relatorio_whatsapp():
             logger.info("WhatsApp: nenhum contato configurado, pulando.")
             return
 
-        mensagem = construir_relatorio_semanal(nome_loja)
+        mensagem = construir_relatorio_semanal(nome_loja, session)
         client = WhatsAppClient(sid, token, from_num)
         resultados = client.enviar_para_lista(numeros, mensagem)
         logger.info("Relatório WhatsApp enviado | resultados=%s", resultados)
@@ -75,7 +75,7 @@ def _enviar_relatorio_email():
             return
 
         assunto = f"Relatório Semanal — {nome_loja}"
-        html, imagens = construir_relatorio_email(nome_loja)
+        html, imagens = construir_relatorio_email(nome_loja, session)
         smtp_port = int(smtp_port_str)
         resultados = enviar_para_lista_com_imagens(
             emails, assunto, html, imagens,

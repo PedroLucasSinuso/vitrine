@@ -82,3 +82,4 @@ class SkuDTO(BaseModel):
     ticket_medio: float
     ranking_dias: list[PontoDiarioDTO]
     distribuicao_hora: list[PontoHoraDTO]
+    distribuicao_dia_semana: list[PontoDiaSemanaDTO]

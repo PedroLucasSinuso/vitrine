@@ -23,6 +23,7 @@ dependencies = [
     "jinja2>=3.1.6",
     "twilio>=9.10.9",
     "pillow>=12.2.0",
+    "cryptography>=44.0.0",
 ]
 
 [tool.setuptools]

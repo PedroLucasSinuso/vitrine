@@ -92,7 +92,7 @@ export default function Temporal() {
           <div className="flex flex-col gap-1">
             <label className="text-xs text-slate-500 dark:text-slate-400">Métrica</label>
             <select
-              className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-40"
+              className="border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-40"
               value={metrica}
               onChange={(e) => setMetrica(e.target.value as Metrica)}
             >
@@ -125,7 +125,7 @@ export default function Temporal() {
               <button
                 key={a}
                 onClick={() => setAba(a)}
-                className={`px-5 py-2 rounded-xl text-sm font-semibold transition ${
+                className={`px-5 py-2 rounded-xl text-sm font-semibold transition relative ${
                   aba === a ? 'bg-primary text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
               >
@@ -146,15 +146,15 @@ export default function Temporal() {
               <BarChart data={dadosGrafico} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="barGradientTemporal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={CHART.green} stopOpacity={0.9} />
-                    <stop offset="100%" stopColor={CHART.green} stopOpacity={0.25} />
+                    <stop offset="0%" stopColor={isReceita ? CHART.green : CHART.amber} stopOpacity={0.9} />
+                    <stop offset="100%" stopColor={isReceita ? CHART.green : CHART.amber} stopOpacity={0.25} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#9ca3af' }} />
                 <YAxis
                   tick={{ fontSize: 11, fill: '#9ca3af' }}
-                  tickFormatter={(v) => isReceita ? `${(v / 1000).toFixed(0)}k` : v}
+                  tickFormatter={(v) => isReceita ? `R$ ${(v / 1000).toFixed(0)}k` : `${(v / 1000).toFixed(0)}k un.`}
                   width={40}
                 />
                 <Tooltip content={<BiTooltip />} />

@@ -52,6 +52,11 @@ export async function testarEmail(): Promise<{ status: string; mensagem: string 
   return response.data
 }
 
+export async function testarAnthropic(): Promise<{ status: string; mensagem: string }> {
+  const response = await api.post('/admin/configuracoes/testar-anthropic')
+  return response.data
+}
+
 export async function getStatus(): Promise<{ last_updated: string }> {
   const response = await api.get('/status/')
   return response.data

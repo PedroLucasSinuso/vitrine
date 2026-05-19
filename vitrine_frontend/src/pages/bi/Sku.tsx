@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { subDays, format, parseISO, getDay } from 'date-fns'
+import { subDays, format } from 'date-fns'
 import PeriodoForm, { type Preset } from '../../components/bi/PeriodoForm'
 import BiPageLayout from '../../components/bi/BiPageLayout'
 import ExportButtons from '../../components/bi/ExportButtons'
@@ -22,7 +22,7 @@ import { useCountUp } from '../../hooks/useCountUp'
 import { Search, TrendingUp, BarChart3, Calendar, Crown } from 'lucide-react'
 import Skeleton from '../../components/ui/Skeleton'
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid,
 } from 'recharts'
 
@@ -131,7 +131,7 @@ export default function Sku() {
               />
             </div>
             {searchResults.length > 0 && (
-              <div className="mt-1 bg-white dark:bg-slate-800 rounded-lg shadow-md border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700 max-h-48 overflow-y-auto">
+              <div className="mt-1 bg-white dark:bg-slate-800 rounded-lg shadow-md border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700 max-h-48 overflow-y-auto absolute left-0 right-0 z-20">
                 {searchResults.map((p) => (
                   <button
                     key={p.codigo_chamada}
@@ -208,6 +208,7 @@ export default function Sku() {
       )}
       {dados && (
         <>
+          <div className="flex flex-col gap-3">
           <Card variant="bordered">
             <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mb-1">{dados.grupo} · {dados.familia}</p>
             <p className="text-xl font-bold text-slate-800 dark:text-slate-100">{dados.produto}</p>
@@ -220,22 +221,29 @@ export default function Sku() {
             <KpiCard label="Tickets" valor={animTickets.toLocaleString('pt-BR')} />
             <KpiCard label="Ticket Médio" valor={formatCurrency(animTicketMedio)} />
           </div>
+          </div>
 
           {dados.ranking_dias.length > 0 && (
             <Card variant="bordered">
               <SectionHeader icon={TrendingUp}>Receita diária</SectionHeader>
               <div className="w-full aspect-[16/9] md:aspect-[21/9]">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart
+                <AreaChart
                   data={dados.ranking_dias.slice().sort((a, b) => a.data.localeCompare(b.data))}
                   margin={{ top: 0, right: 8, left: 0, bottom: 0 }}
                 >
+                  <defs>
+                    <linearGradient id="areaGradientSku" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={CHART.green} stopOpacity={0.3} />
+                      <stop offset="100%" stopColor={CHART.green} stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                   <XAxis dataKey="data" tick={{ fontSize: 10, fill: '#9ca3af' }} tickFormatter={(v) => v.slice(5)} interval="preserveStartEnd" />
                   <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={36} />
                   <Tooltip content={<BiTooltip />} labelFormatter={(l) => `Data: ${l}`} />
-                  <Line type="monotone" dataKey="valor" stroke={CHART.green} strokeWidth={2} dot={false} animationBegin={0} animationDuration={600} />
-                </LineChart>
+                  <Area type="monotone" dataKey="valor" stroke={CHART.green} strokeWidth={2} fill="url(#areaGradientSku)" animationBegin={0} animationDuration={600} />
+                </AreaChart>
               </ResponsiveContainer>
               </div>
             </Card>
@@ -264,20 +272,13 @@ export default function Sku() {
             </Card>
           )}
 
-          {dados.ranking_dias.length > 0 && (
+          {dados.distribuicao_dia_semana.length > 0 && (
             <Card variant="bordered">
               <SectionHeader icon={Calendar}>Receita por dia da semana</SectionHeader>
               <div className="w-full aspect-[16/9] md:aspect-[21/9]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={(() => {
-                    const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
-                    const agrupado = Array(7).fill(0)
-                    dados.ranking_dias.forEach((d) => {
-                      agrupado[getDay(parseISO(d.data))] += d.valor
-                    })
-                    return dias.map((label, i) => ({ label, valor: agrupado[i] }))
-                  })()}
+                  data={dados.distribuicao_dia_semana.map((d) => ({ label: d.dia_semana, valor: d.valor }))}
                   margin={{ top: 0, right: 8, left: 0, bottom: 0 }}
                 >
                   <defs>
@@ -299,7 +300,8 @@ export default function Sku() {
 
           <Card variant="bordered">
             <SectionHeader icon={Crown}>Top dias de venda</SectionHeader>
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto max-h-64 overflow-y-auto">
+              <table className="w-full text-sm">
               <thead>
                 <tr className="border-b dark:border-slate-700 text-left">
                   <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium">#</th>
@@ -317,6 +319,7 @@ export default function Sku() {
                 ))}
               </tbody>
             </table>
+            </div>
           </Card>
         </>
       )}

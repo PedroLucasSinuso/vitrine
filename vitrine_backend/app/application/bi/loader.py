@@ -2,6 +2,7 @@
 import pandas as pd
 from cachetools import TTLCache
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 from app.application.bi.query_loader import BiQueryLoader
 from app.application.bi.db import get_bi_engine
 from app.core.timer import temporizador
@@ -21,7 +22,7 @@ def _validar_periodo(data_inicio: date, data_fim: date) -> None:
         raise ValueError(f"Range máximo permitido é {MAX_RANGE_DIAS} dias")
 
 
-def carregar_fluxo(data_inicio: date, data_fim: date) -> pd.DataFrame:
+def carregar_fluxo(data_inicio: date, data_fim: date, db: Session) -> pd.DataFrame:
     _validar_periodo(data_inicio, data_fim)
     key = (data_inicio.isoformat(), data_fim.isoformat())
     if key in _bi_cache:
@@ -29,7 +30,7 @@ def carregar_fluxo(data_inicio: date, data_fim: date) -> pd.DataFrame:
         return _bi_cache[key]
     sql = BiQueryLoader.load("fluxo")
     with temporizador(f"BI Load fluxo | periodo={data_inicio}..{data_fim}", logger):
-        with get_bi_engine().connect() as conn:
+        with get_bi_engine(db).connect() as conn:
             df = pd.read_sql(
                 text(sql),
                 conn,

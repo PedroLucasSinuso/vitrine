@@ -95,6 +95,7 @@ export interface SkuDTO {
   ticket_medio: number
   ranking_dias: PontoDiarioDTO[]
   distribuicao_hora: PontoHoraDTO[]
+  distribuicao_dia_semana: PontoDiaSemanaDTO[]
 }
 
 export interface PeriodoBi {

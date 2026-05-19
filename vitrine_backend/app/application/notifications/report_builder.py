@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
+from sqlalchemy.orm import Session
 from app.application.bi.factory import criar_dominio
 from app.application.bi.reporting.relatorio import Relatorio
 from app.application.bi.schema import Metrica
@@ -14,7 +15,7 @@ def _formatar_data(d: date) -> str:
     return d.strftime("%d/%m/%Y")
 
 
-def construir_relatorio_semanal(nome_loja: str) -> str:
+def construir_relatorio_semanal(nome_loja: str, db: Session) -> str:
     hoje = date.today()
     inicio = hoje - timedelta(days=7)
     fim = hoje - timedelta(days=1)
@@ -22,8 +23,8 @@ def construir_relatorio_semanal(nome_loja: str) -> str:
     inicio_ant = inicio - timedelta(days=7)
     fim_ant = inicio - timedelta(days=1)
 
-    dominio = criar_dominio(inicio, fim)
-    dominio_ant = criar_dominio(inicio_ant, fim_ant)
+    dominio = criar_dominio(inicio, fim, db)
+    dominio_ant = criar_dominio(inicio_ant, fim_ant, db)
 
     rel = Relatorio(dominio.vendas, dominio.trocas)
     rel_ant = Relatorio(dominio_ant.vendas, dominio_ant.trocas)

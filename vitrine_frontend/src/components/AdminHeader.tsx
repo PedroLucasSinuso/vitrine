@@ -101,7 +101,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
     <div className="w-full max-w-5xl relative">
       {/* Breadcrumb */}
       {breadcrumb && breadcrumb.length > 0 && (
-        <nav className="text-xs text-slate-400 dark:text-slate-500 mb-2 flex items-center gap-0.5 flex-wrap" aria-label="Breadcrumb">
+        <nav className="text-xs text-slate-400 dark:text-slate-400 mb-2 flex items-center gap-0.5 flex-wrap" aria-label="Breadcrumb">
           {breadcrumb.map((b, i) => (
             <span key={i} className="flex items-center gap-0.5">
               {i > 0 && <ChevronRight size={10} className="opacity-40" />}
@@ -189,7 +189,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
         className={`grid ${cols} gap-2 transition-all duration-300 ease-in-out overflow-hidden ${
           hideNav
             ? 'opacity-0 pointer-events-none max-h-0 mb-0'
-            : 'opacity-100 max-h-56 mb-6'
+            : 'opacity-100 max-h-72 mb-6'
         }`}
       >
         {links.map(({ label, icon: Icon, pagina, path }) => {

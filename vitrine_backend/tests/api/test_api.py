@@ -314,6 +314,60 @@ class TestAdminSync:
         assert data["total"] >= 1
 
 
+class TestAdminCacheStatus:
+    def test_cache_status_como_admin_sem_registro(self, client, token_admin):
+        """Sem nenhum registro de cache, retorna produtos_cached=False."""
+        response = client.get(
+            "/admin/cache/status",
+            headers={"Authorization": f"Bearer {token_admin}"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data == {
+            "produtos_cached": False,
+            "last_refresh": None,
+            "ttl_seconds": 30,
+        }
+
+    def test_cache_status_como_admin_com_registro(self, client, token_admin, db_session):
+        """Com um registro de cache, retorna produtos_cached=True e last_refresh."""
+        from datetime import datetime, timezone
+        from app.domain.models.cache_status import CacheStatus
+
+        now = datetime.now(timezone.utc)
+        db_session.add(CacheStatus(last_updated=now, status="sucesso"))
+        db_session.commit()
+
+        response = client.get(
+            "/admin/cache/status",
+            headers={"Authorization": f"Bearer {token_admin}"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["produtos_cached"] is True
+        assert data["last_refresh"] is not None
+        assert data["ttl_seconds"] == 30
+
+    def test_cache_status_supervisor_403(self, client, token_supervisor):
+        response = client.get(
+            "/admin/cache/status",
+            headers={"Authorization": f"Bearer {token_supervisor}"},
+        )
+        assert response.status_code == 403
+        assert response.json()["detail"] == "Acesso restrito a administradores"
+
+    def test_cache_status_operador_403(self, client, token_operador):
+        response = client.get(
+            "/admin/cache/status",
+            headers={"Authorization": f"Bearer {token_operador}"},
+        )
+        assert response.status_code == 403
+
+    def test_cache_status_sem_autenticacao_401(self, client):
+        response = client.get("/admin/cache/status")
+        assert response.status_code == 401
+
+
 class TestCors:
     def test_cors_headers_present(self, client):
         response = client.options(

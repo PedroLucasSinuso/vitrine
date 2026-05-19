@@ -30,7 +30,7 @@ export default function PasswordConfigInput({ label, value, onChange, placeholde
             {isConfigured && (
               <button
                 type="button"
-                onClick={() => { originalValue.current = value; setEditing(true); onChange('') }}
+                onClick={() => { originalValue.current = value; setEditing(true); onChange(SENTINEL) }}
                 className="text-xs text-primary hover:text-primary-hover font-medium transition shrink-0"
                 title="Editar"
               >
@@ -52,8 +52,11 @@ export default function PasswordConfigInput({ label, value, onChange, placeholde
           <input
             type={showValue ? 'text' : 'password'}
             className="w-full border border-primary/50 dark:border-primary/30 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent transition"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
+            value={value === SENTINEL ? '' : value}
+            onChange={(e) => {
+              const v = e.target.value
+              if (v !== '') onChange(v)
+            }}
             placeholder={placeholder ?? 'Digite o novo valor'}
             autoFocus
           />

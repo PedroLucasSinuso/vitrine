@@ -88,10 +88,18 @@ export default function Trocas() {
 
       {/* Loading skeleton */}
       {loading && !dados && (
-        <div className="grid grid-cols-2 gap-3">
-          <Skeleton variant="kpi" />
-          <Skeleton variant="kpi" />
-        </div>
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <Skeleton variant="kpi" />
+            <Skeleton variant="kpi" />
+          </div>
+          <Card variant="bordered">
+            <Skeleton className="h-5 w-40 mb-4" />
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} variant="table-row" className="mb-2" />
+            ))}
+          </Card>
+        </>
       )}
 
       {/* Empty state */}

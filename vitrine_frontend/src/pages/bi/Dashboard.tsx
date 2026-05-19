@@ -9,6 +9,7 @@ import EmptyState from '../../components/ui/EmptyState'
 import KpiCard from '../../components/bi/KpiCard'
 import HeroKpiCard from '../../components/bi/HeroKpiCard'
 import ErrorBanner from '../../components/ui/ErrorBanner'
+import Card from '../../components/ui/Card'
 import { fetchKpis, fetchKpisComparativo, fetchRanking, exportarExcelBI } from '../../api/bi'
 import { baixarCSVdeArray } from '../../utils/csv'
 import type { KpisDTO, KpisComparativoDTO, ItemRankingDTO, PeriodoBi } from '../../types'
@@ -151,8 +152,8 @@ export default function Dashboard() {
           </label>
           <div className="flex items-center gap-3">
             {cacheTimestamp && (
-              <span className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500" title={`Cache atualizado às ${format(new Date(cacheTimestamp), 'HH:mm:ss')}`}>
-                <RefreshCw size={10} className={cacheFresh ? 'text-emerald-500' : 'text-amber-500'} />
+              <span className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 font-medium" title={`Cache atualizado às ${format(new Date(cacheTimestamp), 'HH:mm:ss')}`}>
+                <RefreshCw size={12} className={cacheFresh ? 'text-emerald-500' : 'text-amber-500'} />
                 {formatDistanceToNow(new Date(cacheTimestamp), { locale: ptBR, addSuffix: true })}
               </span>
             )}
@@ -167,35 +168,10 @@ export default function Dashboard() {
               <Clock size={12} className="inline mr-1" /> Parcial até {kpisComp.dados_parciais_ate}
             </span>
           )}
+          </div>
         </div>
-      </div>
 
       {erro && <ErrorBanner message={erro} />}
-
-      {/* Loading skeleton */}
-      {loading && !kpisAtivos && (
-        <div className="flex flex-col gap-4">
-          {/* Hero skeleton */}
-          <Skeleton variant="kpi" className="h-36" />
-          {/* KPI grid skeleton */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} variant="kpi" />
-            ))}
-          </div>
-          {/* Ranking skeleton */}
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 p-5">
-            <Skeleton className="h-5 w-40 mb-4" />
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 mb-3">
-                <Skeleton className="h-6 w-6 rounded-full" />
-                <Skeleton className="h-4 flex-1" />
-                <Skeleton className="h-4 w-20" />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* KPI section */}
       {kpisAtivos && (
@@ -209,20 +185,20 @@ export default function Dashboard() {
             valorAnterior={kpisComp?.faturamento_bruto.anterior != null ? formatCurrency(kpisComp.faturamento_bruto.anterior) : undefined}
           />
           {/* Secondary KPIs */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            <KpiCard label="Faturamento Líquido" valor={formatCurrency(animFatLiq)} delay={80} pulseKey={pulseKey}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <KpiCard label="Faturamento Líquido" valor={formatCurrency(animFatLiq)} delay={80}
               variacao={kpisComp ? variacaoInfo(kpisComp.faturamento_liquido.variacao_pct) : null}
               valorAnterior={kpisComp?.faturamento_liquido.anterior != null ? formatCurrency(kpisComp.faturamento_liquido.anterior) : undefined} />
-            <KpiCard label="Total de Trocas" valor={formatCurrency(animTrocas)} delay={160} pulseKey={pulseKey}
+            <KpiCard label="Total de Trocas" valor={Math.round(animTrocas).toLocaleString('pt-BR')} delay={160}
               variacao={kpisComp ? variacaoInfo(kpisComp.total_trocas.variacao_pct) : null} invertVariation
-              valorAnterior={kpisComp?.total_trocas.anterior != null ? formatCurrency(kpisComp.total_trocas.anterior) : undefined} />
-            <KpiCard label="Tickets" valor={Math.round(animTickets).toLocaleString('pt-BR')} delay={240} pulseKey={pulseKey}
+              valorAnterior={kpisComp?.total_trocas.anterior != null ? Math.round(kpisComp.total_trocas.anterior).toLocaleString('pt-BR') : undefined} />
+            <KpiCard label="Tickets" valor={Math.round(animTickets).toLocaleString('pt-BR')} delay={240}
               variacao={kpisComp ? variacaoInfo(kpisComp.qtd_tickets.variacao_pct) : null}
               valorAnterior={kpisComp?.qtd_tickets.anterior != null ? Math.round(kpisComp.qtd_tickets.anterior).toLocaleString('pt-BR') : undefined} />
-            <KpiCard label="Ticket Médio" valor={formatCurrency(animTicketMedio)} delay={320} pulseKey={pulseKey}
+            <KpiCard label="Ticket Médio" valor={formatCurrency(animTicketMedio)} delay={320}
               variacao={kpisComp ? variacaoInfo(kpisComp.ticket_medio.variacao_pct) : null}
               valorAnterior={kpisComp?.ticket_medio.anterior != null ? formatCurrency(kpisComp.ticket_medio.anterior) : undefined} />
-            <KpiCard label="Itens por Ticket" valor={animItensTicket.toFixed(2)} delay={400} pulseKey={pulseKey}
+            <KpiCard label="Itens por Ticket" valor={animItensTicket.toFixed(2)} delay={400}
               variacao={kpisComp ? variacaoInfo(kpisComp.itens_por_ticket.variacao_pct) : null}
               valorAnterior={kpisComp?.itens_por_ticket.anterior != null ? kpisComp.itens_por_ticket.anterior.toFixed(2) : undefined} />
           </div>
@@ -247,7 +223,7 @@ export default function Dashboard() {
         </div>
       )}
       {topProdutos.length > 0 && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 p-5">
+        <Card variant="bordered">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <TrendingUp size={16} className="text-primary" />
@@ -293,7 +269,7 @@ export default function Dashboard() {
               )
             })}
           </div>
-        </div>
+        </Card>
       )}
     </BiPageLayout>
   )

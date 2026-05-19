@@ -135,8 +135,11 @@ export default function PerdasConsumo() {
 
       {loading && !perdas && !consumo && (
         <div className="flex flex-col gap-4">
-          <Skeleton variant="kpi" />
-          <Skeleton variant="chart" />
+          <div className="grid grid-cols-2 gap-3">
+            <Skeleton variant="kpi" />
+            <Skeleton variant="kpi" />
+          </div>
+          <Skeleton variant="kpi" className="col-span-2" />
         </div>
       )}
       {!loading && !perdas && !consumo && !erro && (
@@ -175,7 +178,7 @@ export default function PerdasConsumo() {
               <button
                 key={a}
                 onClick={() => setAba(a)}
-                className={`px-5 py-2 rounded-xl text-sm font-semibold transition capitalize ${
+                className={`px-5 py-2 rounded-xl text-sm font-semibold transition capitalize relative ${
                   aba === a ? 'bg-primary text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
               >

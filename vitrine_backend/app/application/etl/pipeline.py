@@ -21,20 +21,20 @@ def run_etl() -> EtlResult:
     logger.info("Iniciando ETL")
 
     with temporizador("ETL Pipeline completo", logger):
-        extractor = ProdutoExtractor()
-
-        data = extractor.extract()
-
-        logger.info("Extract concluído | produtos=%s codigos=%s", len(data.produtos), len(data.codigos))
-
-        produtos = transformar_produtos(
-            data.produtos,
-            data.codigos
-        )
-
-        logger.info("Transform concluído | total=%s", len(produtos))
-
         with SqliteSession() as session:
+            extractor = ProdutoExtractor(db=session)
+
+            data = extractor.extract()
+
+            logger.info("Extract concluído | produtos=%s codigos=%s", len(data.produtos), len(data.codigos))
+
+            produtos = transformar_produtos(
+                data.produtos,
+                data.codigos
+            )
+
+            logger.info("Transform concluído | total=%s", len(produtos))
+
             try:
                 with session.begin():
                     produtos_count, codigos_count = carregar_produtos(session, produtos)

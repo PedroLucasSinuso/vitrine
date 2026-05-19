@@ -57,12 +57,19 @@ class TestIsSensitive:
         assert is_sensitive("twilio_auth_token") is True
         assert is_sensitive("smtp_password") is True
         assert is_sensitive("anthropic_api_key") is True
-        assert is_sensitive("erp_postgres_url") is True
+        assert is_sensitive("erp_password") is True
 
     def test_chave_por_padrao_regex(self):
         assert is_sensitive("my_secret_key") is True
         assert is_sensitive("api_token_foo") is True
         assert is_sensitive("other_password") is True
+        # url capturado pelo regex, exceto logo_url
+        assert is_sensitive("erp_postgres_url") is True
+        assert is_sensitive("qualquer_outra_url") is True
+
+    def test_logo_url_nao_e_sensivel(self):
+        """logo_url não deve ser capturada pelo lookbehind negativo."""
+        assert is_sensitive("logo_url") is False
 
     def test_chave_nao_sensivel(self):
         assert is_sensitive("nome_estabelecimento") is False
@@ -200,17 +207,37 @@ class TestConsistency:
             "twilio_account_sid",
             "smtp_password",
             "anthropic_api_key",
-            "erp_postgres_url",
+            "erp_password",
         ]
         for chave in sensiveis_editaveis:
             assert chave in CHAVES_EDITAVEIS, (
                 f"{chave} é sensível mas não está em CHAVES_EDITAVEIS"
             )
 
+    def test_chaves_endereco_estao_em_chaves_editaveis(self):
+        """As 7 chaves de endereço devem estar na whitelist."""
+        chaves_endereco = [
+            "endereco_rua",
+            "endereco_numero",
+            "endereco_complemento",
+            "endereco_bairro",
+            "endereco_cidade",
+            "endereco_estado",
+            "endereco_cep",
+        ]
+        for chave in chaves_endereco:
+            assert chave in CHAVES_EDITAVEIS, (
+                f"{chave} (endereço) não está em CHAVES_EDITAVEIS"
+            )
+
     def test_chaves_fallback_estao_em_chaves_editaveis(self):
         """Toda chave com fallback .env deve estar na whitelist."""
         chaves_fallback = [
-            "erp_postgres_url",
+            "erp_host",
+            "erp_port",
+            "erp_database",
+            "erp_user",
+            "erp_password",
             "twilio_account_sid",
             "twilio_auth_token",
             "twilio_from_number",

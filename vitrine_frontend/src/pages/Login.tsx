@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { TrendingUp, Shield, BarChart3 } from 'lucide-react'
+import { TrendingUp, Shield, BarChart3, AlertCircle } from 'lucide-react'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -34,7 +34,7 @@ export default function Login() {
       </div>
 
       {/* Left panel — brand / value prop (hidden on mobile) */}
-      <div className="hidden lg:flex flex-col justify-between px-16 py-12 flex-1 relative">
+      <div className="hidden md:flex flex-col justify-between px-16 py-12 flex-1 relative">
         <div className="animate-fade-in-up">
           <img src="/vitrine_logo.svg" alt="Vitrine" className="h-8 w-auto mb-12 dark:invert" />
           <h1 className="text-4xl font-bold text-slate-900 dark:text-slate-50 mb-6 leading-tight tracking-tight">
@@ -121,6 +121,7 @@ export default function Login() {
 
               {error && (
                 <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900 rounded-xl px-4 py-3 text-xs text-red-600 dark:text-red-400 flex items-center gap-2" role="alert">
+                  <AlertCircle size={14} className="shrink-0" />
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
                   {error}
                 </div>

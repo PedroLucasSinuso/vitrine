@@ -132,7 +132,7 @@ export default function Usuarios() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-auto">
 
       {/* Modal de edição */}
       {modal && (
@@ -189,7 +189,7 @@ export default function Usuarios() {
               <p className="text-xs text-slate-400 dark:text-slate-500">Adicione um novo membro à equipe</p>
             </div>
           </div>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row gap-3">
               <input
                 className="w-full sm:flex-1 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -261,7 +261,7 @@ export default function Usuarios() {
                       {roleLabels[usuario.role]}
                     </span>
                   </div>
-                  <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
+                  <div className="flex gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition">
                     <button
                       onClick={() => setModal({
                         usuario,

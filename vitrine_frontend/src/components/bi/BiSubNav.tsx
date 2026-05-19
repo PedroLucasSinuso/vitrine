@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 
 interface Tab {
@@ -29,7 +29,7 @@ export default function BiSubNav() {
   }, [])
 
   // Scroll active tab into view within the scroll container
-  useEffect(() => {
+  const scrollActiveTab = useCallback(() => {
     const activeIndex = TABS.findIndex((tab) => location.pathname === tab.path)
     const container = scrollRef.current
     if (!container || activeIndex < 0) return
@@ -40,6 +40,21 @@ export default function BiSubNav() {
     const targetScroll = activeEl.offsetLeft - container.offsetWidth / 2 + activeEl.offsetWidth / 2
     container.scrollTo({ left: targetScroll, behavior: 'smooth' })
   }, [location.pathname])
+
+  useEffect(() => {
+    scrollActiveTab()
+  }, [scrollActiveTab])
+
+  // Re-scroll on resize/orientation change — fixes mobile auto-rotate layout break
+  useEffect(() => {
+    const handleResize = () => requestAnimationFrame(scrollActiveTab)
+    window.addEventListener('resize', handleResize)
+    window.addEventListener('orientationchange', handleResize)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      window.removeEventListener('orientationchange', handleResize)
+    }
+  }, [scrollActiveTab])
 
   return (
     <div

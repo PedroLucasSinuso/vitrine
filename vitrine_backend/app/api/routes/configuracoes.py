@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy import select, create_engine, text
 from sqlalchemy.orm import Session
+from pydantic import ValidationError
 
 from app.api.deps import get_db, require_admin
 from app.schemas.configuracao_schema import (
@@ -12,7 +13,9 @@ from app.schemas.configuracao_schema import (
     ConfiguracaoResponse,
     ConfiguracaoUpdate,
 )
+from app.schemas.endereco_schema import extrair_endereco_update
 from app.domain.models.configuracao import Configuracao
+from app.domain.models.cache_status import CacheStatus
 from app.domain.models.usuario import Usuario
 from app.infrastructure.db.bootstrap import init_db
 from app.application.scheduler_manager import (
@@ -28,6 +31,8 @@ from app.application.config_service import (
     set_many,
     invalidar_cache,
     get as get_config,
+    get_decrypted,
+    montar_url_postgres,
     is_sensitive,
     CHAVES_EDITAVEIS,
 )
@@ -67,6 +72,13 @@ def atualizar_configuracoes(
     _admin: Usuario = Depends(require_admin),
 ):
     init_db()
+
+    # Valida campos de endereço antes de salvar
+    try:
+        extrair_endereco_update(body.valores)
+    except ValidationError as e:
+        raise HTTPException(status_code=422, detail=e.errors())
+
     set_many(db, body.valores)
 
     valores = body.valores
@@ -115,7 +127,7 @@ def testar_conexao_erp(
     _admin: Usuario = Depends(require_admin),
 ):
     """Testa a conexão com o banco do ERP com as credenciais atuais."""
-    url = get_config(db, "erp_postgres_url")
+    url = montar_url_postgres(db)
     if not url:
         raise HTTPException(status_code=400, detail="URL do ERP não configurada")
     try:
@@ -174,3 +186,61 @@ def upload_logo(
     set_many(db, {"logo_url": logo_url})
 
     return {"logo_url": logo_url}
+
+
+# ── Cache Status ─────────────────────────────────────────────────────
+
+
+@router.get("/cache/status")
+def get_cache_status(
+    db: Session = Depends(get_db),
+    _admin: Usuario = Depends(require_admin),
+):
+    """Retorna o status do cache de produtos (última sincronia ETL)."""
+    stmt = select(CacheStatus).order_by(CacheStatus.id.desc())
+    result = db.execute(stmt).scalars().first()
+    return {
+        "produtos_cached": result is not None,
+        "last_refresh": result.last_updated if result else None,
+        "ttl_seconds": 30,
+    }
+
+
+# ── Teste Anthropic ──────────────────────────────────────────────────
+
+
+@router.post("/configuracoes/testar-anthropic")
+def testar_anthropic(
+    db: Session = Depends(get_db),
+    _admin: Usuario = Depends(require_admin),
+):
+    """Testa a conexão com a API da Anthropic usando a chave configurada."""
+    api_key = get_decrypted(db, "anthropic_api_key")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="Anthropic API Key não configurada")
+
+    try:
+        import httpx
+        with httpx.Client(timeout=10) as client:
+            resp = client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": api_key,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json",
+                },
+                json={
+                    "model": "claude-3-haiku-20240307",
+                    "max_tokens": 10,
+                    "messages": [{"role": "user", "content": "Say OK"}],
+                },
+            )
+            if resp.status_code == 200:
+                return {"status": "ok", "mensagem": "Conexão com Anthropic estabelecida"}
+            else:
+                return {
+                    "status": "erro",
+                    "mensagem": f"HTTP {resp.status_code}: {resp.text[:200]}",
+                }
+    except Exception as e:
+        return {"status": "erro", "mensagem": sanitizar_erro(e)}
