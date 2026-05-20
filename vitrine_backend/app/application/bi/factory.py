@@ -30,7 +30,8 @@ def _filtrar_hora(items: list[TransactionItem], data_limite: date, hora_atual: i
     return [
         i for i in items
         if i.date != data_limite
-        or (i.time is not None and i.time.hour <= hora_atual)
+        or i.time is None
+        or i.time.hour <= hora_atual
     ]
 
 
