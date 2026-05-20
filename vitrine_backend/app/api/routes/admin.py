@@ -15,8 +15,8 @@ from app.schemas.sync_schema import (
 )
 from app.domain.models.sync_job import SyncJob
 from app.domain.models.usuario import Usuario
-from app.application.etl.pipeline import run_etl, EtlResult
-from app.core.error_handler import sanitizar_erro, logar_erro_interno
+from app.application.sync_service import SyncService, SyncResult
+from app.core.error_handler import sanitizar_erro
 from app.application.scheduler_manager import listar_jobs
 
 logger = logging.getLogger(__name__)
@@ -26,9 +26,13 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 executor = ThreadPoolExecutor(max_workers=1)
 
 
-def _run_etl_background(job_id: str):
+def _run_sync_background(job_id: str):
     from app.infrastructure.db.bootstrap import init_db
     from app.infrastructure.db.session import SqliteSession
+    from app.adapters.alterdata.product_source import AlterdataProductSource
+    from app.adapters.alterdata.db import get_alterdata_engine
+    from app.adapters.alterdata.transaction_source import invalidar_cache_transacoes
+
     init_db()
     session = SqliteSession()
 
@@ -42,7 +46,12 @@ def _run_etl_background(job_id: str):
         session.commit()
         logger.info("Sync job %s iniciado em background", job_id)
 
-        result: EtlResult = run_etl()
+        source = AlterdataProductSource(get_alterdata_engine(session))
+        service = SyncService(source, session)
+        result: SyncResult = service.sync()
+
+        # Invalida cache de transações (equivalente ao antigo limpar_cache_bi())
+        invalidar_cache_transacoes()
 
         job.status = "sucesso"
         job.finished_at = datetime.now(timezone.utc)
@@ -87,7 +96,7 @@ def trigger_sync(
     db.add(job)
     db.commit()
 
-    executor.submit(_run_etl_background, job_id)
+    executor.submit(_run_sync_background, job_id)
 
     logger.info("Sync triggered | job_id=%s by admin=%s", job_id, _admin.username)
 

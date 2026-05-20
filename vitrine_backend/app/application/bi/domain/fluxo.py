@@ -1,4 +1,5 @@
 ﻿import pandas as pd
+from app.core.models.transaction import TransactionItem
 from app.application.bi.schema import COLUNAS
 import logging
 
@@ -6,13 +7,38 @@ logger = logging.getLogger(__name__)
 
 
 class Fluxo:
-    def __init__(self, df: pd.DataFrame):
-        rows_in = len(df)
-        self.df = self._padronizar(df.copy())
-        logger.debug("BI Fluxo.init | rows_in=%s rows_out=%s", rows_in, len(self.df))
+    """Classe base para domínios de fluxo de mercadorias.
 
-    def _padronizar(self, df: pd.DataFrame) -> pd.DataFrame:
-        df.columns = df.columns.str.strip().str.lower()
-        df[COLUNAS.receita] = pd.to_numeric(df[COLUNAS.receita], errors="coerce").fillna(0.0)
-        df[COLUNAS.qtd_item] = pd.to_numeric(df[COLUNAS.qtd_item], errors="coerce").fillna(0.0)
-        return df
+    Opera em list[TransactionItem] (em vez de pd.DataFrame).
+    Mantém .df property para compatibilidade com módulos de reporting.
+    """
+
+    def __init__(self, items: list[TransactionItem]):
+        self.items: list[TransactionItem] = items
+        self._df: pd.DataFrame | None = None
+
+    @property
+    def df(self) -> pd.DataFrame:
+        """Compatibilidade retroativa com módulos de reporting.
+        Converte self.items para DataFrame usando COLUNAS.
+        """
+        if self._df is None:
+            self._df = pd.DataFrame([self._to_dict(i) for i in self.items])
+        return self._df
+
+    @staticmethod
+    def _to_dict(item: TransactionItem) -> dict:
+        return {
+            COLUNAS.id_documento: item.document_id,
+            COLUNAS.emissao: item.date,
+            COLUNAS.hora: item.time,
+            COLUNAS.operacao: item.operation.value if item.operation else "",
+            COLUNAS.cancelado: "",
+            COLUNAS.total_documento: float(item.document_total),
+            COLUNAS.grupo: item.group_name,
+            COLUNAS.familia: item.family_name,
+            COLUNAS.codigo: item.product_code,
+            COLUNAS.produto: item.product_name,
+            COLUNAS.qtd_item: float(item.quantity),
+            COLUNAS.receita: float(item.line_total),
+        }

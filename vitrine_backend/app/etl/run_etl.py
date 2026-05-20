@@ -1,13 +1,12 @@
-﻿from app.core.logging_config import setup_logging
-from app.infrastructure.db.bootstrap import init_db
-from app.application.etl.pipeline import run_etl as run_etl_pipeline
+﻿"""CLI para rodar sync manualmente (substitui o antigo run_etl)."""
+from app.core.logging_config import setup_logging
+from app.application.sync_service import run_sync_scheduled
 
 setup_logging()
 
 
 def run_etl():
-    init_db()
-    run_etl_pipeline()
+    run_sync_scheduled()
 
 
 if __name__ == "__main__":

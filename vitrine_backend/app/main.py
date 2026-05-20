@@ -25,7 +25,7 @@ from app.application.notifications.scheduler_notifications import (
     iniciar_scheduler_notificacoes,
     ler_config_etl_interval,
 )
-from app.application.etl.pipeline import run_etl
+from app.application.sync_service import run_sync_scheduled
 
 setup_logging()
 
@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
     init_scheduler_manager(scheduler)
 
     etl_min = ler_config_etl_interval()
-    reagendar_etl(etl_min, run_etl)
+    reagendar_etl(etl_min, run_sync_scheduled)
 
     iniciar_scheduler_notificacoes(scheduler)
     yield

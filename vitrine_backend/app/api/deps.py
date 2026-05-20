@@ -64,3 +64,41 @@ def require_admin(usuario: Usuario = Depends(get_current_user)) -> Usuario:
         [RolesEnum.ADMIN],
         "Acesso restrito a administradores"
     )
+
+
+# ── Injeção de dependência — Adapter de ERP ──────────────────────────
+
+from app.core.interfaces.source import ProductSource, TransactionSource
+from app.application.config_service import get as get_config
+
+
+_ADAPTER_CACHE: dict[str, ProductSource | TransactionSource] = {}
+
+
+def _get_erp_adapter_name(db) -> str:
+    """Lê o nome do adapter configurado (ex: 'alterdata')."""
+    return get_config(db, "erp_adapter", "alterdata")
+
+
+def get_product_source(db=Depends(get_db)) -> ProductSource:
+    """Retorna a fonte de produtos conforme o ERP configurado."""
+    erp = _get_erp_adapter_name(db)
+    if erp != "alterdata":
+        raise ValueError(f"Adapter não implementado: {erp}")
+    if "product_source" not in _ADAPTER_CACHE:
+        from app.adapters.alterdata.product_source import AlterdataProductSource
+        from app.adapters.alterdata.db import get_alterdata_engine
+        _ADAPTER_CACHE["product_source"] = AlterdataProductSource(get_alterdata_engine(db))
+    return _ADAPTER_CACHE["product_source"]
+
+
+def get_transaction_source(db=Depends(get_db)) -> TransactionSource:
+    """Retorna a fonte de transações conforme o ERP configurado."""
+    erp = _get_erp_adapter_name(db)
+    if erp != "alterdata":
+        raise ValueError(f"Adapter não implementado: {erp}")
+    if "transaction_source" not in _ADAPTER_CACHE:
+        from app.adapters.alterdata.transaction_source import AlterdataTransactionSource
+        from app.adapters.alterdata.db import get_alterdata_engine
+        _ADAPTER_CACHE["transaction_source"] = AlterdataTransactionSource(get_alterdata_engine(db))
+    return _ADAPTER_CACHE["transaction_source"]

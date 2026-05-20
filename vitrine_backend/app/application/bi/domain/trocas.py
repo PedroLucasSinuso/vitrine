@@ -1,4 +1,4 @@
-﻿from app.application.bi.schema import COLUNAS
+﻿from app.core.models.transaction import TransactionItem, OperationType
 from app.application.bi.domain.fluxo import Fluxo
 import logging
 
@@ -6,12 +6,11 @@ logger = logging.getLogger(__name__)
 
 
 class Trocas(Fluxo):
-    def __init__(self, df):
-        rows_in = len(df)
-        super().__init__(df)
-        self.df = self.df[
-            (self.df[COLUNAS.cancelado] != "*") &
-            (self.df[COLUNAS.operacao] == "E") &
-            (self.df[COLUNAS.devolucao].isin(["T", "D"]))
-        ].reset_index(drop=True)
-        logger.debug("BI Trocas | rows_in=%s rows_apos_filtro=%s", rows_in, len(self.df))
+    def __init__(self, items: list[TransactionItem]):
+        rows_in = len(items)
+        self.items = [
+            i for i in items
+            if not i.is_canceled and i.operation == OperationType.RETURN
+        ]
+        self._df = None
+        logger.debug("BI Trocas | rows_in=%s rows_apos_filtro=%s", rows_in, len(self.items))
