@@ -21,19 +21,17 @@
 
 ## Visão geral
 
-O **Vitrine** resolve um problema real de varejo: operadores precisam consultar preço, estoque, markup e margem de produtos rapidamente — via **código de barras (EAN)** ou **código interno (PLU)** — sem depender de conectividade contínua com o banco de dados principal.
+O Vitrine nasceu de um problema prático de supermercado: operadores precisam consultar preço, estoque, markup e margem de produtos sem depender de conexão direta com o banco do ERP. A consulta aceita código de barras (EAN) ou código interno (PLU).
 
-Além da consulta rápida, oferece:
+Além da consulta, o sistema faz:
 
-- 📊 **Business Intelligence** — relatórios analíticos de vendas com comparação **YoY** (ano contra ano)
-- 📋 **Inventário multi-usuário** — contagem colaborativa com sessões, convites e consolidado
-- 🏷️ **Geração de etiquetas** — formatação profissional para impressão
-- 📱 **Leitor de código de barras via câmera** — sem hardware dedicado
-- ⚙️ **Configurações via UI** — 6 abas com encriptação Fernet, fallback `.env` e teste de conexão
-- 📧 **Notificações agendadas** — relatórios por WhatsApp (Twilio) e Email (SMTP) com templates Jinja2
-- 🏠 **Enriquecimento de endereço** — consulta automática a BrasilAPI + ViaCEP (IBGE, DDD, coordenadas)
-
-> Projeto desenvolvido para um problema real: operadores precisam de informações rápidas sem depender do banco principal.
+- **BI** — relatórios de vendas com comparação ano contra ano (YoY)
+- **Inventário** — contagem colaborativa com sessões e consolidação
+- **Etiquetas** — formatação para impressão profissional
+- **Leitor de código de barras via câmera** — sem hardware dedicado
+- **Configurações via UI** — 6 abas com encriptação das senhas e fallback para `.env`
+- **Notificações agendadas** — relatórios por WhatsApp e email
+- **Enriquecimento de endereço** — consulta automática a BrasilAPI + ViaCEP
 
 ---
 
@@ -78,20 +76,19 @@ Além da consulta rápida, oferece:
 
 | Módulo | Funcionalidades |
 |--------|----------------|
-| 🔍 **Consulta** | Busca por EAN, PLU, nome. Exibe preço, estoque, markup, margem |
-| 🏷️ **Etiquetas** | Geração de etiquetas profissionais para impressão |
-| 📋 **Inventário** | Sessões multi-usuário, código de convite, consolidado geral |
-| 📊 **BI** | Dashboard, receita, ranking, curva ABC, análise SKU, trocas, perdas, consumo, distribuição temporal |
-| 📈 **YoY** | Comparação ano contra ano com alinhamento de dia da semana (offset ±3d) e fallback 29/fev |
-| 📎 **Exportação** | Excel (.xlsx) para todos os relatórios de BI e inventário |
-| 📱 **Câmera** | Leitura contínua de código de barras via câmera do dispositivo |
-| ⚙️ **Configurações** | 6 abas (Geral, Endereço, ERP, WhatsApp, Email, Sistema) com encriptação Fernet + fallback `.env` |
-| 🔬 **Teste de conexão** | Testa ERP (PostgreSQL), WhatsApp, Email, Anthropic com feedback visual |
-| 🏠 **Endereço** | Enriquecimento automático via BrasilAPI + ViaCEP (IBGE, DDD, coordenadas) |
-| 📧 **Notificações** | Relatórios agendados via WhatsApp (Twilio) e Email (SMTP) com templates Jinja2 |
-| 🔄 **Sync** | Sincronização de produtos via adapter (ProductSource) com agendamento configurável (mín. 10 min) |
-| ⏰ **Scheduler** | Jobs dinâmicos via APScheduler com intervalo definido pela UI |
-| 🔐 **Auth** | JWT com 3 roles (operador, supervisor, admin) |
+| **Consulta** | Busca por EAN, PLU, nome. Exibe preço, estoque, markup, margem |
+| **Etiquetas** | Geração de etiquetas para impressão |
+| **Inventário** | Sessões multi-usuário, código de convite, consolidado geral |
+| **BI** | Dashboard, receita, ranking, curva ABC, análise SKU, trocas, perdas, consumo, distribuição temporal |
+| **YoY** | Comparação ano contra ano com alinhamento de dia da semana (offset ±3d) e fallback 29/fev |
+| **Exportação** | Excel (.xlsx) para relatórios de BI e inventário |
+| **Câmera** | Leitura contínua de código de barras via câmera do dispositivo |
+| **Configurações** | 6 abas (Geral, Endereço, ERP, WhatsApp, Email, Sistema) com encriptação Fernet + fallback `.env` |
+| **Teste de conexão** | Testa ERP, WhatsApp, Email, Anthropic com feedback visual |
+| **Endereço** | Enriquecimento automático via BrasilAPI + ViaCEP |
+| **Notificações** | Relatórios agendados via WhatsApp (Twilio) e Email (SMTP) com templates Jinja2 |
+| **Sync** | Sincronização de produtos via adapter com agendamento configurável (mín. 10 min) |
+| **Auth** | JWT com 3 roles (operador, supervisor, admin) |
 
 ---
 
@@ -226,7 +223,7 @@ Deploy automatizado em servidor Windows limpo — sem precisar instalar Python, 
 # → tudo automático: Git, Python, Caddy, NSSM, clone, deps, serviços
 ```
 
-> 📖 Instruções detalhadas em [`deploy/README.md`](deploy/README.md)
+> Instruções detalhadas em [`deploy/README.md`](deploy/README.md)
 
 ---
 
@@ -261,7 +258,7 @@ http://localhost:8000/docs
 | `GET` | `/contatos/whatsapp` | Listar contatos de WhatsApp |
 | `POST` | `/contatos/whatsapp` | Adicionar contato de WhatsApp |
 
-> 🔗 Lista completa de endpoints e parâmetros: [`docs/API.md`](docs/API.md) _(em breve)_ ou diretamente no Swagger UI.
+> Lista completa de endpoints e parâmetros: [`docs/API.md`](docs/API.md) _(em breve)_ ou diretamente no Swagger UI.
 
 ### Autenticação
 
@@ -384,16 +381,11 @@ Distribuído sob licença **MIT**. Veja [`LICENSE`](LICENSE) para mais informaç
 <div align="center">
   <br />
   <p>
-    Desenvolvido por <strong>Pedro Lucas</strong>
-    <br />
-    <a href="mailto:pedrolucas.sinuso@gmail.com">pedrolucas.sinuso@gmail.com</a>
+    <a href="mailto:pedrolucassinuso@gmail.com">pedrolucassinuso@gmail.com</a>
     &nbsp;·&nbsp;
     <a href="https://linkedin.com/in/pedro-sinuso">LinkedIn</a>
     &nbsp;·&nbsp;
     <a href="https://github.com/PedroLucasSinuso">GitHub</a>
-  </p>
-  <p>
-    <sub>Gostou do projeto? ⭐ Deixe uma estrela no repositório!</sub>
   </p>
   <br />
 </div>
