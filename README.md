@@ -50,7 +50,7 @@ Além da consulta rápida, oferece:
 | Cache | **SQLite** (offline-first) |
 | Fonte | **PostgreSQL** |
 | Auth | **JWT** (PyJWT) + **bcrypt** |
-| Scheduler | **APScheduler** (ETL + notificações dinâmicas) |
+| Scheduler | **APScheduler** (sync + notificações dinâmicas) |
 | Notificações | **Twilio** (WhatsApp) + **SMTP** (email) + **Jinja2** (templates) |
 | Encriptação | **Fernet** (cryptography) — senhas em repouso |
 | Testes | **pytest** |
@@ -89,7 +89,7 @@ Além da consulta rápida, oferece:
 | 🔬 **Teste de conexão** | Testa ERP (PostgreSQL), WhatsApp, Email, Anthropic com feedback visual |
 | 🏠 **Endereço** | Enriquecimento automático via BrasilAPI + ViaCEP (IBGE, DDD, coordenadas) |
 | 📧 **Notificações** | Relatórios agendados via WhatsApp (Twilio) e Email (SMTP) com templates Jinja2 |
-| 🔄 **ETL** | Pipeline PostgreSQL → Transform → SQLite com agendamento configurável (mín. 10 min) |
+| 🔄 **Sync** | Sincronização de produtos via adapter (ProductSource) com agendamento configurável (mín. 10 min) |
 | ⏰ **Scheduler** | Jobs dinâmicos via APScheduler com intervalo definido pela UI |
 | 🔐 **Auth** | JWT com 3 roles (operador, supervisor, admin) |
 
@@ -98,47 +98,57 @@ Além da consulta rápida, oferece:
 ## Arquitetura
 
 ```
-PostgreSQL (fonte)
-    │
-    ▼
-ETL Pipeline
-┌─────────────────────────────┐
-│  Extract → Transform → Load │
-└─────────────────────────────┘
-    │
-    ▼
-SQLite (cache local — offline-first)
-    │
-    ▼
-FastAPI (API REST — SQLAlchemy + Pydantic)
-    │
-    ▼
-React 19 + TypeScript + Vite 8 (SPA)
-    │
-    ▼
-Operador / Supervisor / Admin
+┌─────────────────────────────────────────────────────┐
+│                    ERP (PostgreSQL)                  │
+│              ┌──────────────────────┐                │
+│              │   Adapter Alterdata  │                │
+│              │  (ProductSource +    │                │
+│              │   TransactionSource) │                │
+│              └──────────┬───────────┘                │
+└─────────────────────────┼───────────────────────────┘
+                          │
+            ┌─────────────┼─────────────┐
+            ▼             ▼             ▼
+     SQLite (cache)  BI (domínios)  SyncService
+     produtos,       vendas/trocas/  (products →
+     config, users   perdas/consumo   SQLite)
+            │             │
+            └─────────────┘
+                  │
+                  ▼
+     FastAPI (API REST — SQLAlchemy + Pydantic)
+                  │
+                  ▼
+     React 19 + TypeScript + Vite 8 (SPA)
+                  │
+                  ▼
+         Operador / Supervisor / Admin
 ```
 
 ### Backend
 
-O backend segue **arquitetura em camadas** com separação clara de responsabilidades:
+O backend segue **arquitetura em camadas + adapter pattern** para desacoplamento do ERP:
 
 ```
 app/
+├── core/                # Config, logging, error handling, rate limiter
+│   ├── interfaces/      # Portas (ProductSource, TransactionSource) — ABCs
+│   └── models/          # DTOs genéricos (Product, TransactionItem, OperationType)
+├── adapters/            # Implementações das interfaces por ERP
+│   └── alterdata/       # Adapter Alterdata (config, db, product_source, transaction_source, queries/)
 ├── domain/              # Entidades ORM + Value Objects + Enums + Domain Services
-│   ├── models/          # SQLAlchemy models
+│   ├── models/          # SQLAlchemy models (SQLite)
 │   ├── value_objects/   # Codigo (EAN/PLU), Endereco (CEP, UF, 3 níveis de dados)
 │   ├── services/        # enriquecer_endereco (BrasilAPI + ViaCEP)
 │   └── enums.py         # RolesEnum
 ├── application/         # Casos de uso
 │   ├── services/        # Regras de negócio (auth, produto, config)
-│   ├── bi/              # Business Intelligence (factory, loader, analytics, reporting)
-│   ├── etl/             # Pipeline de sincronização (Extract → Transform → Load)
-│   ├── scheduler/       # Agendamento dinâmico (APScheduler)
+│   ├── bi/              # Business Intelligence (factory, analytics, reporting)
+│   ├── sync_service.py  # Sincronização de produtos (substitui ETL)
+│   ├── scheduler.py     # Agendamento dinâmico (APScheduler)
 │   └── notifications/   # Email (SMTP), WhatsApp (Twilio), templates (Jinja2)
-├── infrastructure/      # Banco (SQLite), repositórios, PostgreSQL loader
+├── infrastructure/      # Banco (SQLite), repositórios
 ├── api/                 # Rotas FastAPI + injeção de dependência
-├── core/                # Config, logging, error handling, rate limiter
 └── schemas/             # Pydantic DTOs (contratos da API)
 ```
 
@@ -184,7 +194,7 @@ cd vitrine
 cd vitrine_backend
 cp .env.example .env        # Configure suas credenciais
 uv sync                     # Instala dependências
-uv run python -m app.etl.run_etl  # Popula cache SQLite
+uv run python -m run_etl    # Popula cache SQLite (SyncService)
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 # Frontend (outro terminal)
@@ -285,7 +295,7 @@ uv run pytest
 | Códigos | Validação EAN-13/8/12, PLU-6, checksum |
 | BI | KPIs, receita, ranking, curva ABC, SKU, trocas, exportação |
 | Inventário | Sessões, itens, consolidado multi-usuário |
-| ETL | Transformação de dados |
+| Sync | Sincronização de produtos |
 | CORS | Headers em requisições OPTIONS |
 | Config Service | CRUD, encriptação Fernet, fallback `.env`, senhas sensíveis |
 | Cache Status | Admin com/sem registro, supervisor 403, operador 403, sem auth 401 |
@@ -322,21 +332,21 @@ O dashboard compara KPIs do período atual com o mesmo período do ano anterior:
 
 > Endpoint dedicado `GET /bi/kpis/comparativo` com `VariacaoKpi` tipado e badges visuais no frontend (▲ verde / ▼ vermelho).
 
-**Ajustes de qualidade:** A data comparativa é calculada com `_ajustar_mesmo_dia_semana()` que desloca ±3 dias para alinhar ao mesmo dia da semana do período atual — padrão de indústria para varejo. Datas 29/fevereiro têm fallback automático para 28/fevereiro em ano não bissexto. O filtro de hora futura é aplicado simetricamente nos dois períodos (antes só no anterior, o que inflava o resultado atual).
+**Ajustes de qualidade:** A data comparativa é calculada com `_ajustar_mesmo_dia_semana()` que desloca ±3 dias para alinhar ao mesmo dia da semana do período atual — padrão de indústria para varejo. Datas 29/fevereiro têm fallback automático para 28/fevereiro em ano não bissexto. O filtro de hora futura é aplicado simetricamente nos dois períodos para comparação justa.
 
 ---
 
-## ETL
+## Sincronização (SyncService)
 
-Pipeline de sincronização do PostgreSQL para o SQLite local:
+O antigo pipeline ETL foi substituído pelo **SyncService**, que usa o `ProductSource` do adapter para buscar produtos diretamente do ERP e sincronizar com o SQLite local:
 
-1. **Extract** — queries SQL externas no Postgres
-2. **Transform** — agrupa códigos, converte para DTOs
-3. **Load** — trunca e reinsere no SQLite, registra timestamp
+1. **Adapter** — `AlterdataProductSource.get_all_products()` retorna `list[Product]`
+2. **SyncService** — deleta registros antigos e insere os novos no SQLite
+3. **Cache** — invalida cache de transações para forçar refresh no próximo acesso
 
 ```bash
 cd vitrine_backend
-uv run python -m app.etl.run_etl
+uv run python -m run_etl
 ```
 
 Pode ser executado manualmente, via scheduler interno (intervalo configurável pela UI, mínimo 10 min) ou via API (`POST /admin/sync`).
@@ -347,6 +357,7 @@ Pode ser executado manualmente, via scheduler interno (intervalo configurável p
 
 | Decisão | Motivo |
 |---------|--------|
+| **Adapter Pattern para ERP** | `ProductSource` / `TransactionSource` isolam o core do Vitrine dos detalhes de cada ERP. Trocar de ERP = novo adapter, sem mexer no core |
 | **SQLite como cache** | Desacopla API da disponibilidade do PostgreSQL. Consultas locais são rápidas e não geram carga no banco operacional |
 | **Separação Model / Schema** | `Produto` (ORM) ≠ `ProdutoResponse` (Pydantic). Métricas computadas (`markup`, `margem`) como `@property` no model |
 | **Camadas domain/application/infrastructure** | Isola regras de negócio de detalhes técnicos (SOLID) |
@@ -357,7 +368,7 @@ Pode ser executado manualmente, via scheduler interno (intervalo configurável p
 | **Sentinel `***configurado***`** | A UI exibe `••••••` em vez de retornar a senha descriptada; o valor enviado de volta é ignorado pelo backend se igual ao sentinel |
 | **ConfigService com fallback `.env`** | Lê de `.env` se a chave não existe no banco; ao salvar pela UI, escreve no SQLite e sobrescreve o `.env` |
 | **Templates Jinja2 para relatórios** | `relatorio_email.j2` / `relatorio_semanal.j2` permitem customizar o HTML sem recompilar |
-| **APScheduler para jobs dinâmicos** | ETL e notificações agendados com intervalo configurável pela UI (mín. 10 min), sem reiniciar o servidor |
+| **APScheduler para jobs dinâmicos** | Sync e notificações agendados com intervalo configurável pela UI (mín. 10 min), sem reiniciar o servidor |
 | **Cache frontend com AbortController** | Stale-while-revalidate com cancelamento de requests duplicadas (evita waterfall em navegação de BI) |
 | **Componentização do BI** | `KpiCard`, `PeriodoForm`, `BiSubNav`, `BiSideRail` — componentes puros e reutilizáveis |
 | **Design system próprio (`ui/`)** | `Button`, `Card`, `Input`, `Modal`, `Skeleton`, `CmdK` — consistência visual sem dependência pesada de UI library |
