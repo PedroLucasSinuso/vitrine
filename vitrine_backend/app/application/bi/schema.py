@@ -39,7 +39,3 @@ class Colunas:
 
 COLUNAS = Colunas()
 
-class CodigoOperacao:
-    CONSUMO_INTERNO = "0103430GOE"
-    PERDA = "0RR000000E"
-
