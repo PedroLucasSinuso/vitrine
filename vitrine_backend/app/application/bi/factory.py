@@ -1,4 +1,6 @@
-﻿from datetime import date, datetime, timedelta
+﻿from collections import Counter
+from datetime import date, datetime, timedelta
+from decimal import Decimal
 import logging
 
 from app.core.interfaces.source import TransactionSource
@@ -46,6 +48,43 @@ def criar_dominio(source: TransactionSource, data_inicio: date, data_fim: date) 
     return DominioBI(vendas=vendas, trocas=trocas)
 
 
+def _debug_items(items_before: list[TransactionItem], data_limite: date, hora_atual: int, label: str):
+    """Log detalhado para depuração do filtro de hora."""
+    filtrados = _filtrar_hora(items_before, data_limite, hora_atual)
+
+    # Contagem por data no período
+    datas = Counter(i.date for i in items_before)
+    soma_total = sum(float(i.line_total) for i in items_before if isinstance(i.line_total, (int, float, Decimal)))
+    soma_filtrada = sum(float(i.line_total) for i in filtrados if isinstance(i.line_total, (int, float, Decimal)))
+
+    logger.info(
+        "BI debug | %s hora_atual=%s data_limite=%s "
+        "items=%s filtrados=%s "
+        "soma_total=%.2f soma_filtrada=%.2f "
+        "datas=%s",
+        label, hora_atual, data_limite,
+        len(items_before), len(filtrados),
+        soma_total, soma_filtrada,
+        dict(datas),
+    )
+
+    # Detalhe da data limite
+    itens_na_data = [i for i in items_before if i.date == data_limite]
+    com_time = sum(1 for i in itens_na_data if i.time is not None)
+    sem_time = sum(1 for i in itens_na_data if i.time is None)
+    soma_data = sum(float(i.line_total) for i in itens_na_data if isinstance(i.line_total, (int, float, Decimal)))
+    logger.info(
+        "BI debug | %s data_limite=%s itens_na_data=%s "
+        "com_time=%s sem_time=%s soma_total=%.2f",
+        label, data_limite, len(itens_na_data), com_time, sem_time, soma_data,
+    )
+
+    # Distribuição de horas na data limite
+    if itens_na_data:
+        horas = Counter(i.time.hour for i in itens_na_data if i.time is not None)
+        logger.info("BI debug | %s horas na data_limite=%s", label, dict(sorted(horas.items())))
+
+
 def criar_dominio_comparativo(
     source: TransactionSource,
     data_inicio: date,
@@ -63,6 +102,12 @@ def criar_dominio_comparativo(
     data_inicio_ant = _calcular_data_ant(data_inicio)
     data_fim_ant = _calcular_data_ant(data_fim)
 
+    logger.info(
+        "BI comparativo | periodo_atual=%s..%s periodo_ant=%s..%s data_fim_eh_hoje=%s",
+        data_inicio, data_fim, data_inicio_ant, data_fim_ant,
+        data_fim == date.today(),
+    )
+
     if data_fim == date.today():
         hora_atual = datetime.now().hour
         dominio_anterior = criar_dominio(source, data_inicio_ant, data_fim_ant)
@@ -70,6 +115,7 @@ def criar_dominio_comparativo(
 
         # Filtra hora futura no ano anterior
         for nome, dominio_obj in (("vendas", dominio_anterior.vendas), ("trocas", dominio_anterior.trocas)):
+            _debug_items(dominio_obj.items, data_fim_ant, hora_atual, f"ant/{nome}")
             rows_before = len(dominio_obj.items)
             dominio_obj.items = _filtrar_hora(dominio_obj.items, data_fim_ant, hora_atual)
             dominio_obj._df = None  # Invalida cache do DataFrame
@@ -78,6 +124,7 @@ def criar_dominio_comparativo(
 
         # Mesmo filtro de hora futura no domínio atual
         for nome, dominio_obj in (("vendas", dominio_atual.vendas), ("trocas", dominio_atual.trocas)):
+            _debug_items(dominio_obj.items, data_fim, hora_atual, f"atual/{nome}")
             rows_before = len(dominio_obj.items)
             dominio_obj.items = _filtrar_hora(dominio_obj.items, data_fim, hora_atual)
             dominio_obj._df = None

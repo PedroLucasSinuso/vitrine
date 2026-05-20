@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 
@@ -52,10 +52,18 @@ class AlterdataTransactionSource(TransactionSource):
 
         operation = OPERATION_MAP.get(op_key)
 
+        emissao = row["emissao"]
+        hora = row.get("hora")
+        # Normaliza tipos: SQLAlchemy pode retornar datetime no lugar de date
+        if isinstance(emissao, datetime):
+            emissao = emissao.date()
+        if isinstance(hora, datetime):
+            hora = hora.time()
+
         return TransactionItem(
             document_id=str(row["iddocumento"]),
-            date=row["emissao"],
-            time=row.get("hora"),
+            date=emissao,
+            time=hora,
             operation=operation,
             is_canceled=row.get("cancelado") == CANCELED_MARKER,
             product_code=str(row["codigo"]),
