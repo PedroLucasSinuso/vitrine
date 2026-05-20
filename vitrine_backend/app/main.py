@@ -16,7 +16,7 @@ from app.api.routes import whatsapp
 from app.api.routes import email as email_routes
 from app.core.logging_config import setup_logging
 from app.core.config import settings
-from app.application.etl.scheduler import iniciar_scheduler, parar_scheduler
+from app.application.scheduler import iniciar_scheduler, parar_scheduler
 from app.application.scheduler_manager import (
     init_scheduler_manager,
     reagendar_etl,

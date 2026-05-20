@@ -1,4 +1,4 @@
-﻿from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo
 from apscheduler.schedulers.background import BackgroundScheduler
 import logging
 
