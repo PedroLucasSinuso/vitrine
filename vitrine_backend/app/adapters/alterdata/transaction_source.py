@@ -30,10 +30,11 @@ class AlterdataTransactionSource(TransactionSource):
             return _cache[key]
 
         with self._engine.connect() as conn:
-            rows = conn.execute(
+            result = conn.execute(
                 text(self._fluxo_sql),
                 {"data_inicio": start.isoformat(), "data_fim": end.isoformat()},
-            ).fetchall()
+            )
+            rows = result.mappings().fetchall()
 
         items = [self._to_item(r) for r in rows]
         _cache[key] = items

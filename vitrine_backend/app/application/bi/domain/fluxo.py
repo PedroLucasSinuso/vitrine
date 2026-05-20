@@ -13,6 +13,14 @@ class Fluxo:
     Mantém .df property para compatibilidade com módulos de reporting.
     """
 
+    # Colunas esperadas pelo reporting — garante DataFrame vazio com schema correto
+    _COLUMNS = [
+        COLUNAS.id_documento, COLUNAS.emissao, COLUNAS.hora,
+        COLUNAS.operacao, COLUNAS.cancelado, COLUNAS.total_documento,
+        COLUNAS.grupo, COLUNAS.familia, COLUNAS.codigo, COLUNAS.produto,
+        COLUNAS.qtd_item, COLUNAS.receita,
+    ]
+
     def __init__(self, items: list[TransactionItem]):
         self.items: list[TransactionItem] = items
         self._df: pd.DataFrame | None = None
@@ -21,9 +29,14 @@ class Fluxo:
     def df(self) -> pd.DataFrame:
         """Compatibilidade retroativa com módulos de reporting.
         Converte self.items para DataFrame usando COLUNAS.
+        Garante que DataFrame vazio tenha as colunas esperadas.
         """
         if self._df is None:
-            self._df = pd.DataFrame([self._to_dict(i) for i in self.items])
+            dicts = [self._to_dict(i) for i in self.items]
+            if dicts:
+                self._df = pd.DataFrame(dicts)
+            else:
+                self._df = pd.DataFrame(columns=self._COLUMNS)
         return self._df
 
     @staticmethod

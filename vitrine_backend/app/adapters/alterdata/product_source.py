@@ -22,8 +22,8 @@ class AlterdataProductSource(ProductSource):
 
     def get_all_products(self) -> list[Product]:
         with self._engine.connect() as conn:
-            produtos_raw = conn.execute(text(self._produto_sql)).fetchall()
-            codigos_raw = conn.execute(text(self._codigo_sql)).fetchall()
+            produtos_raw = conn.execute(text(self._produto_sql)).mappings().fetchall()
+            codigos_raw = conn.execute(text(self._codigo_sql)).mappings().fetchall()
 
         # Agrupa códigos de barras por produto
         barcodes_map: dict[str, list[str]] = {}
