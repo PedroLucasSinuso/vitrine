@@ -1,5 +1,4 @@
 ﻿import os
-import shutil
 import logging
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
@@ -175,12 +174,13 @@ def upload_logo(
 ):
     os.makedirs(STATIC_DIR, exist_ok=True)
 
-    ext = os.path.splitext(file.filename or "logo.png")[1] or ".png"
-    filename = f"logo{ext}"
+    # Força extensão .png independente do que o usuário enviar
+    filename = "logo.png"
     filepath = os.path.join(STATIC_DIR, filename)
 
+    content = file.file.read()
     with open(filepath, "wb") as f:
-        shutil.copyfileobj(file.file, f)
+        f.write(content)
 
     logo_url = f"/static/{filename}"
 

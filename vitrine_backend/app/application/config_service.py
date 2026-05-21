@@ -6,8 +6,6 @@ permitindo migração transparente.
 """
 
 import logging
-import re
-import logging
 from datetime import datetime, timezone
 from urllib.parse import urlparse, unquote
 from sqlalchemy import select
@@ -96,17 +94,34 @@ _CHAVES_SENSIVEIS_POR_PADRAO: set[str] = {
     "erp_password",
 }
 
-_PADROES_SENSIVEIS = re.compile(
-    r"(password|secret|token|key|api_key|auth_token|sid|(?<!logo_)url)", re.IGNORECASE
-)
+# Padrões de chaves sensíveis — lista explícita, sem regex complexo.
+# Qualquer chave que contenha um destes termos (case-insensitive) é considerada
+# sensível, exceto as que estão em _CHAVES_NAO_SENSIVEIS.
+_CHAVES_SENSIVEIS_POR_PADRAO = _CHAVES_SENSIVEIS_POR_PADRAO | {
+    "jwt_secret", "erp_postgres_url", "erp_password",
+    "postgres_password", "twilio_auth_token", "twilio_account_sid",
+    "smtp_password", "anthropic_api_key", "openai_api_key",
+}
+# Chaves que corresponderiam a padrões mas não são sensíveis (ex: logo_url)
+_CHAVES_NAO_SENSIVEIS: set[str] = {"logo_url"}
 
 
 def is_sensitive(chave: str) -> bool:
-    """Retorna True se a chave é considerada sensível (não expor valor real)."""
-    if chave in _CHAVES_SENSIVEIS_POR_PADRAO:
+    """Retorna True se a chave é considerada sensível (não expor valor real).
+
+    Usa lista explícita de padrões em vez de regex com negative lookbehind
+    para clareza e manutenibilidade.
+    """
+    chave_lower = chave.lower()
+    if chave_lower in _CHAVES_NAO_SENSIVEIS:
+        return False
+    if chave_lower in _CHAVES_SENSIVEIS_POR_PADRAO:
         return True
-    if _PADROES_SENSIVEIS.search(chave):
-        return True
+    # Heurística por palavra-chave no nome (exceto logo_url)
+    _termos_sensiveis = {"password", "secret", "token", "api_key", "auth_token", "sid", "url"}
+    for termo in _termos_sensiveis:
+        if termo in chave_lower:
+            return True
     return False
 
 
@@ -216,9 +231,6 @@ def _seed_from_env(db: Session, chave: str) -> str | None:
         return row.valor if row else env_val
 
 
-_migracao_criptografia_feita = False
-
-
 def get(db: Session, chave: str, default: str = "") -> str:
     """Retorna o valor de uma configuração.
 
@@ -228,11 +240,6 @@ def get(db: Session, chave: str, default: str = "") -> str:
     3. .env (fallback via Settings, com seed automático)
     4. default informado
     """
-    global _migracao_criptografia_feita
-    if not _migracao_criptografia_feita:
-        _migrar_chaves_criptografia(db)
-        _migracao_criptografia_feita = True
-
     # 0. Chaves que só vêm do .env — ignoram cache e banco completamente
     if chave in _CHAVES_SOMENTE_ENV:
         env_val: str | None = getattr(settings, chave, None)

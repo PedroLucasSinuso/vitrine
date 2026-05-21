@@ -34,9 +34,18 @@ class SyncService:
         self.db = db
 
     def sync(self) -> SyncResult:
+        try:
+            return self._sync()
+        except Exception as e:
+            self.sync_com_erro(e)
+
+    def _sync(self) -> SyncResult:
         logger.info("SyncService iniciando sync")
 
         with temporizador("SyncService completo", logger):
+            # Fetch ALL products from ERP FIRST, THEN delete local data.
+            # Isso elimina a janela de 0 produtos: se get_all_products()
+            # falhar, o banco local permanece intacto.
             products = self.source.get_all_products()
             logger.info("SyncService source retornou %s produtos", len(products))
 
@@ -64,6 +73,7 @@ class SyncService:
 
     def sync_com_erro(self, error: Exception) -> SyncResult:
         """Registra falha no sync sem alterar os dados."""
+        self.db.rollback()  # limpa transação corrompida (ex: deletes parciais)
         logger.error("SyncService erro | %s", sanitizar_erro(error))
         self.db.add(CacheStatus(
             last_updated=datetime.now(ZoneInfo("America/Sao_Paulo")),

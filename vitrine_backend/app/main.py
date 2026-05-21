@@ -1,6 +1,9 @@
-﻿from contextlib import asynccontextmanager
+﻿import logging
+from contextlib import asynccontextmanager
 import os
 from fastapi import FastAPI
+
+logger = logging.getLogger(__name__)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
@@ -26,21 +29,32 @@ from app.application.notifications.scheduler_notifications import (
     ler_config_etl_interval,
 )
 from app.application.sync_service import run_sync_scheduled
+from app.infrastructure.db.bootstrap import init_db, acquire_scheduler_lock
 
 setup_logging()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    scheduler = iniciar_scheduler()
-    init_scheduler_manager(scheduler)
+    init_db()
 
-    etl_min = ler_config_etl_interval()
-    reagendar_etl(etl_min, run_sync_scheduled)
+    # Scheduler lock: apenas um worker por vez agenda jobs.
+    # Evita execução duplicada de sync/notificações com --workers N.
+    scheduler = None
+    if acquire_scheduler_lock():
+        scheduler = iniciar_scheduler()
+        init_scheduler_manager(scheduler)
 
-    iniciar_scheduler_notificacoes(scheduler)
+        etl_min = ler_config_etl_interval()
+        reagendar_etl(etl_min, run_sync_scheduled)
+
+        iniciar_scheduler_notificacoes(scheduler)
+    else:
+        logger.warning("Scheduler lock não adquirido — jobs não serão agendados neste worker")
+
     yield
-    parar_scheduler()
+    if scheduler:
+        parar_scheduler()
 
 
 app = FastAPI(title="Vitrine", lifespan=lifespan)

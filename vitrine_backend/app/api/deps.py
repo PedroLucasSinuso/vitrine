@@ -1,4 +1,5 @@
-﻿from datetime import datetime, timezone
+﻿import threading
+from datetime import datetime, timezone
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from app.infrastructure.db.session import SqliteSession
@@ -44,28 +45,15 @@ def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_db)) ->
         raise HTTPException(status_code=401, detail="Token inválido")
 
     # ── Verifica blacklist (revogação individual) ──────────────────────
-    # Otimização: pula query de blacklist para tokens emitidos há
-    # menos de 5 minutos — chance de revogação é desprezível (~0%).
-    # Ignora tokens expirados — eles podem ser limpos por job futuro
+    # Sempre verifica — sem bypass por idade de token.
+    # Tokens expirados na blacklist podem ser limpos por job futuro
     # sem comprometer a segurança.
-    iat = payload.get("iat")
-    if iat:
-        age = datetime.now(timezone.utc) - datetime.fromtimestamp(iat, tz=timezone.utc)
-        if age.total_seconds() >= 300:
-            blacklisted = db.query(TokenBlacklist).filter(
-                TokenBlacklist.jti == jti,
-                TokenBlacklist.expires_at > datetime.now(timezone.utc)
-            ).first()
-            if blacklisted:
-                raise HTTPException(status_code=401, detail="Token revogado")
-    else:
-        # Fallback: sem iat, sempre verifica (tokens antigos)
-        blacklisted = db.query(TokenBlacklist).filter(
-            TokenBlacklist.jti == jti,
-            TokenBlacklist.expires_at > datetime.now(timezone.utc)
-        ).first()
-        if blacklisted:
-            raise HTTPException(status_code=401, detail="Token revogado")
+    blacklisted = db.query(TokenBlacklist).filter(
+        TokenBlacklist.jti == jti,
+        TokenBlacklist.expires_at > datetime.now(timezone.utc)
+    ).first()
+    if blacklisted:
+        raise HTTPException(status_code=401, detail="Token revogado")
 
     usuario = UsuarioRepository(db).buscar_por_username(username)
     if not usuario:
@@ -111,6 +99,7 @@ from app.application.config_service import get as get_config
 
 
 _ADAPTER_CACHE: dict[str, ProductSource | TransactionSource] = {}
+_ADAPTER_LOCK = threading.Lock()
 
 
 def _get_erp_adapter_name(db) -> str:
@@ -129,11 +118,12 @@ def get_product_source(db=Depends(get_db)) -> ProductSource:
     erp = _get_erp_adapter_name(db)
     if erp != "alterdata":
         raise ValueError(f"Adapter não implementado: {erp}")
-    if "product_source" not in _ADAPTER_CACHE:
-        from app.adapters.alterdata.product_source import AlterdataProductSource
-        from app.adapters.alterdata.db import get_alterdata_engine
-        _ADAPTER_CACHE["product_source"] = AlterdataProductSource(get_alterdata_engine(db))
-    return _ADAPTER_CACHE["product_source"]
+    with _ADAPTER_LOCK:
+        if "product_source" not in _ADAPTER_CACHE:
+            from app.adapters.alterdata.product_source import AlterdataProductSource
+            from app.adapters.alterdata.db import get_alterdata_engine
+            _ADAPTER_CACHE["product_source"] = AlterdataProductSource(get_alterdata_engine(db))
+        return _ADAPTER_CACHE["product_source"]
 
 
 def get_transaction_source(db=Depends(get_db)) -> TransactionSource:
@@ -141,8 +131,9 @@ def get_transaction_source(db=Depends(get_db)) -> TransactionSource:
     erp = _get_erp_adapter_name(db)
     if erp != "alterdata":
         raise ValueError(f"Adapter não implementado: {erp}")
-    if "transaction_source" not in _ADAPTER_CACHE:
-        from app.adapters.alterdata.transaction_source import AlterdataTransactionSource
-        from app.adapters.alterdata.db import get_alterdata_engine
-        _ADAPTER_CACHE["transaction_source"] = AlterdataTransactionSource(get_alterdata_engine(db))
-    return _ADAPTER_CACHE["transaction_source"]
+    with _ADAPTER_LOCK:
+        if "transaction_source" not in _ADAPTER_CACHE:
+            from app.adapters.alterdata.transaction_source import AlterdataTransactionSource
+            from app.adapters.alterdata.db import get_alterdata_engine
+            _ADAPTER_CACHE["transaction_source"] = AlterdataTransactionSource(get_alterdata_engine(db))
+        return _ADAPTER_CACHE["transaction_source"]

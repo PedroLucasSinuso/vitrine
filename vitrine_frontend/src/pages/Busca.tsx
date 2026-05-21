@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Sun, Moon, Camera, Loader2, Search as SearchIcon } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Sun, Moon, Camera, Loader2, Search as SearchIcon, BarChart3 } from 'lucide-react'
 import { formatCurrency } from '../utils/formatters'
 import { buscarProduto, buscarProdutosPorNome, registrarNaoEncontrado } from '../api/produtos'
 import type { ProdutoBasico, ProdutoCompleto } from '../types'
@@ -38,16 +38,28 @@ export default function Busca() {
   const [searchResults, setSearchResults] = useState<ProdutoBasico[]>([])
   const [searching, setSearching] = useState(false)
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
   useEffect(() => {
     if (searchTimer.current) clearTimeout(searchTimer.current)
     const q = searchQuery.trim()
     searchTimer.current = setTimeout(async () => {
+      if (!mountedRef.current) return
       if (q.length < 2) { setSearchResults([]); setSearching(false); return }
       setSearching(true)
-      try { setSearchResults(await buscarProdutosPorNome(q)) }
-      catch { setSearchResults([]) }
-      finally { setSearching(false) }
+      try {
+        const results = await buscarProdutosPorNome(q)
+        if (mountedRef.current) setSearchResults(results)
+      } catch {
+        if (mountedRef.current) setSearchResults([])
+      } finally {
+        if (mountedRef.current) setSearching(false)
+      }
     }, 300)
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current) }
   }, [searchQuery])
@@ -61,7 +73,9 @@ export default function Busca() {
     setProduto(null)
     setLoading(true)
     try {
-      setProduto(await buscarProduto(valor))
+      const produtoEncontrado = await buscarProduto(valor)
+      if (!mountedRef.current) return
+      setProduto(produtoEncontrado)
     } catch (e: unknown) {
       const error = e as { response?: { status?: number } }
       if (error.response?.status === 404) setCodigoNaoEncontrado(valor)
@@ -216,6 +230,7 @@ export default function Busca() {
       {erro && <p className="text-red-500 text-sm mb-4" role="alert">{erro}</p>}
 
       {produto && (
+        <>
         <Card variant="elevated" className="w-full max-w-md">
           <div>
             <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wide">Produto</p>
@@ -272,6 +287,17 @@ export default function Busca() {
             </>
           )}
         </Card>
+
+        {(role === 'supervisor' || role === 'admin') && (
+          <Link
+            to={`/bi/sku?codigo=${produto.codigo_chamada ?? ''}`}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors mt-4 w-full max-w-md"
+          >
+            <BarChart3 size={16} />
+            Análise de Vendas
+          </Link>
+        )}
+      </>
       )}
 
       {!loading && !produto && !searchQuery.trim() && !erro && (

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format, formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -114,13 +114,16 @@ export default function Dashboard() {
     }
   }, [periodo, comparar, cache, cacheKey])
 
-  useEffect(() => { const t = setTimeout(() => buscar()); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Re-fetch when "comparar" toggle changes
+  const isFirstRender = useRef(true)
   useEffect(() => {
-    cache.invalidate(cacheKey)
-    const t = setTimeout(() => buscar(undefined, true)); return () => clearTimeout(t)
-  }, [comparar]) // eslint-disable-line react-hooks/exhaustive-deps -- Intentional: re-fetch on toggle change
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      buscar()
+    } else {
+      cache.invalidate(cacheKey)
+      buscar(undefined, true)
+    }
+  }, [comparar]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleBuscar(periodoOverride?: PeriodoBi) {
     cache.invalidate(cacheKey)

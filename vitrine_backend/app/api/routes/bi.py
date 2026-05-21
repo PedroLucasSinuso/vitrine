@@ -39,9 +39,9 @@ router = APIRouter(prefix="/bi", tags=["BI"])
 def _periodo(data_inicio: date, data_fim: date, comparar: bool = False) -> tuple[date, date]:
     if data_fim < data_inicio:
         raise HTTPException(status_code=400, detail="data_fim não pode ser anterior a data_inicio")
-    max_dias = 731 if comparar else 366
+    max_dias = 180
     if (data_fim - data_inicio).days > max_dias:
-        raise HTTPException(status_code=400, detail=f"Range máximo permitido é {max_dias} dias")
+        raise HTTPException(status_code=400, detail=f"Período máximo permitido é {max_dias} dias")
     return data_inicio, data_fim
 
 
@@ -59,7 +59,7 @@ def kpis(
     """Calcula e retorna os KPIs de vendas e trocas para o período informado."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | kpis periodo=%s..%s", data_inicio, data_fim)
-    dominio = criar_dominio(source, data_inicio, data_fim)
+    dominio = criar_dominio(source, data_inicio, data_fim, tipo="kpis")
     return Relatorio(dominio.vendas, dominio.trocas).kpis()
 
 
@@ -399,5 +399,8 @@ def exportar_excel(
     return StreamingResponse(
         BytesIO(conteudo),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename={nome_arquivo}"},
+        headers={
+            "Content-Disposition": f'attachment; filename="{nome_arquivo}"',
+            "Content-Length": str(len(conteudo)),
+        },
     )

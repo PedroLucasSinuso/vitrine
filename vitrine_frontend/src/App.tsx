@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import React, { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
 import Busca from './pages/Busca'
@@ -12,19 +12,20 @@ import ProtectedRoute from './components/ProtectedRoute'
 import { useAuth } from './hooks/useAuth'
 import Usuarios from './pages/Usuarios'
 import Configuracoes from './pages/Configuracoes'
-import BiDashboard from './pages/bi/Dashboard'
-import BiReceita from './pages/bi/Receita'
-import BiCurvaAbc from './pages/bi/CurvaAbc'
-import BiRanking from './pages/bi/Ranking'
-import BiTrocas from './pages/bi/Trocas'
-import BiPerdasConsumo from './pages/bi/PerdasConsumo'
-import BiTemporal from './pages/bi/Temporal'
-import BiSku from './pages/bi/Sku'
+const BiDashboard = React.lazy(() => import('./pages/bi/Dashboard'))
+const BiReceita = React.lazy(() => import('./pages/bi/Receita'))
+const BiCurvaAbc = React.lazy(() => import('./pages/bi/CurvaAbc'))
+const BiRanking = React.lazy(() => import('./pages/bi/Ranking'))
+const BiTrocas = React.lazy(() => import('./pages/bi/Trocas'))
+const BiPerdasConsumo = React.lazy(() => import('./pages/bi/PerdasConsumo'))
+const BiTemporal = React.lazy(() => import('./pages/bi/Temporal'))
+const BiSku = React.lazy(() => import('./pages/bi/Sku'))
 import { BiCacheProvider } from './stores/biCache'
 import { ToastProvider } from './hooks/useToast'
 import ToastContainer from './components/ToastContainer'
 import ScrollToTop from './components/ui/ScrollToTop'
 import CmdK from './components/ui/CmdK'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 function HomeRouter() {
   const { getRole } = useAuth()
@@ -45,28 +46,32 @@ function App() {
     <BrowserRouter>
       <BiCacheProvider>
         <ToastProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/" element={<ProtectedRoute><HomeRouter /></ProtectedRoute>} />
-            <Route path="/busca" element={<ProtectedRoute><Busca /></ProtectedRoute>} />
-            <Route path="/home" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><Home /></ProtectedRoute>} />
-            <Route path="/home/operador" element={<ProtectedRoute allowedRoles={['operador']}><OperadorHome /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><Admin /></ProtectedRoute>} />
-            <Route path="/inventario" element={<ProtectedRoute allowedRoles={['operador', 'supervisor', 'admin']}><Inventario /></ProtectedRoute>} />
-            <Route path="/admin/etiquetas" element={<ProtectedRoute allowedRoles={['admin', 'supervisor']}><Etiquetas /></ProtectedRoute>} />
-            <Route path="/admin/inventario" element={<ProtectedRoute allowedRoles={['admin', 'supervisor', 'operador']}><Inventario /></ProtectedRoute>} />
-            <Route path="/admin/usuarios" element={<ProtectedRoute allowedRoles={['admin']}><Usuarios /></ProtectedRoute>} />
-            <Route path="/admin/configuracoes" element={<ProtectedRoute allowedRoles={['admin']}><Configuracoes /></ProtectedRoute>} />
-            <Route path="/bi" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiDashboard /></ProtectedRoute>} />
-            <Route path="/bi/receita" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiReceita /></ProtectedRoute>} />
-            <Route path="/bi/curva-abc" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiCurvaAbc /></ProtectedRoute>} />
-            <Route path="/bi/ranking" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiRanking /></ProtectedRoute>} />
-            <Route path="/bi/trocas" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiTrocas /></ProtectedRoute>} />
-            <Route path="/bi/perdas-consumo" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiPerdasConsumo /></ProtectedRoute>} />
-            <Route path="/bi/temporal" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiTemporal /></ProtectedRoute>} />
-            <Route path="/bi/sku" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiSku /></ProtectedRoute>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <ErrorBoundary>
+            <React.Suspense fallback={<div className="flex items-center justify-center min-h-[60vh] text-gray-400 text-lg">Carregando...</div>}>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/" element={<ProtectedRoute><HomeRouter /></ProtectedRoute>} />
+              <Route path="/busca" element={<ProtectedRoute><Busca /></ProtectedRoute>} />
+              <Route path="/home" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><Home /></ProtectedRoute>} />
+              <Route path="/home/operador" element={<ProtectedRoute allowedRoles={['operador']}><OperadorHome /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><Admin /></ProtectedRoute>} />
+              <Route path="/inventario" element={<ProtectedRoute allowedRoles={['operador', 'supervisor', 'admin']}><Inventario /></ProtectedRoute>} />
+              <Route path="/admin/etiquetas" element={<ProtectedRoute allowedRoles={['admin', 'supervisor']}><Etiquetas /></ProtectedRoute>} />
+              <Route path="/admin/inventario" element={<ProtectedRoute allowedRoles={['admin', 'supervisor', 'operador']}><Inventario /></ProtectedRoute>} />
+              <Route path="/admin/usuarios" element={<ProtectedRoute allowedRoles={['admin']}><Usuarios /></ProtectedRoute>} />
+              <Route path="/admin/configuracoes" element={<ProtectedRoute allowedRoles={['admin']}><Configuracoes /></ProtectedRoute>} />
+              <Route path="/bi" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiDashboard /></ProtectedRoute>} />
+              <Route path="/bi/receita" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiReceita /></ProtectedRoute>} />
+              <Route path="/bi/curva-abc" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiCurvaAbc /></ProtectedRoute>} />
+              <Route path="/bi/ranking" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiRanking /></ProtectedRoute>} />
+              <Route path="/bi/trocas" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiTrocas /></ProtectedRoute>} />
+              <Route path="/bi/perdas-consumo" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiPerdasConsumo /></ProtectedRoute>} />
+              <Route path="/bi/temporal" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiTemporal /></ProtectedRoute>} />
+              <Route path="/bi/sku" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiSku /></ProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            </React.Suspense>
+          </ErrorBoundary>
           <CmdK />
           <ScrollToTop />
           <ToastContainer />

@@ -1,4 +1,6 @@
-import { subDays, startOfMonth, endOfMonth, subMonths, format } from 'date-fns'
+import { subDays, startOfMonth, endOfMonth, subMonths, format, differenceInDays } from 'date-fns'
+
+const MAX_BI_DAYS = 180
 
 export interface Preset {
   label: string
@@ -43,7 +45,28 @@ function presetAtivo(p: Preset, value: { data_inicio: string; data_fim: string }
   return computed.data_inicio === value.data_inicio && computed.data_fim === value.data_fim
 }
 
+function diasNoRange(value: { data_inicio: string; data_fim: string }): number {
+  return differenceInDays(new Date(value.data_fim), new Date(value.data_inicio))
+}
+
 export default function PeriodoForm({ value, onChange, onBuscar, loading, presets }: Props) {
+  const dias = diasNoRange(value)
+  const dataFimMenor = !!(value.data_fim && value.data_inicio && new Date(value.data_fim) < new Date(value.data_inicio))
+  const periodoInvalido = dias > MAX_BI_DAYS || dataFimMenor
+
+  function handleBuscar() {
+    if (periodoInvalido) return
+    if (onBuscar) onBuscar()
+  }
+
+  const handlePreset = (novo: { data_inicio: string; data_fim: string }) => {
+    const dias = diasNoRange(novo)
+    const dataFimMenor = novo.data_fim && novo.data_inicio && new Date(novo.data_fim) < new Date(novo.data_inicio)
+    if (dias > MAX_BI_DAYS || dataFimMenor) return
+    onChange(novo)
+    if (onBuscar) onBuscar(novo)
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {presets && (
@@ -54,11 +77,7 @@ export default function PeriodoForm({ value, onChange, onBuscar, loading, preset
               <button
                 key={p.label}
                 type="button"
-                onClick={() => {
-                  const novo = computePreset(p)
-                  onChange(novo)
-                  if (onBuscar) onBuscar(novo)
-                }}
+                onClick={() => handlePreset(computePreset(p))}
                 className={`text-xs px-2.5 py-1 rounded-full transition ${
                   ativo
                     ? 'bg-primary text-white shadow-sm'
@@ -92,14 +111,21 @@ export default function PeriodoForm({ value, onChange, onBuscar, loading, preset
         </div>
         {onBuscar && (
           <button
-            onClick={() => onBuscar()}
-            disabled={loading}
+            onClick={handleBuscar}
+            disabled={loading || periodoInvalido}
             className="bg-primary hover:bg-primary-hover text-white font-semibold px-5 py-2 rounded-lg transition disabled:opacity-50 text-sm"
           >
             {loading ? 'Buscando...' : 'Buscar'}
           </button>
         )}
       </div>
+      {periodoInvalido && (
+        <p className="text-xs text-red-500 dark:text-red-400">
+          {dataFimMenor
+            ? "Data final não pode ser anterior à data inicial."
+            : `Período máximo permitido é ${MAX_BI_DAYS} dias. Selecione um intervalo menor.`}
+        </p>
+      )}
     </div>
   )
 }

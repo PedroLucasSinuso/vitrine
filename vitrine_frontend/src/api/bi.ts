@@ -5,7 +5,22 @@ import type {
   PontoDiaSemanaDTO, SkuDTO, Dimensao, Metrica, PeriodoBi,
 } from '../types'
 
+const MAX_BI_DAYS = 180
+
 function params(periodo: PeriodoBi, extra?: Record<string, unknown>) {
+  const dataInicio = new Date(periodo.data_inicio + 'T00:00:00')
+  const dataFim = new Date(periodo.data_fim + 'T00:00:00')
+  const diffDays = Math.round((dataFim.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24))
+  if (diffDays > MAX_BI_DAYS) {
+    const clamped = new Date(dataInicio)
+    clamped.setDate(clamped.getDate() + MAX_BI_DAYS)
+    const clampedStr = clamped.toISOString().split('T')[0]
+    console.warn(
+      `[BI] Período de ${diffDays} dias excede o máximo de ${MAX_BI_DAYS}. ` +
+      `data_fim ajustado de ${periodo.data_fim} para ${clampedStr}`
+    )
+    return { data_inicio: periodo.data_inicio, data_fim: clampedStr, ...extra }
+  }
   return { data_inicio: periodo.data_inicio, data_fim: periodo.data_fim, ...extra }
 }
 

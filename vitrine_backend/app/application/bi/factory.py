@@ -37,9 +37,26 @@ def _filtrar_hora(items: list[TransactionItem], data_limite: date, hora_atual: i
     ]
 
 
-def criar_dominio(source: TransactionSource, data_inicio: date, data_fim: date) -> DominioBI:
-    """Cria o domínio BI carregando os dados via TransactionSource."""
-    logger.info("BI criando domínio | periodo=%s..%s", data_inicio, data_fim)
+def criar_dominio(
+    source: TransactionSource,
+    data_inicio: date,
+    data_fim: date,
+    tipo: str = "completo",
+) -> DominioBI:
+    """Cria o domínio BI carregando os dados via TransactionSource.
+
+    Args:
+        tipo: "completo" para fetch integral, "kpis" para apenas resumo.
+              TODO: implementar fetch parcial para tipo="kpis" evitando
+              carregar todos os itens transacionais quando só KPIs são
+              necessários. Atualmente o parâmetro é aceito mas o fetch
+              ainda é integral.
+    """
+    if tipo == "kpis":
+        logger.info("BI criando domínio (KPI, TODO: fetch parcial) | periodo=%s..%s", data_inicio, data_fim)
+    else:
+        logger.info("BI criando domínio | periodo=%s..%s", data_inicio, data_fim)
+    # TODO: para tipo="kpis", carregar apenas agregados em vez de todos os itens
     items = source.get_items(data_inicio, data_fim)
     vendas = Vendas(items)
     trocas = Trocas(items)

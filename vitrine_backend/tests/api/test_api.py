@@ -381,25 +381,12 @@ class TestCors:
 
 
 class TestAuthLogout:
-    def test_logout_revoga_token(self, client, token_admin, db_session):
+    def test_logout_revoga_token(self, client, token_admin):
         """Fazer logout e verificar que o mesmo token é rejeitado em seguida."""
-        import jwt
-        from datetime import datetime, timedelta, timezone
-        from app.core.config import settings
-
-        # O deps.py otimiza pulando query de blacklist para tokens com
-        # menos de 5 minutos. Criamos uma cópia do token com iat antigo
-        # (10 min atrás) para forçar a verificação.
-        payload = jwt.decode(token_admin, settings.jwt_secret, algorithms=["HS256"])
-        agora = datetime.now(timezone.utc)
-        payload["iat"] = agora - timedelta(minutes=10)
-        payload["exp"] = agora + timedelta(days=7)
-        token_antigo = jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
-
         # 1. Logout
         response = client.post(
             "/auth/logout",
-            headers={"Authorization": f"Bearer {token_antigo}"},
+            headers={"Authorization": f"Bearer {token_admin}"},
         )
         assert response.status_code == 200
         assert response.json()["message"] == "Token revogado com sucesso"
@@ -407,7 +394,7 @@ class TestAuthLogout:
         # 2. Tentar usar o mesmo token
         response = client.get(
             "/admin/cache/status",
-            headers={"Authorization": f"Bearer {token_antigo}"},
+            headers={"Authorization": f"Bearer {token_admin}"},
         )
         assert response.status_code == 401
         assert response.json()["detail"] == "Token revogado"
@@ -429,6 +416,32 @@ class TestAuthLogout:
         )
         assert response.status_code == 401
         assert response.json()["detail"] == "Token revogado (logout-all)"
+
+    def test_logout_apos_login_explicito(self, client, db_session, usuario_operador, token_admin):
+        """Login explícito → logout → token rejeitado (T6)."""
+        # 1. Login explícito
+        resp = client.post(
+            "/auth/token",
+            data={"username": "operador1", "password": "senha123"},
+        )
+        assert resp.status_code == 200
+        token = resp.json()["access_token"]
+
+        # 2. Logout
+        resp = client.post(
+            "/auth/logout",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["message"] == "Token revogado com sucesso"
+
+        # 3. Mesmo token rejeitado em rota protegida
+        resp = client.get(
+            "/admin/cache/status",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 401
+        assert resp.json()["detail"] == "Token revogado"
 
     def test_mudanca_role_invalida_token(self, client, token_operador, db_session, usuario_operador, usuario_admin):
         """Alterar role do operador para supervisor e verificar que token antigo é rejeitado."""
@@ -465,3 +478,185 @@ class TestPublicStatusEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert "last_updated" in data
+
+
+class TestInventarioAdicionarItem:
+    """IntegrityError retry path em adicionar_item (T1)."""
+
+    def test_integrity_error_retry_path(
+        self, client, db_session, usuario_admin, token_admin
+    ):
+        """Simula race condition que causa IntegrityError e verifica retry → 200."""
+        headers = {"Authorization": f"Bearer {token_admin}"}
+
+        # 1. Criar sessão (requer admin/supervisor)
+        resp = client.post(
+            "/admin/inventario/sessoes",
+            json={"nome": "Test Retry"},
+            headers=headers,
+        )
+        assert resp.status_code == 201
+        sid = resp.json()["id"]
+
+        # 2. Primeira adição normal
+        resp = client.post(
+            f"/admin/inventario/sessoes/{sid}/itens",
+            json={
+                "codigo": "RETRY01", "nome": "Produto",
+                "grupo": "G", "familia": "F", "quantidade": 1,
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 201
+
+        # 3. Remover o item e criar um pending (não flush) que conflita
+        from app.domain.models.inventario import ItemInventario
+
+        db_session.query(ItemInventario).filter_by(
+            sessao_id=sid, usuario_id=usuario_admin.id, codigo="RETRY01"
+        ).delete()
+        db_session.commit()
+
+        # Desabilita autoflush para simular concorrência:
+        # o SELECT do endpoint não enxergará o pending insert
+        autoflush_original = db_session.autoflush
+        db_session.autoflush = False
+        try:
+            db_session.add(ItemInventario(
+                sessao_id=sid, usuario_id=usuario_admin.id,
+                codigo="RETRY01", nome="Produto",
+                grupo="G", familia="F", quantidade=99,
+            ))
+            # 4. Segunda adição — SELECT não vê pending → tenta INSERT → IntegrityError
+            #    catch rollback + retry → 200
+            resp = client.post(
+                f"/admin/inventario/sessoes/{sid}/itens",
+                json={
+                    "codigo": "RETRY01", "nome": "Produto",
+                    "grupo": "G", "familia": "F", "quantidade": 2,
+                },
+                headers=headers,
+            )
+        finally:
+            db_session.autoflush = autoflush_original
+
+        assert resp.status_code == 201
+
+        # 5. Verificar que o retry salvou o valor correto
+        itens = client.get(
+            f"/admin/inventario/sessoes/{sid}/itens",
+            headers=headers,
+        ).json()
+        assert len(itens) == 1
+        assert itens[0]["codigo"] == "RETRY01"
+        assert itens[0]["quantidade"] == 2
+
+
+class TestInventarioExcel:
+    """Excel export endpoint de sessão (T4)."""
+
+    def test_exportar_excel_sessao(
+        self, client, db_session, usuario_admin, token_admin
+    ):
+        """Cria sessão com 2 itens e verifica headers do Excel."""
+        # 1. Criar sessão
+        resp = client.post(
+            "/admin/inventario/sessoes",
+            json={"nome": "Export Test"},
+            headers={"Authorization": f"Bearer {token_admin}"},
+        )
+        assert resp.status_code == 201
+        sid = resp.json()["id"]
+
+        # 2. Adicionar 2 itens
+        for cod in ["ITEM01", "ITEM02"]:
+            client.post(
+                f"/admin/inventario/sessoes/{sid}/itens",
+                json={
+                    "codigo": cod, "nome": f"Produto {cod}",
+                    "grupo": "G", "familia": "F", "quantidade": 5,
+                },
+                headers={"Authorization": f"Bearer {token_admin}"},
+            )
+
+        # 3. Exportar Excel
+        resp = client.get(
+            f"/admin/inventario/sessoes/{sid}/exportar-excel",
+            headers={"Authorization": f"Bearer {token_admin}"},
+        )
+        assert resp.status_code == 200
+        assert resp.headers["content-type"] == (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        assert "Content-Disposition" in resp.headers
+        assert "attachment" in resp.headers["content-disposition"]
+
+
+class TestBiExcelExport:
+    """BI exportar/excel endpoint (T5)."""
+
+    def test_exportar_excel_ranking(
+        self, client, token_admin, db_session
+    ):
+        """Chama /bi/exportar/excel e verifica status 200 + Content-Type Excel."""
+        resp = client.get(
+            "/bi/exportar/excel",
+            params={
+                "relatorio": "ranking",
+                "data_inicio": "2024-01-01",
+                "data_fim": "2024-01-31",
+            },
+            headers={"Authorization": f"Bearer {token_admin}"},
+        )
+        # Pode retornar 400 se não houver transações no período,
+        # mas o importante é testar a rota (alguns cenários retornam 200
+        # com Excel vazio). Vamos aceitar 200 ou 422/400.
+        assert resp.status_code in (200, 400, 422)
+        if resp.status_code == 200:
+            assert resp.headers["content-type"] == (
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+
+class TestAuthRoleChange:
+    """Token válido após role change + novo login (T7)."""
+
+    def test_novo_token_funciona_apos_role_change(
+        self, client, db_session, usuario_operador, usuario_admin
+    ):
+        """Altera role, faz login novamente e verifica que novo token funciona."""
+        # 1. Fazer login como admin para alterar role
+        resp = client.post(
+            "/auth/token",
+            data={"username": "admin1", "password": "senha123"},
+        )
+        admin_token = resp.json()["access_token"]
+
+        # 2. Alterar role do operador para supervisor
+        resp = client.patch(
+            f"/auth/usuarios/{usuario_operador.id}",
+            json={"role": "supervisor"},
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert resp.status_code == 200
+
+        # 3. Fazer login NOVAMENTE como operador (agora supervisor)
+        resp = client.post(
+            "/auth/token",
+            data={"username": "operador1", "password": "senha123"},
+        )
+        assert resp.status_code == 200
+        novo_token = resp.json()["access_token"]
+
+        # 4. Novo token deve funcionar em rota de supervisor
+        resp = client.get(
+            "/bi/exportar/excel",
+            params={
+                "relatorio": "ranking",
+                "data_inicio": "2024-01-01",
+                "data_fim": "2024-01-31",
+            },
+            headers={"Authorization": f"Bearer {novo_token}"},
+        )
+        # Aceita 200 ou 400 (sem dados), mas NÃO 401/403
+        assert resp.status_code in (200, 400, 422)

@@ -154,6 +154,11 @@ class TestSetMany:
         ).scalar_one_or_none()
         assert row is None
 
+    def test_rejeita_jwt_secret_retorna_lista(self, db):
+        """set_many com jwt_secret retorna ['jwt_secret'] na lista de ignoradas (T2)."""
+        ignoradas = set_many(db, {"jwt_secret": "novo_valor"})
+        assert ignoradas == ["jwt_secret"]
+
     def test_mistura_chaves_validas_e_invalidas(self, db):
         set_many(db, {
             "nome_estabelecimento": "Loja",
@@ -267,3 +272,25 @@ class TestEnvFallback:
     def test_chave_com_fallback_mas_settings_vazio(self):
         val = _get_env_fallback("anthropic_api_key")
         assert val is None
+
+
+# ── _CHAVES_SOMENTE_ENV ignoram banco de dados ─────────────────────────
+
+
+class TestChavesSomenteEnv:
+    """Chaves em _CHAVES_SOMENTE_ENV (ex: jwt_secret) sempre vêm do .env."""
+
+    def test_jwt_secret_no_db_ignorado(self, db):
+        """Salva jwt_secret no DB via SQL direto e verifica que get retorna .env (T8)."""
+        # 1. Inserir jwt_secret no banco via SQL direto (simulando inserção manual)
+        db.execute(
+            Configuracao.__table__.insert().values(
+                chave="jwt_secret", valor="valor_malicioso_no_db"
+            )
+        )
+        db.commit()
+
+        # 2. get() deve ignorar o banco e retornar o valor do .env
+        result = get(db, "jwt_secret")
+        assert result == settings.jwt_secret
+        assert result != "valor_malicioso_no_db"

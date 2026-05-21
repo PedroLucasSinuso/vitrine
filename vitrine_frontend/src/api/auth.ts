@@ -1,3 +1,4 @@
+import { jwtDecode } from 'jwt-decode'
 import api from './client'
 import type { AuthToken, Role } from '../types'
 
@@ -12,17 +13,13 @@ export async function login(username: string, password: string): Promise<AuthTok
   return response.data
 }
 
-export async function logout(navigate: (path: string) => void) {
-  try {
-    await api.post('/auth/logout')
-  } catch {
-    // Falha silenciosa — melhor limpar localStorage de qualquer forma
-  }
-  localStorage.removeItem('token')
-  localStorage.removeItem('role')
-  navigate('/login')
-}
-
 export function getRole(): Role | null {
-  return localStorage.getItem('role') as Role | null
+  const token = localStorage.getItem('token')
+  if (!token) return null
+  try {
+    const decoded = jwtDecode<{ role?: Role }>(token)
+    return decoded.role ?? null
+  } catch {
+    return null
+  }
 }

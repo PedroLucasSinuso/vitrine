@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class CriarSessaoInput(BaseModel):
@@ -27,7 +27,7 @@ class ItemInventarioSubmit(BaseModel):
     grupo: str
     familia: str
     quantidade: int = 1
-    observacao: str = ""
+    observacao: str = Field(default="", max_length=500)
 
 
 class ItemInventarioResponse(BaseModel):
@@ -41,4 +41,4 @@ class ItemInventarioResponse(BaseModel):
 
 class AtualizarItemInput(BaseModel):
     quantidade: int
-    observacao: str | None = None
+    observacao: str | None = Field(default=None, max_length=500)

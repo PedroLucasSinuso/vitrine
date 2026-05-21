@@ -40,18 +40,12 @@ function _getExpiresInMs(token: string): number {
   return Math.max(0, remaining)
 }
 
-function _isTokenAboutToExpire(token: string, thresholdMs = 300000): boolean {
-  const remaining = _getExpiresInMs(token)
-  return remaining > 0 && remaining < thresholdMs
-}
-
 export function useAuth() {
   const isAuthenticated = useCallback((): boolean => {
     const token = getToken()
     if (!token) return false
     if (isTokenExpired(token)) {
       localStorage.removeItem('token')
-      localStorage.removeItem('role')
       return false
     }
     return true
@@ -62,7 +56,7 @@ export function useAuth() {
     if (!token || isTokenExpired(token)) return null
 
     const payload = parseJwtPayload(token)
-    return payload?.role ?? (localStorage.getItem('role') as Role | null)
+    return payload?.role ?? null
   }, [])
 
   const getUsername = useCallback((): string | null => {
@@ -84,15 +78,16 @@ export function useAuth() {
     const data = await apiLogin(username, password)
     const decoded = jwtDecode<JwtPayload>(data.access_token)
     localStorage.setItem('token', data.access_token)
-    localStorage.setItem('role', decoded.role)
     return decoded.role as Role
   }, [])
 
-  const logout = useCallback(() => {
-    // Fire-and-forget: tenta revogar o token no servidor, mas não espera
-    api.post('/auth/logout').catch(() => {})
+  const logout = useCallback(async () => {
+    try {
+      await api.post('/auth/logout')
+    } catch (err) {
+      console.warn('[Auth] Falha ao revogar token no servidor. Token removido apenas localmente.', err)
+    }
     localStorage.removeItem('token')
-    localStorage.removeItem('role')
   }, [])
 
   const checkAuth = useCallback(() => {
@@ -112,11 +107,5 @@ export function useAuth() {
     return _getExpiresInMs(token)
   }, [])
 
-  const isTokenAboutToExpire = useCallback((thresholdMs = 300000): boolean => {
-    const token = getToken()
-    if (!token) return false
-    return _isTokenAboutToExpire(token, thresholdMs)
-  }, [])
-
-  return { isAuthenticated, getRole, getUsername, getNomeExibicao, login, logout, checkAuth, getTokenExp, getExpiresInMs, isTokenAboutToExpire }
+  return { isAuthenticated, getRole, getUsername, getNomeExibicao, login, logout, checkAuth, getTokenExp, getExpiresInMs }
 }
