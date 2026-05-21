@@ -29,6 +29,7 @@ class ItemInventario(Base):
     grupo: Mapped[str] = mapped_column(String, nullable=False)
     familia: Mapped[str] = mapped_column(String, nullable=False)
     quantidade: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    observacao: Mapped[str | None] = mapped_column(String, nullable=True)
 
     __table_args__ = (
         UniqueConstraint("sessao_id", "usuario_id", "codigo", name="uq_sessao_usuario_codigo"),

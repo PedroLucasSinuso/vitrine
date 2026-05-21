@@ -90,10 +90,17 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
 
   const isAdmin = role === 'admin'
   const isOperador = role === 'operador'
+  function linkPara(path: string, pagina: string): string {
+    if (pagina === 'inventario' && isOperador) return '/inventario'
+    return path
+  }
+
   const supervisorAdminLinks = ADMIN_LINKS.filter(l => l.pagina === 'etiquetas' || l.pagina === 'inventario')
   const operadorAdminLinks = ADMIN_LINKS.filter(l => l.pagina === 'inventario')
   const adminLinksToShow = isAdmin ? ADMIN_LINKS : isOperador ? operadorAdminLinks : supervisorAdminLinks
-  const links = isAdmin ? [...ADMIN_LINKS, ...COMMON_LINKS] : isOperador ? [...operadorAdminLinks, ...COMMON_LINKS] : [...supervisorAdminLinks, ...COMMON_LINKS]
+  const links = (isAdmin ? ADMIN_LINKS : isOperador ? operadorAdminLinks : supervisorAdminLinks)
+    .map(l => ({ ...l, path: linkPara(l.path, l.pagina) }))
+    .concat(COMMON_LINKS)
   const cols = 'grid-cols-3 sm:grid-cols-6'
   const logoFallback = marketName ? marketName.charAt(0).toUpperCase() : 'M'
 
@@ -221,7 +228,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
                   Administração
                 </div>
                 <div className="grid grid-cols-2 gap-1">
-                  {adminLinksToShow.map(({ label, icon: Icon, pagina, path }) => {
+                  {adminLinksToShow.map(l => ({ ...l, path: linkPara(l.path, l.pagina) })).map(({ label, icon: Icon, pagina, path }) => {
                     const ativo = paginaAtual === pagina
                     return (
                       <button

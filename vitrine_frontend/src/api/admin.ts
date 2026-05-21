@@ -1,3 +1,11 @@
+// src/api/admin.ts  — substitui o arquivo existente na íntegra
+//
+// Mudanças em relação ao original:
+//   • exportarExcelSessao(sessaoId)      → GET /admin/inventario/sessoes/{id}/exportar-excel
+//   • exportarExcelConsolidado()         → GET /admin/inventario/consolidado-geral/exportar-excel
+//   • Remove handleConsolidadoExcel do frontend (lógica de xlsx movida para o backend)
+//   Todo o resto permanece idêntico.
+
 import api from './client'
 import type { SyncJob, SyncHistory } from '../types'
 
@@ -67,6 +75,8 @@ export async function getCacheStatus(): Promise<Record<string, unknown>> {
   return response.data
 }
 
+// ─── Inventário ───────────────────────────────────────────────────────────────
+
 import type { SessaoInventario, ItemInventario, ItemInventarioSubmit } from '../types/inventario'
 
 export async function getSessoesInventario(): Promise<SessaoInventario[]> {
@@ -108,4 +118,44 @@ export async function limparItensInventario(sessaoId: number): Promise<void> {
 export async function getConsolidadoGeral(): Promise<ItemInventario[]> {
   const response = await api.get('/admin/inventario/consolidado-geral')
   return response.data
+}
+
+/**
+ * Baixa o Excel de UMA sessão com delta vs. estoque do sistema.
+ * O arquivo é gerado no backend (inclui aba "Delta (vs. Sistema)").
+ */
+export async function exportarExcelSessao(sessaoId: number): Promise<void> {
+  const response = await api.get(
+    `/admin/inventario/sessoes/${sessaoId}/exportar-excel`,
+    { responseType: 'blob' }
+  )
+  _triggerDownload(response.data, _filenameFromHeaders(response.headers) ?? `inventario_sessao_${sessaoId}.xlsx`)
+}
+
+/**
+ * Baixa o Excel consolidado de TODAS as sessões ativas com delta.
+ */
+export async function exportarExcelConsolidado(): Promise<void> {
+  const response = await api.get(
+    '/admin/inventario/consolidado-geral/exportar-excel',
+    { responseType: 'blob' }
+  )
+  _triggerDownload(response.data, _filenameFromHeaders(response.headers) ?? 'inventario_consolidado.xlsx')
+}
+
+// ─── helpers de download ──────────────────────────────────────────────────────
+
+function _triggerDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function _filenameFromHeaders(headers: Record<string, unknown>): string | null {
+  const disposition = String(headers['content-disposition'] ?? '')
+  const match = disposition.match(/filename="?([^";\n]+)"?/)
+  return match ? match[1] : null
 }

@@ -15,6 +15,7 @@ export interface ItemInventario {
   grupo: string
   familia: string
   quantidade: number
+  observacao?: string
 }
 
 export interface ItemInventarioSubmit {
@@ -23,4 +24,5 @@ export interface ItemInventarioSubmit {
   grupo: string
   familia: string
   quantidade?: number
+  observacao?: string
 }

@@ -5,6 +5,7 @@ import Busca from './pages/Busca'
 import Admin from './pages/Admin'
 import Etiquetas from './pages/Etiquetas'
 import Inventario from './pages/Inventario'
+import OperadorHome from './pages/OperadorHome'
 import Home from './pages/Home'
 import NotFound from './pages/NotFound'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -30,6 +31,7 @@ function HomeRouter() {
   const role = getRole()
   if (role === 'admin') return <Navigate to="/admin" replace />
   if (role === 'supervisor') return <Navigate to="/home" replace />
+  if (role === 'operador') return <Navigate to="/home/operador" replace />
   return <Busca />
 }
 
@@ -48,7 +50,9 @@ function App() {
             <Route path="/" element={<ProtectedRoute><HomeRouter /></ProtectedRoute>} />
             <Route path="/busca" element={<ProtectedRoute><Busca /></ProtectedRoute>} />
             <Route path="/home" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><Home /></ProtectedRoute>} />
+            <Route path="/home/operador" element={<ProtectedRoute allowedRoles={['operador']}><OperadorHome /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><Admin /></ProtectedRoute>} />
+            <Route path="/inventario" element={<ProtectedRoute allowedRoles={['operador', 'supervisor', 'admin']}><Inventario /></ProtectedRoute>} />
             <Route path="/admin/etiquetas" element={<ProtectedRoute allowedRoles={['admin', 'supervisor']}><Etiquetas /></ProtectedRoute>} />
             <Route path="/admin/inventario" element={<ProtectedRoute allowedRoles={['admin', 'supervisor', 'operador']}><Inventario /></ProtectedRoute>} />
             <Route path="/admin/usuarios" element={<ProtectedRoute allowedRoles={['admin']}><Usuarios /></ProtectedRoute>} />

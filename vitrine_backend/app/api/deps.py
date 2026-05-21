@@ -80,6 +80,12 @@ def _get_erp_adapter_name(db) -> str:
     return get_config(db, "erp_adapter", "alterdata")
 
 
+def get_produto_service(produto_repo=Depends(get_produto_repository)):
+    """Retorna o serviço de produtos com o repositório injetado."""
+    from app.application.services.produto_service import ProdutoService
+    return ProdutoService(produto_repo)
+
+
 def get_product_source(db=Depends(get_db)) -> ProductSource:
     """Retorna a fonte de produtos conforme o ERP configurado."""
     erp = _get_erp_adapter_name(db)

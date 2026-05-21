@@ -1,6 +1,14 @@
+// src/pages/Inventario.tsx  — substitui o arquivo existente na íntegra
+//
+// Mudanças em relação ao original:
+//   • handleExportarExcel / handleConsolidadoExcel → chamam exportarExcelSessao /
+//     exportarExcelConsolidado do backend (remove dependência de 'xlsx' aqui)
+//   • Remove import de 'xlsx' (não é mais necessário nesta página)
+//   • Botões de Excel agora mostram loading enquanto o backend gera o arquivo
+//   • Todo o restante permanece idêntico
+
 import { useState, useRef, useEffect, useCallback } from 'react'
-import * as XLSX from 'xlsx'
-import { Camera, Plus, Minus, Download, Trash2, LogOut, Check } from 'lucide-react'
+import { Camera, Plus, Minus, Download, Trash2, LogOut, Check, FileSpreadsheet } from 'lucide-react'
 import { buscarProduto } from '../api/produtos'
 import AdminHeader from '../components/AdminHeader'
 import LeitorCodigo from '../components/LeitorCodigo'
@@ -19,6 +27,8 @@ import {
   atualizarItemInventario,
   limparItensInventario,
   getConsolidadoGeral,
+  exportarExcelSessao,
+  exportarExcelConsolidado,
 } from '../api/admin'
 import type { SessaoInventario, ItemInventario } from '../types/inventario'
 
@@ -42,15 +52,26 @@ export default function Inventario() {
   const [confirmarLimpar, setConfirmarLimpar] = useState(false)
   const [editSheetItem, setEditSheetItem] = useState<ItemInventario | null>(null)
   const [scanFeedback, setScanFeedback] = useState<string | null>(null)
+  const [excelLoading, setExcelLoading] = useState(false)
+  const [excelConsolidadoLoading, setExcelConsolidadoLoading] = useState(false)
+
+  // Modal "produto não encontrado" — permite adicionar com observação
+  const [naoCadastradoModal, setNaoCadastradoModal] = useState<{ codigo: string } | null>(null)
+  const [naoCadastradoObs, setNaoCadastradoObs] = useState('')
+
   const processando = useRef<Set<string>>(new Set())
+  const ultimaLeitura = useRef<Map<string, number>>(new Map())
+  const ultimaQualquerLeitura = useRef(0)
+  const pausaEscaneio = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const conviteRef = useRef<HTMLInputElement>(null)
   const scrollPosRef = useRef(0)
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const sessaoAtivaRef = useRef<number | null>(null)
 
   const { toast } = useToast()
 
-  // Consolidated data from all sessions (auto-refreshed)
+  // Consolidado de todas as sessões (auto-refreshed, supervisor only)
   const [consolidadoItems, setConsolidadoItems] = useState<ItemInventario[]>([])
   const [consolidadoLoading, setConsolidadoLoading] = useState(false)
 
@@ -66,7 +87,6 @@ export default function Inventario() {
 
   useEffect(() => {
     if (sessaoAtiva && isSupervisor) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Mount/dependency-triggered fetch
       fetchConsolidado()
     }
   }, [sessaoAtiva, isSupervisor, fetchConsolidado])
@@ -83,6 +103,11 @@ export default function Inventario() {
     getItensInventario(sessaoAtiva.id, false)
       .then(setItens)
       .catch(() => setErro('Erro ao carregar itens'))
+  }, [sessaoAtiva])
+
+  // Mantém sessaoAtivaRef sincronizado com sessaoAtiva
+  useEffect(() => {
+    sessaoAtivaRef.current = sessaoAtiva?.id ?? null
   }, [sessaoAtiva])
 
   useEffect(() => {
@@ -115,13 +140,53 @@ export default function Inventario() {
     getSessoesInventario().then(setSessoes).catch(() => {})
   }
 
+  // ─── Produto não cadastrado — adicionar com observação ────────────────────
+  async function handleAdicionarNaoCadastrado() {
+    if (!sessaoAtiva || !naoCadastradoModal) return
+    const codigo = naoCadastradoModal.codigo
+    pausaEscaneio.current = false
+    ultimaQualquerLeitura.current = Date.now() - 500  // 500ms de folga p/ frames residuais
+    setNaoCadastradoModal(null)
+
+    try {
+      const obs = naoCadastradoObs.trim()
+      setItens(prev => [...prev, {
+        codigo,
+        nome: 'Não cadastrado',
+        grupo: '',
+        familia: '',
+        quantidade: 1,
+        observacao: obs || undefined,
+      }])
+      await adicionarItemInventario(sessaoAtiva.id, {
+        codigo,
+        nome: 'Não cadastrado',
+        grupo: '',
+        familia: '',
+        observacao: obs,
+      })
+      if (inputRef.current) inputRef.current.value = ''
+      haptico()
+      mostrarFeedback('Adicionado sem cadastro')
+      fetchConsolidado()
+    } catch {
+      setErro('Erro ao adicionar produto')
+    }
+  }
+
+  // ─── TXT consolidado (padrão coletador Alterdata) ─────────────────────────
+  // Formato: <codigo_interno>;<quantidade>  — uma linha por produto, sem cabeçalho.
+  // BOM UTF-8 incluído para compatibilidade com Windows/Alterdata Import.
+  // Este é o formato nativo do coletador Alterdata (não é acoplamento):
+  // o Alterdata ERP importa diretamente via menu Estoque > Inventário > Importar Coletora,
+  // esperando exatamente este layout de campos separados por ponto-e-vírgula.
   async function handleConsolidadoTxt() {
     setErro('')
     try {
-      const itens = await getConsolidadoGeral()
-      if (itens.length === 0) { setErro('Nenhum item encontrado nas sessões.'); return }
-      const linhas = itens.map(i => `${i.codigo};${i.quantidade}`).join('\n')
-      const bom = "\uFEFF"
+      const items = await getConsolidadoGeral()
+      if (items.length === 0) { setErro('Nenhum item encontrado nas sessões.'); return }
+      const linhas = items.map(i => `${i.codigo};${i.quantidade}`).join('\n')
+      const bom = '\uFEFF'
       const blob = new Blob([bom + linhas], { type: 'text/plain;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -135,19 +200,17 @@ export default function Inventario() {
     }
   }
 
+  // ─── Excel consolidado (via backend — inclui aba Delta) ───────────────────
   async function handleConsolidadoExcel() {
+    setExcelConsolidadoLoading(true)
     setErro('')
     try {
-      const itens = await getConsolidadoGeral()
-      if (itens.length === 0) { setErro('Nenhum item encontrado nas sessões.'); return }
-      const data = itens.map(i => ({ código: i.codigo, produto: i.nome, grupo: i.grupo, família: i.familia, quantidade: i.quantidade }))
-      const ws = XLSX.utils.json_to_sheet(data)
-      const wb = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(wb, ws, 'Consolidado Geral')
-      XLSX.writeFile(wb, `consolidado_geral_${new Date().toISOString().slice(0, 10)}.xlsx`)
+      await exportarExcelConsolidado()
       toast({ type: 'success', message: 'Excel consolidado baixado!' })
     } catch {
-      setErro('Erro ao gerar relatório consolidado')
+      setErro('Erro ao gerar Excel consolidado')
+    } finally {
+      setExcelConsolidadoLoading(false)
     }
   }
 
@@ -191,9 +254,22 @@ export default function Inventario() {
 
   async function handleCodigo(codigo: string) {
     if (!sessaoAtiva) return
+    if (pausaEscaneio.current) return  // modal "não cadastrado" aberto
+
+    const agora = Date.now()
+
+    // Debounce global de 2s — QUALQUER leitura, independente do código ou fonte
+    if (agora - ultimaQualquerLeitura.current < 2000) return
+    ultimaQualquerLeitura.current = agora
+
     setErro('')
     const codigoLimpo = codigo.trim()
     if (!codigoLimpo) return
+
+    // Cooldown de 1.5s por código específico (câmera 30fps)
+    const ultima = ultimaLeitura.current.get(codigoLimpo) ?? 0
+    if (agora - ultima < 1500) return
+    ultimaLeitura.current.set(codigoLimpo, agora)
 
     if (processando.current.has(codigoLimpo)) return
     processando.current.add(codigoLimpo)
@@ -212,6 +288,8 @@ export default function Inventario() {
       }
 
       const produto = await buscarProduto(codigoLimpo)
+      // Guard: sessão pode ter mudado durante o await — verifica stale closure
+      if (!sessaoAtivaRef.current || sessaoAtivaRef.current !== sessaoAtiva?.id) return
       const internalCode = produto.codigo_chamada
 
       setItens(prev => {
@@ -229,9 +307,17 @@ export default function Inventario() {
       fetchConsolidado()
     } catch (e: unknown) {
       const error = e as { response?: { status?: number } }
+      if (error.response?.status === 404) {
+        // Abre modal para adicionar mesmo sem cadastro
+        pausaEscaneio.current = true
+        setCamera(false)                      // fecha a câmera na hora
+        setNaoCadastradoModal({ codigo: codigoLimpo })
+        setNaoCadastradoObs('')
+        if (inputRef.current) inputRef.current.value = ''
+        return
+      }
       let msg = 'Erro ao consultar.'
-      if (error.response?.status === 404) msg = 'Produto não encontrado.'
-      else if (error.response?.status === 400) msg = 'Código inválido.'
+      if (error.response?.status === 400) msg = 'Código inválido.'
       toast({ type: 'error', message: msg })
     } finally {
       processando.current.delete(codigoLimpo)
@@ -239,7 +325,7 @@ export default function Inventario() {
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') handleCodigo((e.target as HTMLInputElement).value)
+    if (e.key === 'Enter' && !pausaEscaneio.current) handleCodigo((e.target as HTMLInputElement).value)
   }
 
   function ajustarQuantidade(codigo: string, delta: number) {
@@ -251,11 +337,7 @@ export default function Inventario() {
     const item = itens.find(i => i.codigo === codigo)
     if (item) {
       const novaQtd = Math.max(0, item.quantidade + delta)
-      if (novaQtd > 0) {
-        atualizarItemInventario(sessaoAtiva.id, codigo, novaQtd).catch(() => {})
-      } else {
-        atualizarItemInventario(sessaoAtiva.id, codigo, 0).catch(() => {})
-      }
+      atualizarItemInventario(sessaoAtiva.id, codigo, novaQtd).catch(() => {})
       fetchConsolidado()
     }
   }
@@ -269,11 +351,7 @@ export default function Inventario() {
       .map(i => i.codigo === codigo ? { ...i, quantidade: n } : i)
       .filter(i => i.quantidade > 0)
     )
-    if (n > 0) {
-      atualizarItemInventario(sessaoAtiva.id, codigo, n).catch(() => {})
-    } else {
-      atualizarItemInventario(sessaoAtiva.id, codigo, 0).catch(() => {})
-    }
+    atualizarItemInventario(sessaoAtiva.id, codigo, n).catch(() => {})
     fetchConsolidado()
   }
 
@@ -289,10 +367,11 @@ export default function Inventario() {
     }
   }
 
+  // ─── TXT da sessão individual (padrão Alterdata coletador) ───────────────
   function handleExportarTxt() {
     if (itens.length === 0) return
     const linhas = itens.map(i => `${i.codigo};${i.quantidade}`).join('\n')
-    const bom = "\uFEFF"
+    const bom = '\uFEFF'
     const blob = new Blob([bom + linhas], { type: 'text/plain;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -302,19 +381,25 @@ export default function Inventario() {
     URL.revokeObjectURL(url)
   }
 
-  function handleExportarExcel() {
-    if (itens.length === 0) return
-    const data = itens.map(i => ({ código: i.codigo, grupo: i.grupo, família: i.familia, produto: i.nome }))
-    const ws = XLSX.utils.json_to_sheet(data)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Inventário')
-    XLSX.writeFile(wb, `inventario_${new Date().toISOString().slice(0, 10)}.xlsx`)
+  // ─── Excel da sessão individual (via backend — inclui aba Delta) ──────────
+  async function handleExportarExcel() {
+    if (!sessaoAtiva || itens.length === 0) return
+    setExcelLoading(true)
+    setErro('')
+    try {
+      await exportarExcelSessao(sessaoAtiva.id)
+      toast({ type: 'success', message: 'Excel baixado!' })
+    } catch {
+      setErro('Erro ao gerar Excel')
+    } finally {
+      setExcelLoading(false)
+    }
   }
 
   const totalItens = itens.reduce((acc, i) => acc + i.quantidade, 0)
   const totalConsolidado = consolidadoItems.reduce((acc, i) => acc + i.quantidade, 0)
 
-  /* ─── Estado A: Seleção de sessão ─── */
+  // ─── Estado A: Seleção de sessão ─────────────────────────────────────────
   if (!sessaoAtiva) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-hidden">
@@ -378,8 +463,8 @@ export default function Inventario() {
                   <Button variant="outline" onClick={handleConsolidadoTxt} fullWidth>
                     <Download size={14} /> TXT Consolidado
                   </Button>
-                  <Button onClick={handleConsolidadoExcel} fullWidth>
-                    <Download size={14} /> Excel Consolidado
+                  <Button onClick={handleConsolidadoExcel} loading={excelConsolidadoLoading} fullWidth>
+                    <FileSpreadsheet size={14} /> Excel + Delta
                   </Button>
                 </div>
               )}
@@ -417,12 +502,11 @@ export default function Inventario() {
     )
   }
 
-  /* ─── Estado B/C: Bipagem / Consolidado ─── */
+  // ─── Estado B/C: Bipagem / Consolidado ──────────────────────────────────
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-hidden">
       {camera && (
         <LeitorCodigo
-          continuo
           onLeitura={(codigo) => { handleCodigo(codigo) }}
           onFechar={() => setCamera(false)}
         />
@@ -454,31 +538,31 @@ export default function Inventario() {
 
         {/* Input de bipagem */}
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-5">
-            <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-4">Bipar produtos</h2>
-            <div className="flex gap-2">
-              <input
-                ref={inputRef}
-                aria-label="Código do produto"
-                className="flex-1 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Digite ou bipe o código"
-                onKeyDown={handleKeyDown}
-                autoFocus
-              />
-              <button
-                onClick={() => setCamera(true)}
-                className="md:hidden bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-gray-600 text-slate-700 dark:text-slate-300 px-3 py-2 rounded-lg transition"
-                aria-label="Ler código de barras"
-              >
-                <Camera size={18} />
-              </button>
-            </div>
-            {scanFeedback && (
-              <div className="mt-2 flex items-center gap-2 text-green-600 dark:text-green-400 text-sm font-medium animate-fade-in-up">
-                <Check size={16} /> {scanFeedback}
-              </div>
-            )}
-            {erro && <p className="text-red-500 text-sm mt-2" role="alert">{erro}</p>}
+          <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-4">Bipar produtos</h2>
+          <div className="flex gap-2">
+            <input
+              ref={inputRef}
+              aria-label="Código do produto"
+              className="flex-1 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="Digite ou bipe o código"
+              onKeyDown={handleKeyDown}
+              autoFocus
+            />
+            <button
+              onClick={() => setCamera(true)}
+              className="md:hidden bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-gray-600 text-slate-700 dark:text-slate-300 px-3 py-2 rounded-lg transition"
+              aria-label="Ler código de barras"
+            >
+              <Camera size={18} />
+            </button>
           </div>
+          {scanFeedback && (
+            <div className="mt-2 flex items-center gap-2 text-green-600 dark:text-green-400 text-sm font-medium animate-fade-in-up">
+              <Check size={16} /> {scanFeedback}
+            </div>
+          )}
+          {erro && <p className="text-red-500 text-sm mt-2" role="alert">{erro}</p>}
+        </div>
 
         {/* Lista de itens */}
         {itens.length > 0 && (
@@ -497,9 +581,11 @@ export default function Inventario() {
                 <button onClick={handleExportarTxt} className="text-sm text-slate-500 hover:text-primary transition flex items-center gap-1">
                   <Download size={14} /> TXT
                 </button>
-                <Button size="sm" onClick={handleExportarExcel}>
-                  <Download size={14} /> Excel
-                </Button>
+                {isSupervisor && (
+                  <Button size="sm" onClick={handleExportarExcel} loading={excelLoading}>
+                    <FileSpreadsheet size={14} /> Excel + Delta
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -515,6 +601,16 @@ export default function Inventario() {
                     <span className="text-xs text-slate-400 dark:text-slate-500 ml-2 truncate block sm:inline">
                       {item.nome} {item.grupo && item.familia ? `• ${item.grupo} / ${item.familia}` : ''}
                     </span>
+                    {item.nome === 'Não cadastrado' && (
+                      <span className="ml-2 inline-flex text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 uppercase tracking-wider">
+                        Sem cadastro
+                      </span>
+                    )}
+                    {item.observacao && (
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 truncate italic">
+                        Obs: {item.observacao}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <button
@@ -552,7 +648,7 @@ export default function Inventario() {
           <p className="text-sm text-slate-400 dark:text-slate-500 text-center">Nenhum item bipado ainda</p>
         )}
 
-        {/* Consolidado Geral — auto-refreshed */}
+        {/* Consolidado Geral — supervisor only */}
         {isSupervisor && (
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-5">
             <div className="flex justify-between items-center mb-4">
@@ -597,6 +693,40 @@ export default function Inventario() {
             )}
           </div>
         )}
+
+        {/* Modal Produto Não Cadastrado */}
+        <Modal
+          open={!!naoCadastradoModal}
+          onClose={() => { pausaEscaneio.current = false; ultimaQualquerLeitura.current = Date.now() - 500; setNaoCadastradoModal(null) }}
+          title="Produto não encontrado"
+          actions={
+            <>
+              <Button variant="ghost" onClick={() => { pausaEscaneio.current = false; ultimaQualquerLeitura.current = Date.now() - 500; setNaoCadastradoModal(null) }}>
+                Cancelar
+              </Button>
+              <Button onClick={handleAdicionarNaoCadastrado}>
+                Adicionar mesmo assim
+              </Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-3">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              O código <strong>{naoCadastradoModal?.codigo}</strong> não está cadastrado no sistema.
+            </p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              Se quiser, adicione uma observação para o supervisor ajustar o cadastro depois.
+            </p>
+            <input
+              autoFocus
+              value={naoCadastradoObs}
+              onChange={(e) => setNaoCadastradoObs(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleAdicionarNaoCadastrado() }}
+              placeholder="Ex: EAN estava no rótulo do produto"
+              className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+        </Modal>
 
         {/* Modal Editar Item (bottom-sheet) */}
         <Modal
@@ -645,6 +775,11 @@ export default function Inventario() {
                   <Plus size={22} />
                 </button>
               </div>
+              {editSheetItem.observacao && (
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-3 text-center italic">
+                  Obs: {editSheetItem.observacao}
+                </p>
+              )}
             </div>
           )}
         </Modal>

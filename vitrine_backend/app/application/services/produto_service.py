@@ -30,3 +30,7 @@ class ProdutoService:
             return []
         limit = max(1, min(limit, 100))
         return self.repo.buscar_por_nome(nome, limit, offset)
+
+    def get_all_products(self) -> List[Produto]:
+        """Retorna todos os produtos cadastrados (sem paginação)."""
+        return self.repo.listar_paginado(limit=999999, offset=0)

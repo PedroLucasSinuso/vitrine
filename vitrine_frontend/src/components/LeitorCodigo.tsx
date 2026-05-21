@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { BrowserMultiFormatReader } from '@zxing/browser'
-import { X, ScanLine, CameraOff } from 'lucide-react'
+import { X, ScanLine, CameraOff, Sun } from 'lucide-react'
 import Button from './ui/Button'
 
 interface Props {
@@ -12,26 +12,44 @@ interface Props {
 export default function LeitorCodigo({ onLeitura, onFechar, continuo = false }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [erro, setErro] = useState('')
+  const [flash, setFlash] = useState(false)
   const readerRef = useRef<BrowserMultiFormatReader | null>(null)
   const controlsRef = useRef<{ stop: () => void } | null>(null)
   const hasReadRef = useRef(false)
+  const stoppedRef = useRef(false)
 
   const onLeituraRef = useRef(onLeitura)
   useEffect(() => { onLeituraRef.current = onLeitura }, [onLeitura])
 
   const cleanup = useCallback(() => {
+    stoppedRef.current = true
     try { controlsRef.current?.stop() } catch { /* already stopped */ }
     controlsRef.current = null
     readerRef.current = null
     BrowserMultiFormatReader.releaseAllStreams()
   }, [])
 
+  function toggleFlash() {
+    const video = videoRef.current
+    if (!video) return
+    const stream = video.srcObject as MediaStream | null
+    const track = stream?.getVideoTracks()[0]
+    if (!track) return
+    const nova = !flash
+    setFlash(nova)
+    track.applyConstraints({ advanced: [{ torch: nova }] as Record<string, unknown>[] }).catch(() => {
+      setFlash(false) // torch não suportado nesse dispositivo
+    })
+  }
+
   useEffect(() => {
     hasReadRef.current = false
+    stoppedRef.current = false  // limpa trava do Strict Mode (desmonta + remonta)
     const reader = new BrowserMultiFormatReader()
     readerRef.current = reader
 
     reader.decodeFromVideoDevice(undefined, videoRef.current!, (result) => {
+      if (stoppedRef.current) return
       if (result && (continuo || !hasReadRef.current)) {
         if (!continuo) hasReadRef.current = true
         navigator.vibrate?.(20)
@@ -60,6 +78,20 @@ export default function LeitorCodigo({ onLeitura, onFechar, continuo = false }: 
             <ScanLine size={40} className="text-white/30" />
           </div>
         </div>
+
+        {/* Flash toggle */}
+        <button
+          onClick={toggleFlash}
+          className={`absolute top-3 right-3 z-10 p-2.5 rounded-xl transition ${
+            flash
+              ? 'bg-yellow-400 text-yellow-900 shadow-lg shadow-yellow-400/40'
+              : 'bg-white/20 text-white/70 hover:bg-white/30'
+          }`}
+          aria-label={flash ? 'Desligar flash' : 'Ligar flash'}
+          title={flash ? 'Desligar flash' : 'Ligar flash'}
+        >
+          <Sun size={18} />
+        </button>
 
         {erro && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 gap-3">

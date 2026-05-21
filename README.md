@@ -361,7 +361,7 @@ Pode ser executado manualmente, via scheduler interno (intervalo configurável p
 | **Injeção de dependência** | Sessão gerenciada por `Depends` do FastAPI, repositório desacoplado do ciclo de vida da request |
 | **Value Objects (`Codigo`, `Endereco`)** | Encapsulam validação e invariantes do domínio (EAN/PLU, CEP/UF) sem poluir o service |
 | **Domain Services (`enriquecer_endereco`)** | Orquestra chamadas externas (BrasilAPI → ViaCEP) mantendo o VO imutável |
-| **Fernet para senhas em repouso** | ConfigService encripta valores sensíveis (senha ERP) com chave de `ERPS_ENCRYPTION_KEY` — única proteção em DB SQLite sem segredo |
+| **Fernet para senhas em repouso** | ConfigService encripta valores sensíveis (senha ERP) com chave de `ERPS_ENCRYPTION_KEY` — única proteção em DB SQLite sem segredo. ⚠️ **NÃO altere a chave após o primeiro uso** — senhas criptografadas se tornarão permanentemente ilegíveis |
 | **Sentinel `***configurado***`** | A UI exibe `••••••` em vez de retornar a senha descriptada; o valor enviado de volta é ignorado pelo backend se igual ao sentinel |
 | **ConfigService com fallback `.env`** | Lê de `.env` se a chave não existe no banco; ao salvar pela UI, escreve no SQLite e sobrescreve o `.env` |
 | **Templates Jinja2 para relatórios** | `relatorio_email.j2` / `relatorio_semanal.j2` permitem customizar o HTML sem recompilar |
@@ -369,6 +369,24 @@ Pode ser executado manualmente, via scheduler interno (intervalo configurável p
 | **Cache frontend com AbortController** | Stale-while-revalidate com cancelamento de requests duplicadas (evita waterfall em navegação de BI) |
 | **Componentização do BI** | `KpiCard`, `PeriodoForm`, `BiSubNav`, `BiSideRail` — componentes puros e reutilizáveis |
 | **Design system próprio (`ui/`)** | `Button`, `Card`, `Input`, `Modal`, `Skeleton`, `CmdK` — consistência visual sem dependência pesada de UI library |
+
+---
+
+## ⚠️ Atenção: Chave Fernet (ERPS_ENCRYPTION_KEY)
+
+A senha do ERP (`erp_password`) é criptografada em repouso usando a chave definida em `ERPS_ENCRYPTION_KEY` no `.env`.
+
+**Esta chave NÃO pode ser alterada após o primeiro uso.** Se a chave for modificada:
+
+- Todas as senhas de ERP já armazenadas no banco de dados se tornarão permanentemente ilegíveis.
+- Não há mecanismo de recuperação — a chave antiga é necessária para descriptografar.
+- A conexão com o ERP será perdida até que uma nova senha seja fornecida pela interface de Configurações.
+
+### Boas práticas
+
+1. **Gere a chave uma única vez** na instalação inicial e mantenha-a fixa.
+2. **Faça backup** do arquivo `.env` (ou ao menos da linha `ERPS_ENCRYPTION_KEY`) junto com o banco de dados.
+3. **NÃO rotacione a chave** — diferente de boas práticas de segurança tradicionais, a implementação atual não suporta re-criptografia dos valores existentes com uma nova chave. (Esta limitação é conhecida e está documentada como C2 em `known-issues.md`.)
 
 ---
 

@@ -27,6 +27,7 @@ class ItemInventarioSubmit(BaseModel):
     grupo: str
     familia: str
     quantidade: int = 1
+    observacao: str = ""
 
 
 class ItemInventarioResponse(BaseModel):
@@ -35,7 +36,9 @@ class ItemInventarioResponse(BaseModel):
     grupo: str
     familia: str
     quantidade: int
+    observacao: str = ""
 
 
 class AtualizarItemInput(BaseModel):
     quantidade: int
+    observacao: str | None = None
