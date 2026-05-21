@@ -39,6 +39,11 @@ CACHE_TTL = 30
 
 CHAVES_COPIADAS_DO_ENV: set[str] = set()
 
+# ── Chaves que SOMENTE vêm do .env (ignoram cache e banco) ────────────────
+# Estas chaves nunca devem ser lidas do SQLite nem sobrescritas via UI.
+# Proteção crítica contra escalada de privilégio via JWT.
+_CHAVES_SOMENTE_ENV: set[str] = {"jwt_secret"}
+
 # ── Whitelist de chaves editáveis via API ──────────────────────────────────
 # Qualquer chave não listada aqui será rejeitada por set_many().
 # Mantenha esta lista sincronizada com as abas da UI de Admin > Configurações.
@@ -228,6 +233,11 @@ def get(db: Session, chave: str, default: str = "") -> str:
         _migrar_chaves_criptografia(db)
         _migracao_criptografia_feita = True
 
+    # 0. Chaves que só vêm do .env — ignoram cache e banco completamente
+    if chave in _CHAVES_SOMENTE_ENV:
+        env_val: str | None = getattr(settings, chave, None)
+        return env_val if env_val else default
+
     now = datetime.now(timezone.utc).timestamp()
 
     # 1. Cache
@@ -277,7 +287,7 @@ def get_decrypted(db: Session, chave: str, default: str = "") -> str:
 SENTINEL_MASCARADO = "***configurado***"
 
 
-def set_many(db: Session, valores: dict[str, str]) -> None:
+def set_many(db: Session, valores: dict[str, str]) -> list[str]:
     """Salva múltiplas configurações no banco.
 
     Valida contra CHAVES_EDITAVEIS — chaves não autorizadas são ignoradas
@@ -291,6 +301,13 @@ def set_many(db: Session, valores: dict[str, str]) -> None:
     ignoradas: list[str] = []
     preservadas: list[str] = []
     for chave, valor in valores.items():
+        # Bloqueia chaves que só podem vir do .env (ex: jwt_secret)
+        if chave in _CHAVES_SOMENTE_ENV:
+            ignoradas.append(chave)
+            logger.warning(
+                "Tentativa de salvar chave protegida (somente .env) | chave=%s", chave
+            )
+            continue
         if chave not in CHAVES_EDITAVEIS:
             ignoradas.append(chave)
             logger.warning("Tentativa de salvar chave não editável | chave=%s", chave)
@@ -341,6 +358,8 @@ def set_many(db: Session, valores: dict[str, str]) -> None:
         logger.info("Configurações preservadas (sentinel) | chaves=%s", preservadas)
     if ignoradas:
         logger.info("Configurações ignoradas (não editáveis) | chaves=%s", ignoradas)
+
+    return ignoradas
 
 
 # ── Chaves que são criptografadas em repouso ────────────────────────────────

@@ -28,6 +28,7 @@ def usuario_existente():
         nome_exibicao="Supervisor",
         role="supervisor",
         hashed_password=hash_password("senha123"),
+        token_version=0,
     )
 
 

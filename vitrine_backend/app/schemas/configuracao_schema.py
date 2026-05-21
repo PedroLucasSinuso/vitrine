@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 class ConfiguracaoResponse(BaseModel):
     configuracoes: dict[str, str]
+    ignoradas: list[str] = []
 
 
 class ConfiguracaoUpdate(BaseModel):

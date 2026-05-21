@@ -16,7 +16,9 @@ from app.application.config_service import (
     _get_env_fallback,
     _cache,
     SENTINEL_MASCARADO,
+    _CHAVES_SOMENTE_ENV,
 )
+from app.core.config import settings
 
 
 # ── Engine e sessão compartilhados ─────────────────────────────────────────
@@ -160,7 +162,8 @@ class TestSetMany:
         })
         assert get(db, "nome_estabelecimento") == "Loja"
         assert get(db, "smtp_host") == "smtp.teste.com"
-        assert get(db, "jwt_secret") == ""
+        # jwt_secret é _CHAVES_SOMENTE_ENV — sempre retorna do .env, ignora DB
+        assert get(db, "jwt_secret") == settings.jwt_secret
 
     def test_invalida_cache_ao_salvar(self, db):
         set_many(db, {"nome_estabelecimento": "Primeiro"})

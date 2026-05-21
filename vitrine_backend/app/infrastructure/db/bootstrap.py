@@ -10,19 +10,38 @@ import app.domain.models.inventario
 import app.domain.models.whatsapp_contato
 import app.domain.models.email_contato
 import app.domain.models.sync_job
+import app.domain.models.token_blacklist
 
 logger = logging.getLogger(__name__)
 
 
 def _run_migrations():
     """Executa migrações incrementais (ALTER TABLE) que o create_all não cobre."""
+    # Migration: coluna 'observacao' em itens_inventario
     try:
         with sqlite_engine.connect() as conn:
             conn.execute(text("ALTER TABLE itens_inventario ADD COLUMN observacao TEXT"))
             conn.commit()
             logger.info("Migration: coluna 'observacao' adicionada a itens_inventario")
     except Exception:
-        # Coluna já existe — ignora
+        pass
+
+    # Migration: coluna 'token_version' em usuarios (JWT revogação)
+    try:
+        with sqlite_engine.connect() as conn:
+            conn.execute(text("ALTER TABLE usuarios ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0"))
+            conn.commit()
+            logger.info("Migration: coluna 'token_version' adicionada a usuarios")
+    except Exception:
+        pass
+
+    # Migration: limpar jwt_secret do banco (agora é somente .env)
+    try:
+        with sqlite_engine.connect() as conn:
+            conn.execute(text("DELETE FROM configuracoes WHERE chave = 'jwt_secret'"))
+            conn.commit()
+            logger.info("Migration: jwt_secret removido da tabela configuracoes")
+    except Exception:
         pass
 
 

@@ -45,6 +45,26 @@ from app.domain.models.produto import Produto
 
 logger = logging.getLogger(__name__)
 
+# ────────────────────────────────────────────────────────────────────────────
+# ATENÇÃO — Prefixo /admin/ é intencional (ADR-012)
+# ────────────────────────────────────────────────────────────────────────────
+# O prefixo atual é "/admin/inventario" por razões históricas, mas a maioria
+# das rotas usa `get_current_user` (qualquer role autenticado), não
+# `require_supervisor`. Isso é DELIBERADO — operadores precisam acessar o
+# inventário para contar estoque.
+#
+# ADR-012: Operadores têm página própria em /inventario (frontend), mas o
+# backend mantém as rotas sob /admin/inventario. Supervisores e admins
+# também usam estas mesmas rotas.
+#
+# NÃO "corrija" adicionando role checks desnecessários — operadores precisam
+# destes endpoints para trabalhar.
+#
+# Se no futuro houver separação de roles (ex: admin ≠ supervisor ≠ operador
+# com permissões distintas no inventário), mova as rotas de operador para um
+# prefixo /inventario e restrinja /admin/inventario.
+# ────────────────────────────────────────────────────────────────────────────
+
 router = APIRouter(prefix="/admin/inventario", tags=["Inventario"])
 
 

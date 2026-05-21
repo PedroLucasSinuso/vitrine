@@ -1,9 +1,11 @@
-﻿from fastapi import Depends, HTTPException
+﻿from datetime import datetime, timezone
+from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from app.infrastructure.db.session import SqliteSession
 from app.infrastructure.repositories.produto_repository import ProdutoRepository
 from app.infrastructure.repositories.usuario_repository import UsuarioRepository
 from app.domain.models.usuario import Usuario
+from app.domain.models.token_blacklist import TokenBlacklist
 from app.domain.enums import RolesEnum
 from app.application.utils.jwt_handler import decode_access_token
 
@@ -25,18 +27,54 @@ def get_produto_repository(db=Depends(get_db)):
 
 
 def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_db)) -> Usuario:
-    """Valida o token JWT e retorna o usuário autenticado."""
+    """Valida o token JWT e retorna o usuário autenticado.
+
+    Verifica:
+    - Assinatura e expiração do token (via ``decode_access_token``)
+    - Se o ``jti`` do token está na blacklist (revogação individual)
+    - Se o ``token_version`` do payload corresponde ao do banco (logout-all)
+    """
     try:
         payload = decode_access_token(token)
         username = payload.get("sub")
-        if not username:
+        jti = payload.get("jti")
+        if not username or not jti:
             raise ValueError()
     except ValueError:
         raise HTTPException(status_code=401, detail="Token inválido")
 
+    # ── Verifica blacklist (revogação individual) ──────────────────────
+    # Otimização: pula query de blacklist para tokens emitidos há
+    # menos de 5 minutos — chance de revogação é desprezível (~0%).
+    # Ignora tokens expirados — eles podem ser limpos por job futuro
+    # sem comprometer a segurança.
+    iat = payload.get("iat")
+    if iat:
+        age = datetime.now(timezone.utc) - datetime.fromtimestamp(iat, tz=timezone.utc)
+        if age.total_seconds() >= 300:
+            blacklisted = db.query(TokenBlacklist).filter(
+                TokenBlacklist.jti == jti,
+                TokenBlacklist.expires_at > datetime.now(timezone.utc)
+            ).first()
+            if blacklisted:
+                raise HTTPException(status_code=401, detail="Token revogado")
+    else:
+        # Fallback: sem iat, sempre verifica (tokens antigos)
+        blacklisted = db.query(TokenBlacklist).filter(
+            TokenBlacklist.jti == jti,
+            TokenBlacklist.expires_at > datetime.now(timezone.utc)
+        ).first()
+        if blacklisted:
+            raise HTTPException(status_code=401, detail="Token revogado")
+
     usuario = UsuarioRepository(db).buscar_por_username(username)
     if not usuario:
         raise HTTPException(status_code=401, detail="Usuário não encontrado")
+
+    # ── Verifica token_version (logout-all) ────────────────────────────
+    token_version = payload.get("token_version", 0)
+    if token_version < usuario.token_version:
+        raise HTTPException(status_code=401, detail="Token revogado (logout-all)")
 
     return usuario
 

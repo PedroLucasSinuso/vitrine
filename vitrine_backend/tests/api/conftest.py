@@ -57,6 +57,7 @@ def usuario_operador(db_session):
         nome_exibicao="Operador Um",
         role="operador",
         hashed_password=hash_password("senha123"),
+        token_version=0,
     )
     db_session.add(user)
     db_session.commit()
@@ -71,6 +72,7 @@ def usuario_supervisor(db_session):
         nome_exibicao="Supervisor Um",
         role="supervisor",
         hashed_password=hash_password("senha123"),
+        token_version=0,
     )
     db_session.add(user)
     db_session.commit()
@@ -85,6 +87,7 @@ def usuario_admin(db_session):
         nome_exibicao="Admin Um",
         role="admin",
         hashed_password=hash_password("senha123"),
+        token_version=0,
     )
     db_session.add(user)
     db_session.commit()

@@ -79,7 +79,7 @@ def atualizar_configuracoes(
     except ValidationError as e:
         raise HTTPException(status_code=422, detail=e.errors())
 
-    set_many(db, body.valores)
+    ignoradas = set_many(db, body.valores)
 
     valores = body.valores
 
@@ -117,7 +117,8 @@ def atualizar_configuracoes(
                 else r.valor
             )
             for r in results
-        }
+        },
+        ignoradas=ignoradas,
     )
 
 

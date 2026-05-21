@@ -14,7 +14,11 @@ class AuthService:
         usuario = self.repo.buscar_por_username(username)
         if not usuario or not verify_password(password, usuario.hashed_password):
             raise ValueError("Credenciais inválidas")
-        return create_access_token({"sub": usuario.username, "role": usuario.role, "nome_exibicao": usuario.nome_exibicao})
+        return create_access_token(
+            {"sub": usuario.username, "role": usuario.role, "nome_exibicao": usuario.nome_exibicao},
+            user_id=usuario.id,
+            token_version=usuario.token_version,
+        )
 
     def registrar(self, dados: UsuarioCreate) -> Usuario:
         if self.repo.buscar_por_username(dados.username):
@@ -38,8 +42,9 @@ class AuthService:
             raise ValueError("Nenhuma alteração fornecida")
         if dados.password is not None:
             usuario.hashed_password = hash_password(dados.password)
-        if dados.role is not None:
+        if dados.role is not None and dados.role != usuario.role:
             usuario.role = dados.role
+            usuario.token_version += 1
         self.repo.atualizar(usuario)
         return usuario
 

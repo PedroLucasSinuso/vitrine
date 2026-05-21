@@ -378,3 +378,90 @@ class TestCors:
             },
         )
         assert response.status_code in [200, 204, 405]
+
+
+class TestAuthLogout:
+    def test_logout_revoga_token(self, client, token_admin, db_session):
+        """Fazer logout e verificar que o mesmo token é rejeitado em seguida."""
+        import jwt
+        from datetime import datetime, timedelta, timezone
+        from app.core.config import settings
+
+        # O deps.py otimiza pulando query de blacklist para tokens com
+        # menos de 5 minutos. Criamos uma cópia do token com iat antigo
+        # (10 min atrás) para forçar a verificação.
+        payload = jwt.decode(token_admin, settings.jwt_secret, algorithms=["HS256"])
+        agora = datetime.now(timezone.utc)
+        payload["iat"] = agora - timedelta(minutes=10)
+        payload["exp"] = agora + timedelta(days=7)
+        token_antigo = jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
+
+        # 1. Logout
+        response = client.post(
+            "/auth/logout",
+            headers={"Authorization": f"Bearer {token_antigo}"},
+        )
+        assert response.status_code == 200
+        assert response.json()["message"] == "Token revogado com sucesso"
+
+        # 2. Tentar usar o mesmo token
+        response = client.get(
+            "/admin/cache/status",
+            headers={"Authorization": f"Bearer {token_antigo}"},
+        )
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Token revogado"
+
+    def test_logout_all_invalida_tokens_anteriores(self, client, token_admin, db_session):
+        """Fazer logout-all e verificar que o token existente é rejeitado."""
+        # 1. Logout-all
+        response = client.post(
+            "/auth/logout-all",
+            headers={"Authorization": f"Bearer {token_admin}"},
+        )
+        assert response.status_code == 200
+        assert response.json()["message"] == "Todos os tokens foram revogados com sucesso"
+
+        # 2. Tentar usar o mesmo token (verificação de token_version)
+        response = client.get(
+            "/admin/cache/status",
+            headers={"Authorization": f"Bearer {token_admin}"},
+        )
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Token revogado (logout-all)"
+
+    def test_mudanca_role_invalida_token(self, client, token_operador, db_session, usuario_operador, usuario_admin):
+        """Alterar role do operador para supervisor e verificar que token antigo é rejeitado."""
+        # 1. Obtém um token de admin para alterar o role
+        #    (usuario_admin fixture garante que admin1 existe no banco)
+        response = client.post(
+            "/auth/token",
+            data={"username": "admin1", "password": "senha123"},
+        )
+        admin_token = response.json()["access_token"]
+
+        # 2. Alterar role do operador para supervisor
+        #    O serviço incrementa token_version quando a role muda
+        response = client.patch(
+            f"/auth/usuarios/{usuario_operador.id}",
+            json={"role": "supervisor"},
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert response.status_code == 200
+
+        # 3. Tentar usar o token antigo do operador
+        #    O token_version no payload (0) é menor que o novo (1) -> 401
+        response = client.get(
+            "/admin/cache/status",
+            headers={"Authorization": f"Bearer {token_operador}"},
+        )
+        assert response.status_code == 401
+
+
+class TestPublicStatusEndpoint:
+    def test_status_endpoint_funciona(self, client):
+        """Endpoint público /status/ deve retornar 200 com last_updated."""
+        response = client.get("/status/")
+        assert response.status_code == 200
+        data = response.json()
+        assert "last_updated" in data

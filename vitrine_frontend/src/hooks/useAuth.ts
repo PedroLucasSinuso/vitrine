@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { jwtDecode } from 'jwt-decode'
+import api from '../api/client'
 import { login as apiLogin } from '../api/auth'
 import type { JwtPayload, Role } from '../types'
 
@@ -88,6 +89,8 @@ export function useAuth() {
   }, [])
 
   const logout = useCallback(() => {
+    // Fire-and-forget: tenta revogar o token no servidor, mas não espera
+    api.post('/auth/logout').catch(() => {})
     localStorage.removeItem('token')
     localStorage.removeItem('role')
   }, [])

@@ -12,7 +12,12 @@ export async function login(username: string, password: string): Promise<AuthTok
   return response.data
 }
 
-export function logout(navigate: (path: string) => void) {
+export async function logout(navigate: (path: string) => void) {
+  try {
+    await api.post('/auth/logout')
+  } catch {
+    // Falha silenciosa — melhor limpar localStorage de qualquer forma
+  }
   localStorage.removeItem('token')
   localStorage.removeItem('role')
   navigate('/login')
