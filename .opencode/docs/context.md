@@ -1,8 +1,8 @@
 # Current Context
 
-> Audit stage: **Completa. 4 sprints finalizados. 168 testes passando.**
-> Data da auditoria: **2026-05-21**
-> Status: **Todos os 4 sprints concluídos. Pronto para merge na main.**
+> Audit stage: **Completa. 5 sprints finalizados + hotfix scheduler. 168 testes passando.**
+> Data da auditoria: **2026-05-22**
+> Status: **Sprints 1-4 concluídos. Sprint 5 (BI Dashboard + Temas) concluído. Hotfix scheduler/email aplicado.**
 
 ---
 
@@ -122,6 +122,14 @@
 69. **Bug fix: configStore ignora meta_faturamento_mensal** — `getConfigsCache()` descartava `meta_faturamento_mensal` no cache builder (só extraía `marketName`/`marketLogoUrl`). Dashboard nunca via o valor. Corrigido extraindo o campo no cache. (~5 min)
 70. **Build/Tests** — 0 erros TS, 17/17 testes frontend, 168/168 backend.
 
+### Hotfix — Scheduler/Email (2026-05-22)
+
+71. **Bug 1: Session usada fora do `with SqliteSession()`** — `_enviar_relatorio_email()` e `_enviar_relatorio_whatsapp()` usavam `session` já fechada pelo context manager nas chamadas a `construir_relatorio_email/semanal`. Erro engolido pelo `except` genérico. Correção: movidas chamadas p/ dentro do `with`. (~10 min)
+72. **Bug 2: `criar_dominio` chamado com assinatura antiga** — `report_builder.py` e `report_builder_email.py` passavam `(date, date, Session)` para `criar_dominio`, mas a assinatura atual é `(source: TransactionSource, date, date)`. Nunca funcionou desde a refatoração do adapter. Correção: report builders agora aceitam `TransactionSource`; adicionada `_obter_transaction_source()` no scheduler. (~15 min)
+73. **Bug 3: E-mail chegava vazio (MIME order)** — `multipart/related` exige HTML como primeira parte (root, RFC 2387), mas as imagens eram anexadas antes. Correção: estrutura `related → alternative(text/html) → imagens`. (~10 min)
+74. **Teste real** — Enviado para `gloriamarket21@gmail.com` + `pedrolucassinuso@gmail.com`. Ambos chegaram com conteúdo completo. ✅
+75. **3 commits** — `6231b3e` (scheduler bugs) + `be6f80e` (MIME fix). 168/168 testes, 0 regressões.
+
 ## Descobertas Principais
 
 ### O que está saudável ✅
@@ -185,9 +193,9 @@
 
 - **Backend:** ~15 módulos de primeira linha, ~70 arquivos (estimado).
 - **Frontend:** ~11 módulos de primeira linha, ~40+ componentes/páginas.
-- **Testes:** 168 testes passando (pytest) — 4 sprints validados.
-- **Issues resolvidos:** 27+ em 4 sprints (bugs críticos, segurança, performance, manutenção).
-- **Issues abertos (pós-Sprint 4):** 0 críticos, 0 segurança, 0 performance.
+- **Testes:** 168 testes passando (pytest) — 5 sprints + hotfix validados.
+- **Issues resolvidos:** 30+ em 5 sprints + hotfix.
+- **Issues abertos:** 0 críticos, 0 segurança, 0 performance.
 - **Resíduos pós-revisão Sprint 1:** 2 médios (GET bloqueado indevidamente + segundo async gap) — não bloqueantes.
 - **Tipo de app:** Sistema interno de vitrine/PDV para loja física com BI, inventário, sincronização ERP (Alterdata).
 
@@ -210,17 +218,20 @@
 
 ## Próximos Passos
 
-### ✅ All Sprints (1-4) — Concluídos
+### ✅ All Sprints (1-5 + Hotfix) — Concluídos
 
 **Sprint 1 (Bugs Críticos):** C1, C2, C3 — require_sessao_ativa, Fernet doc, stale closure.  
 **Sprint 2 (Segurança):** S1-S5 + G1-G6 — JWT revogação, rate limits, frontend logout, role invalidation.  
 **Sprint 3 (Performance):** P1-P3 — Dashboard, lazy loading BI, limite 180 dias, ErrorBoundary.  
-**Sprint 4 (Médios):** M1-M12 + #1 #2 #5 #7 — migrations, thread-safe, dead code, Excel, configStore, 9 novos testes.
+**Sprint 4 (Médios):** M1-M12 + #1 #2 #5 #7 — migrations, thread-safe, dead code, Excel, configStore, 9 novos testes.  
+**Sprint 5 (BI Dashboard + Temas):** MetaCard, ProjecaoCard, trend charts, mini ranking, chartTheme, CSS variables, AppHeader refatorado, tema Flagship.  
+**Hotfix Scheduler/Email:** 2 bugs (session out of `with` + criar_dominio signature) + 1 MIME fix (email vazio).
 
-### Resíduos Pós-Sprint 1 (Opcional)
+### Resíduos (Opcional)
 
-19. Remover `require_sessao_ativa()` do `GET /sessoes/{id}/itens` — manter apenas em POST/PATCH/DELETE.
-20. Adicionar guard de stale closure nos `await adicionarItemInventario()` das linhas 283 e 303.
+1. Remover `require_sessao_ativa()` do `GET /sessoes/{id}/itens` — manter apenas em POST/PATCH/DELETE.
+2. Adicionar guard de stale closure nos `await adicionarItemInventario()` das linhas 283 e 303.
+3. Limpar `localStorage.removeItem('role')` em `client.ts` (dead code desde Sprint 4).
 
 ### Backlog (Médio/Longo Prazo)
 

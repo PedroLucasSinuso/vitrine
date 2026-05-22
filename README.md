@@ -79,10 +79,10 @@ Além da consulta, o sistema faz:
 | **Consulta** | Busca por EAN, PLU, nome. Exibe preço, estoque, markup, margem |
 | **Etiquetas** | Geração de etiquetas para impressão |
 | **Inventário** | Sessões multi-usuário, código de convite, consolidado geral |
-| **BI** | Dashboard, receita, ranking, curva ABC, análise SKU, trocas, perdas, consumo, distribuição temporal |
+| **BI** | Dashboard com meta/projeção, receita, ranking, curva ABC, análise SKU, trocas, perdas, consumo, distribuição temporal, tendências (ticket médio + tickets) |
 | **YoY** | Comparação ano contra ano com alinhamento de dia da semana (offset ±3d) e fallback 29/fev |
-| **Exportação** | Excel (.xlsx) para relatórios de BI e inventário |
-| **Câmera** | Leitura contínua de código de barras via câmera do dispositivo |
+| **Exportação** | Excel (.xlsx) para relatórios de BI e inventário (com abas: Contagem, Delta, Observações) |
+| **Câmera** | Leitura única de código de barras via câmera do dispositivo (cooldown 2s entre leituras) |
 | **Configurações** | 6 abas (Geral, Endereço, ERP, WhatsApp, Email, Sistema) com encriptação Fernet + fallback `.env` |
 | **Teste de conexão** | Testa ERP, WhatsApp, Email, Anthropic com feedback visual |
 | **Endereço** | Enriquecimento automático via BrasilAPI + ViaCEP |
@@ -157,10 +157,13 @@ Organização modular por funcionalidade com design system próprio:
 src/
 ├── api/          # Axios instance + módulos de endpoint (admin, auth, bi, produtos, …)
 ├── components/   # Design system (ui/) + feature-specific (bi/, scanner, admin)
-│   └── ui/       # Button, Card, Input, Modal, Skeleton, CmdK, EmptyState…
+│   ├── ui/       # Button, Card, Input, Modal, Skeleton, CmdK, EmptyState…
+│   └── layout/   # Sidebar, AppHeader, AppLayout, MobileNav
 ├── hooks/        # Custom hooks (useAuth, useToast, useCountUp, useLocalStorage)
+├── themes/       # tokens.css, theme-flagship.css, theme-vitrine.css, ThemeProvider, useTheme
 ├── pages/        # Páginas (consulta, admin, BI, login, configurações, …)
-│   └── bi/       # Dashboard, Ranking, Receita, CurvaAbc, Sku, Trocas, PerdasConsumo, Temporal
+│   └── bi/       # Dashboard (com meta/projeção/tendências), Ranking, Receita, CurvaAbc, Sku, Trocas, PerdasConsumo, Temporal, DashboardConsolidado
+├── config/       # chartTheme.ts (tema dos gráficos Recharts)
 ├── stores/       # Cache frontend (biCache com stale-while-revalidate + configStore)
 ├── types/        # TypeScript interfaces (admin, auth, bi, inventario, produto)
 └── utils/        # Formatadores, cores, CSV
@@ -306,7 +309,7 @@ uv run pytest
 
 ### Relatórios disponíveis
 
-- **Dashboard** — KPIs financeiros + ranking do período
+- **Dashboard** — KPIs financeiros + meta de faturamento (progresso + projeção) + tendências (ticket médio, tickets) + mini ranking
 - **Receita por dimensão** — grupo, família ou produto, com filtros hierárquicos
 - **Ranking** — Top N produtos por receita ou quantidade
 - **Curva ABC** — Classificação A/B/C automática
