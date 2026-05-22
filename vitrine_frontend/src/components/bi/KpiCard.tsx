@@ -18,7 +18,7 @@ interface Props {
 
 export default function KpiCard({ label, valor, delay = 0, pulseKey, variacao, invertVariation, valorAnterior }: Props) {
   const [pulsing, setPulsing] = useState(false)
-  const pulseTimer = useRef<ReturnType<typeof setTimeout>>()
+  const pulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (pulseKey === undefined) return

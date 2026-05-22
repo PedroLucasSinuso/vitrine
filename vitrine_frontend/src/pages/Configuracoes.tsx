@@ -59,6 +59,7 @@ const TABS = [
 ]
 
 interface ConfigForm {
+  [key: string]: string | undefined
   nome_estabelecimento?: string
   logo_url?: string
   endereco_rua?: string
@@ -186,7 +187,7 @@ export default function Configuracoes() {
     setSaving(true)
     setSaved(false)
     try {
-      const resp = await atualizarConfiguracoes(form)
+      const resp = await atualizarConfiguracoes(form as Record<string, string>)
       const c = resp.configuracoes
       invalidateConfigCache()
       if (c.logo_url) setLogoPreview(c.logo_url)

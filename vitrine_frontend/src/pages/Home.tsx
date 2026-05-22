@@ -59,7 +59,6 @@ export default function Home() {
               className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
               aria-label="Alternar tema"
               title={dark ? 'Modo claro' : 'Modo escuro'}
-              title={dark ? 'Modo claro' : 'Modo escuro'}
             >
               {dark ? <Sun size={16} /> : <Moon size={16} />}
             </button>

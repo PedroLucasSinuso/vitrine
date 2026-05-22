@@ -16,7 +16,7 @@ interface Props {
 
 export default function HeroKpiCard({ label, valor, pulseKey, variacao, valorAnterior }: Props) {
   const [pulsing, setPulsing] = useState(false)
-  const pulseTimer = useRef<ReturnType<typeof setTimeout>>()
+  const pulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (pulseKey === undefined) return
