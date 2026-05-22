@@ -1,0 +1,140 @@
+/* ========================================================================
+   theme-vitrine.css — Tema claro "Vitrine" (original)
+   
+   Tema padrão. Verde esmeralda primário, fundo claro.
+   Ativado via: <html data-theme="vitrine">
+   ======================================================================== */
+
+[data-theme="vitrine"] {
+  /* ========================= COLORS ========================= */
+
+  /* Brand */
+  --color-primary: #059669;
+  --color-primary-hover: #047857;
+  --color-primary-light: rgba(5, 150, 105, 0.10);
+  --color-primary-lighter: rgba(5, 150, 105, 0.06);
+  --color-primary-dark: #047857;
+
+  /* Accent */
+  --color-accent: #f59e0b;
+  --color-accent-hover: #d97706;
+  --color-accent-light: rgba(245, 158, 11, 0.10);
+
+  /* Semantic */
+  --color-info: #3b82f6;
+  --color-success: #10b981;
+  --color-success-light: rgba(16, 185, 129, 0.10);
+  --color-warning: #f59e0b;
+  --color-warning-light: rgba(245, 158, 11, 0.10);
+  --color-danger: #ef4444;
+  --color-danger-light: rgba(239, 68, 68, 0.10);
+
+  /* Background */
+  --color-bg-page: #f8fafc;               /* slate-50 */
+  --color-bg-sidebar: #ffffff;
+  --color-bg-header: rgba(255, 255, 255, 0.85);
+  --color-bg-card: #ffffff;
+  --color-bg-card-hover: #f8fafc;
+  --color-bg-input: #ffffff;
+  --color-bg-hover: #f1f5f9;
+  --color-bg-modal-overlay: rgba(0, 0, 0, 0.40);
+
+  /* Border */
+  --color-border: #e2e8f0;                /* slate-200 */
+  --color-border-light: #f1f5f9;          /* slate-100 */
+  --color-border-input: #cbd5e1;          /* slate-300 */
+  --color-border-focus: #059669;          /* emerald-600 */
+
+  /* Text */
+  --color-text-primary: #0f172a;          /* slate-900 */
+  --color-text-secondary: #475569;        /* slate-600 */
+  --color-text-muted: #94a3b8;            /* slate-400 */
+  --color-text-inverse: #ffffff;
+  --color-text-link: #059669;             /* emerald-600 */
+  --color-text-accent: #059669;
+
+  /* Surface */
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-overlay: rgba(0, 0, 0, 0.40);
+  --color-surface-modal: #ffffff;
+
+  /* Status */
+  --color-online: #22c55e;
+  --color-online-light: rgba(34, 197, 94, 0.10);
+  --color-offline: #ef4444;
+  --color-offline-light: rgba(239, 68, 68, 0.10);
+  --color-idle: #f59e0b;
+  --color-idle-light: rgba(245, 158, 11, 0.10);
+
+  /* ABC Rank */
+  --color-abc-a: #10b981;
+  --color-abc-a-light: rgba(16, 185, 129, 0.15);
+  --color-abc-b: #f59e0b;
+  --color-abc-b-light: rgba(245, 158, 11, 0.15);
+  --color-abc-c: #ef4444;
+  --color-abc-c-light: rgba(239, 68, 68, 0.15);
+
+  /* Stock gauge */
+  --color-stock-high: #22c55e;
+  --color-stock-medium: #f59e0b;
+  --color-stock-low: #ef4444;
+
+  /* Chart */
+  --color-chart-1: #059669;
+  --color-chart-2: #f59e0b;
+  --color-chart-3: #6366f1;
+  --color-chart-4: #06b6d4;
+  --color-chart-5: #64748b;
+
+  /* ========================= TYPOGRAPHY ========================= */
+
+  --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Inter', sans-serif;   /* fallback: Inter (sem display dedicada) */
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-black: 800;
+
+  --tracking-tight: -0.025em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.1em;
+
+  /* ========================= BORDER RADIUS ========================= */
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-full: 9999px;
+
+  /* ========================= SHADOWS ========================= */
+
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.10);
+  --shadow-card-hover: 0 4px 6px -1px rgba(0, 0, 0, 0.10);
+  --shadow-modal: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+  --shadow-kpi: 0 1px 3px 0 rgba(5, 150, 105, 0.10);
+  --shadow-toast: 0 4px 6px -1px rgba(0, 0, 0, 0.10);
+
+  /* ========================= SPACING / LAYOUT ========================= */
+
+  --space-unit: 4px;
+  --sidebar-width: 240px;
+  --header-height: 64px;
+  --mobile-nav-height: 64px;
+  --content-max-width: 64rem;
+  --card-padding: 1.5rem;
+  --card-gap: 1.5rem;
+
+  /* ========================= ANIMATIONS ========================= */
+
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}

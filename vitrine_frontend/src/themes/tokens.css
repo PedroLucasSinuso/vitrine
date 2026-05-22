@@ -1,0 +1,187 @@
+/* ========================================================================
+   tokens.css — Design System Reference
+   
+   ⚠️  ATENÇÃO: Este arquivo é PURAMENTE DOCUMENTAÇÃO.
+   ⚠️  NÃO importe este arquivo em lugar nenhum.
+   ⚠️  NÃO contém CSS executável — apenas comentários.
+   
+   Cada token abaixo é declarado no @theme em index.css (com fallbacks)
+   e sobrescrito pelos temas em theme-*.css via [data-theme="..."].
+   
+   Consulte DESIGN_SYSTEM.md para a referência completa com valores.
+   ======================================================================== */
+
+/*
+██   ██  ██████  ██      ██████  ██████  ███████
+██   ██ ██    ██ ██      ██   ██ ██   ██ ██
+███████ ██    ██ ██      ██   ██ ██████  █████
+██   ██ ██    ██ ██      ██   ██ ██   ██ ██
+██   ██  ██████  ███████ ██████  ██   ██ ███████
+*/
+
+/* ========================= BRAND ========================= */
+/* --color-primary         Botões, links, indicadores principais         */
+/* --color-primary-hover   Hover de elementos primary                    */
+/* --color-primary-light   Badges, backgrounds sutis (10% opacidade)    */
+/* --color-primary-lighter Backgrounds muito sutis (6% opacidade)       */
+/* --color-primary-dark    Variação escura do primary                    */
+
+/* ========================= ACCENT ========================= */
+/* --color-accent          Elementos de destaque secundário             */
+/* --color-accent-hover    Hover de accent                              */
+/* --color-accent-light    Background de accent (10% opacidade)         */
+
+/* ========================= SEMANTIC ========================= */
+/* --color-info            Informação geral / azul                      */
+/* --color-success         Sucesso / online / verde                     */
+/* --color-success-light   Background de sucesso (10% opacidade)        */
+/* --color-warning         Atenção / idle / amarelo                     */
+/* --color-warning-light   Background de warning (10% opacidade)        */
+/* --color-danger          Erro / offline / perigo / vermelho           */
+/* --color-danger-light    Background de danger (10% opacidade)         */
+
+/* ========================= BACKGROUND ========================= */
+/* --color-bg-page         Fundo da página inteira                      */
+/* --color-bg-sidebar      Fundo da sidebar + modal container           */
+/* --color-bg-header       Fundo do header (com backdrop-blur)          */
+/* --color-bg-card         Fundo de cards, seções, tabelas              */
+/* --color-bg-card-hover   Hover de card                                */
+/* --color-bg-input        Fundo de input fields                        */
+/* --color-bg-hover        Hover genérico (botões ghost, etc)           */
+/* --color-bg-modal-overlay Overlay escuro por trás de modais           */
+
+/* ========================= BORDER ========================= */
+/* --color-border          Borda padrão de containers                   */
+/* --color-border-light    Borda sutil (divisórias leves)               */
+/* --color-border-input    Borda de input fields                        */
+/* --color-border-focus    Borda/ring de foco                           */
+
+/* ========================= TEXT ========================= */
+/* --color-text-primary    Títulos e texto principal                    */
+/* --color-text-secondary  Labels, texto secundário                     */
+/* --color-text-muted      Placeholder, metadados, timestamps           */
+/* --color-text-inverse    Texto sobre fundo primary (ex: botão)        */
+/* --color-text-link       Links                                        */
+/* --color-text-accent     Texto com cor primária (valores destacados)  */
+
+/* ========================= SURFACE ========================= */
+/* --color-surface         Fundo de superfície genérica                 */
+/* --color-surface-raised  Superfície elevada (cards)                   */
+/* --color-surface-overlay Camada de overlay                            */
+/* --color-surface-modal   Fundo de modal                               */
+
+/* ========================= STATUS ========================= */
+/* --color-online          Verde de conexão ativa                       */
+/* --color-online-light    Background de online                         */
+/* --color-offline         Vermelho de conexão inativa                  */
+/* --color-offline-light   Background de offline                        */
+/* --color-idle            Amarelo de status ocioso                     */
+/* --color-idle-light      Background de idle                           */
+
+/* ========================= ABC RANK ========================= */
+/* --color-abc-a           Curva A (alto giro) ~ verde                  */
+/* --color-abc-a-light     Background de curva A                        */
+/* --color-abc-b           Curva B (giro médio) ~ amarelo              */
+/* --color-abc-b-light     Background de curva B                        */
+/* --color-abc-c           Curva C (baixo giro) ~ vermelho             */
+/* --color-abc-c-light     Background de curva C                        */
+
+/* ========================= STOCK GAUGE ========================= */
+/* --color-stock-high      Estoque alto (>30 un) ~ verde               */
+/* --color-stock-medium    Estoque médio (10-30 un) ~ amarelo          */
+/* --color-stock-low       Estoque baixo (<10 un) ~ vermelho           */
+
+/* ========================= CHART ========================= */
+/* --color-chart-1         Série primária de gráficos                  */
+/* --color-chart-2         Série secundária                             */
+/* --color-chart-3         Série terciária                              */
+/* --color-chart-4         Quarta série                                 */
+/* --color-chart-5         Quinta série                                 */
+
+
+/*
+████████  ██▓██   ██▓ ██    ██  ██████  ██    ██  ██████  ██████   █████  ██████  ██   ██
+▓██   ▒ ▓██▒  ██ ▓██▒ ██    ██ ██    ██ ██    ██ ██       ██   ██ ██   ██ ██   ██ ██   ██
+▒████ ░ ▒██░ ██ ▒██░ ██    ██ ██    ██ ██    ██ ██   ███ ██████  ███████ ██████  ███████
+▓▓▓▓  ░ ░██░███ ░██░ ██    ██ ██    ██ ██    ██ ██    ██ ██   ██ ██   ██ ██   ██    ██
+▒▒▒▒     ░██░░█████░   ██████   ██████   ██████   ██████  ██   ██ ██   ██ ██   ██    ██
+*/
+
+/* --font-body             Fonte padrão para corpo de texto (Inter)     */
+/* --font-display          Fonte para títulos e KPIs (Hanken Grotesk)   */
+/* --font-mono             Fonte monoespaçada (JetBrains Mono)          */
+
+/* Font weights: normal(400), medium(500), semibold(600), bold(700), black(800) */
+/* Tracking: tight(-0.025em), wider(0.05em), widest(0.1em) */
+
+
+/*
+██████   █████  ██████  ██ ██    ██ ███████
+██   ██ ██   ██ ██   ██ ██ ██    ██ ██
+██████  ███████ ██   ██ ██ ██    ██ █████
+██   ██ ██   ██ ██   ██ ██ ██    ██ ██
+██   ██ ██   ██ ██████  ██  ██████  ███████
+*/
+
+/* --radius-sm   4px   - Inputs                                        */
+/* --radius-md   6px   - Badges pequenos                                */
+/* --radius-lg   8px   - Botões, cards secundários                      */
+/* --radius-xl   12px  - Cards principais, modal                        */
+/* --radius-2xl  16px  - Cards hero                                     */
+/* --radius-full 9999px - Pills, status dots                            */
+
+
+/*
+███████  ██   ██  █████  ██████  ███████  ██    ██ ███████
+██       ██   ██ ██   ██ ██   ██ ██       ██    ██ ██
+███████  ███████ ███████ ██   ██ █████    ██    ██ █████
+     ██ ██   ██ ██   ██ ██   ██ ██       ██    ██ ██
+███████ ██   ██ ██   ██ ██████  ███████   ██████  ███████
+*/
+
+/* --shadow-card       Sombra padrão de card                           */
+/* --shadow-card-hover Sombra de card em hover                          */
+/* --shadow-modal      Sombra de modal                                  */
+/* --shadow-kpi        Sombra de KPI (glow na cor primária)            */
+/* --shadow-toast      Sombra de toast notification                     */
+
+
+/*
+███████  ██████   █████   ██████ ██ ███    ██  ██████
+██      ██    ██ ██   ██ ██      ██ ████   ██ ██
+███████ ██    ██ ███████ ██      ██ ██ ██  ██ ██
+     ██ ██    ██ ██   ██ ██      ██ ██  ██ ██ ██
+███████  ██████  ██   ██  ██████ ██ ██   ████  ██████
+*/
+
+/* --sidebar-width       240px - Largura da sidebar desktop            */
+/* --header-height       64px  - Altura do header                      */
+/* --mobile-nav-height   64px  - Altura da bottom nav mobile           */
+/* --content-max-width   64rem - Largura máxima do conteúdo            */
+/* --card-padding        1.5rem - Padding interno de cards             */
+/* --card-gap            1.5rem - Gap entre cards no grid              */
+
+
+/*
+ █████  ███    ██ ██ ███    ███  █████   ██████  ██████  ███████
+██   ██ ████   ██ ██ ████  ████ ██   ██ ██       ██   ██ ██
+███████ ██ ██  ██ ██ ██ ████ ██ ███████ ██   ███ ██████  █████
+██   ██ ██  ██ ██ ██ ██  ██  ██ ██   ██ ██    ██ ██   ██ ██
+██   ██ ██   ████ ██ ██      ██ ██   ██  ██████  ██   ██ ███████
+*/
+
+/* --duration-fast   150ms - Hover rápido, transições curtas           */
+/* --duration-normal 200ms - Transições padrão                          */
+/* --duration-slow   300ms - Animações de entrada                       */
+/* --ease-out        cubic-bezier(0.16, 1, 0.3, 1) - Aceleração suave  */
+/* --ease-spring     cubic-bezier(0.34, 1.56, 0.64, 1) - Efeito mola  */
+
+
+/*
+  ╔═══════════════════════════════════════════════════════════════╗
+  ║  Para valores reais de cada token por tema, consulte:        ║
+  ║  - theme-vitrine.css  (tema claro original)                  ║
+  ║  - theme-flagship.css (tema escuro indigo)                   ║
+  ║  - docs/DESIGN_SYSTEM.md (referência completa)               ║
+  ╚═══════════════════════════════════════════════════════════════╝
+*/

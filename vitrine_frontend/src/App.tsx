@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
 import Busca from './pages/Busca'
@@ -26,6 +26,7 @@ import ToastContainer from './components/ToastContainer'
 import ScrollToTop from './components/ui/ScrollToTop'
 import CmdK from './components/ui/CmdK'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { ThemeProvider } from './themes/ThemeProvider'
 
 function HomeRouter() {
   const { getRole } = useAuth()
@@ -37,13 +38,9 @@ function HomeRouter() {
 }
 
 function App() {
-  useEffect(() => {
-    const saved = localStorage.getItem('app_darkMode')
-    if (saved === 'true') document.documentElement.classList.add('dark')
-  }, [])
-
   return (
     <BrowserRouter>
+      <ThemeProvider>
       <BiCacheProvider>
         <ToastProvider>
           <ErrorBoundary>
@@ -77,6 +74,7 @@ function App() {
           <ToastContainer />
         </ToastProvider>
       </BiCacheProvider>
+      </ThemeProvider>
     </BrowserRouter>
   )
 }
