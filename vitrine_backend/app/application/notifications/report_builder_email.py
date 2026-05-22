@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
-from sqlalchemy.orm import Session
+from app.core.interfaces.source import TransactionSource
 from app.application.bi.factory import criar_dominio
 from app.application.bi.reporting.relatorio import Relatorio, comparar_kpis
 from app.application.bi.schema import Metrica
@@ -74,7 +74,7 @@ def _carregar_imagens() -> list[tuple[str, bytes, str]]:
     return imagens
 
 
-def construir_relatorio_email(nome_loja: str, db: Session) -> tuple[str, list[tuple[str, bytes, str]]]:
+def construir_relatorio_email(nome_loja: str, source: TransactionSource) -> tuple[str, list[tuple[str, bytes, str]]]:
     """Retorna (html, imagens_cid)."""
     hoje = date.today()
 
@@ -87,9 +87,9 @@ def construir_relatorio_email(nome_loja: str, db: Session) -> tuple[str, list[tu
     fim_mes = hoje - timedelta(days=1)
     inicio_mes = fim_mes.replace(day=1)
 
-    dominio_semana = criar_dominio(inicio_semana, fim_semana, db)
-    dominio_semana_ant = criar_dominio(inicio_semana_ant, fim_semana_ant, db)
-    dominio_mes = criar_dominio(inicio_mes, fim_mes, db)
+    dominio_semana = criar_dominio(source, inicio_semana, fim_semana)
+    dominio_semana_ant = criar_dominio(source, inicio_semana_ant, fim_semana_ant)
+    dominio_mes = criar_dominio(source, inicio_mes, fim_mes)
 
     rel_semana = Relatorio(dominio_semana.vendas, dominio_semana.trocas)
     rel_semana_ant = Relatorio(dominio_semana_ant.vendas, dominio_semana_ant.trocas)
@@ -104,7 +104,7 @@ def construir_relatorio_email(nome_loja: str, db: Session) -> tuple[str, list[tu
     try:
         inicio_yoy = inicio_mes.replace(year=inicio_mes.year - 1)
         fim_yoy = fim_mes.replace(year=fim_mes.year - 1)
-        dominio_anterior = criar_dominio(inicio_yoy, fim_yoy, db)
+        dominio_anterior = criar_dominio(source, inicio_yoy, fim_yoy)
         rel_ant = Relatorio(dominio_anterior.vendas, dominio_anterior.trocas)
         kpis_ant = rel_ant.kpis()
         yoy = comparar_kpis(kpis_mes, kpis_ant)

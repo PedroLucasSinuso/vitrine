@@ -13,9 +13,33 @@ from sqlalchemy import select
 from app.infrastructure.db.bootstrap import init_db
 from app.application.scheduler_manager import dia_para_cron
 from app.application.config_service import get as get_config
+from app.application.config_service import montar_url_postgres
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+from app.adapters.alterdata.transaction_source import AlterdataTransactionSource
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _obter_transaction_source(db: Session) -> AlterdataTransactionSource | None:
+    """Cria um TransactionSource a partir das configs de ERP no SQLite."""
+    try:
+        url = montar_url_postgres(db)
+        if not url:
+            logger.warning("ERP não configurado — pulando envio de relatório")
+            return None
+        engine = create_engine(
+            url,
+            pool_pre_ping=True,
+            pool_size=2,
+            max_overflow=3,
+            connect_args={"connect_timeout": 10},
+        )
+        return AlterdataTransactionSource(engine)
+    except Exception as e:
+        logger.error("Erro ao conectar no ERP | erro=%s", e)
+        return None
 
 
 def _enviar_relatorio_whatsapp():
@@ -32,16 +56,21 @@ def _enviar_relatorio_whatsapp():
                 logger.warning("WhatsApp não configurado, pulando envio.")
                 return
 
+            source = _obter_transaction_source(session)
+            if source is None:
+                return
+
             contatos = session.execute(
                 select(WhatsAppContato)
             ).scalars().all()
 
-        numeros = [c.numero for c in contatos if c.numero.strip()]
-        if not numeros:
-            logger.info("WhatsApp: nenhum contato configurado, pulando.")
-            return
+            numeros = [c.numero for c in contatos if c.numero.strip()]
+            if not numeros:
+                logger.info("WhatsApp: nenhum contato configurado, pulando.")
+                return
 
-        mensagem = construir_relatorio_semanal(nome_loja, session)
+            mensagem = construir_relatorio_semanal(nome_loja, source)
+
         client = WhatsAppClient(sid, token, from_num)
         resultados = client.enviar_para_lista(numeros, mensagem)
         logger.info("Relatório WhatsApp enviado | resultados=%s", resultados)
@@ -65,18 +94,24 @@ def _enviar_relatorio_email():
                 logger.warning("SMTP não configurado, pulando envio de email")
                 return
 
+            source = _obter_transaction_source(session)
+            if source is None:
+                return
+
             contatos = session.execute(
                 select(EmailContato)
             ).scalars().all()
 
-        emails = [(c.nome, c.email) for c in contatos if c.email.strip()]
-        if not emails:
-            logger.info("Email: nenhum contato configurado, pulando.")
-            return
+            emails = [(c.nome, c.email) for c in contatos if c.email.strip()]
+            if not emails:
+                logger.info("Email: nenhum contato configurado, pulando.")
+                return
 
-        assunto = f"Relatório Semanal — {nome_loja}"
-        html, imagens = construir_relatorio_email(nome_loja, session)
-        smtp_port = int(smtp_port_str)
+            assunto = f"Relatório Semanal — {nome_loja}"
+            html, imagens = construir_relatorio_email(nome_loja, source)
+            smtp_port = int(smtp_port_str)
+
+        # Envio fora do with (não precisa de sessão)
         resultados = enviar_para_lista_com_imagens(
             emails, assunto, html, imagens,
             smtp_host=smtp_host, smtp_port=smtp_port,
