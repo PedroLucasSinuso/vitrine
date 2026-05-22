@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { Search, ClipboardList, LogOut } from 'lucide-react'
+import Card from '../components/ui/Card'
+import Button from '../components/ui/Button'
 
 export default function OperadorHome() {
   const navigate = useNavigate()
@@ -8,76 +10,67 @@ export default function OperadorHome() {
   const role = getRole()
   const nome = getNomeExibicao()
 
-  return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-8">
-      <div className="w-full max-w-md flex flex-col gap-6">
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
 
+  return (
+    <div className="flex flex-col items-center px-4 py-8">
+      <div className="w-full max-w-md flex flex-col gap-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">
-              Olá, {nome || 'Operador'}!
-            </h1>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-              O que você precisa fazer?
-            </p>
-          </div>
+          <h1 className="text-lg font-bold text-text-primary">
+            Olá, {nome || 'Operador'}!
+          </h1>
           <button
-            onClick={() => { logout(); navigate('/login') }}
-            className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+            onClick={handleLogout}
+            className="text-text-muted hover:text-danger transition p-2 rounded-lg hover:bg-danger-light"
             aria-label="Sair"
-            title="Sair"
           >
             <LogOut size={18} />
           </button>
         </div>
 
-        {/* Quick cards */}
-        <div className="flex flex-col gap-4">
+        {role === 'operador' && (
+          <p className="text-xs text-text-muted -mt-3">
+            Use o menu abaixo para navegar
+          </p>
+        )}
 
-          {/* Card: Busca */}
-          <button
-            onClick={() => navigate('/busca')}
-            className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-6 text-left hover:shadow-md hover:border-primary/30 dark:hover:border-primary/30 transition active:scale-[0.98]"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
-                <Search size={28} className="text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <p className="text-base font-bold text-slate-800 dark:text-slate-100">Buscar Produto</p>
-                <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">
-                  Consultar preço, estoque e informações
-                </p>
-              </div>
-            </div>
-          </button>
+        {/* Busca Card */}
+        <Card
+          variant="interactive"
+          onClick={() => navigate('/busca')}
+          className="flex items-center gap-4"
+        >
+          <div className="w-12 h-12 rounded-xl bg-primary-light flex items-center justify-center shrink-0">
+            <Search size={24} className="text-primary" />
+          </div>
+          <div>
+            <p className="text-base font-bold text-text-primary">Buscar Produto</p>
+            <p className="text-xs text-text-muted mt-0.5">Consultar preço e estoque por código</p>
+          </div>
+        </Card>
 
-          {/* Card: Inventário */}
-          <button
-            onClick={() => navigate('/inventario')}
-            className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-6 text-left hover:shadow-md hover:border-primary/30 dark:hover:border-primary/30 transition active:scale-[0.98]"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center shrink-0">
-                <ClipboardList size={28} className="text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <div>
-                <p className="text-base font-bold text-slate-800 dark:text-slate-100">Inventário</p>
-                <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">
-                  Bipar e contar estoque
-                </p>
-              </div>
-            </div>
-          </button>
-        </div>
+        {/* Inventário Card */}
+        <Card
+          variant="interactive"
+          onClick={() => navigate('/inventario')}
+          className="flex items-center gap-4"
+        >
+          <div className="w-12 h-12 rounded-xl bg-primary-light flex items-center justify-center shrink-0">
+            <ClipboardList size={24} className="text-primary" />
+          </div>
+          <div>
+            <p className="text-base font-bold text-text-primary">Inventário</p>
+            <p className="text-xs text-text-muted mt-0.5">Contagem e bipagem de produtos</p>
+          </div>
+        </Card>
 
-        {/* Role badge */}
-        <div className="text-center">
-          <span className="inline-block text-[10px] font-semibold px-2 py-1 rounded-full uppercase tracking-wider bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-            {role === 'operador' ? 'Operador' : role}
-          </span>
-        </div>
+        <Button variant="ghost" onClick={handleLogout} className="mt-2 w-full">
+          <LogOut size={14} /> Sair
+        </Button>
       </div>
     </div>
   )

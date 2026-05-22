@@ -10,7 +10,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Camera, Plus, Minus, Download, Trash2, LogOut, Check, FileSpreadsheet } from 'lucide-react'
 import { buscarProduto } from '../api/produtos'
-import AdminHeader from '../components/AdminHeader'
 import LeitorCodigo from '../components/LeitorCodigo'
 import { useAuth } from '../hooks/useAuth'
 import { useToast } from '../hooks/useToast'
@@ -402,8 +401,7 @@ export default function Inventario() {
   // ─── Estado A: Seleção de sessão ─────────────────────────────────────────
   if (!sessaoAtiva) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-hidden">
-        <AdminHeader titulo="Inventário" paginaAtual="inventario" />
+      <div className="flex flex-col">
         <div className="w-full max-w-2xl flex flex-col gap-5">
 
           {erro && <p className="text-red-500 text-sm" role="alert">{erro}</p>}
@@ -416,18 +414,18 @@ export default function Inventario() {
           ) : (
             <>
               {sessoes.length > 0 && (
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-5">
-                  <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-4">Sessões ativas</h2>
+                <div className="bg-bg-card rounded-xl border border-border shadow-card p-5">
+                  <h2 className="text-base font-semibold text-text-primary mb-4">Sessões ativas</h2>
                   <div className="flex flex-col gap-2">
                     {sessoes.map(s => (
                       <button
                         key={s.id}
                         onClick={() => setSessaoAtiva(s)}
-                        className="flex items-center justify-between border dark:border-slate-700 rounded-xl px-4 py-3 text-left hover:bg-primary-lighter dark:hover:bg-slate-700 transition"
+                        className="flex items-center justify-between border border-border rounded-xl px-4 py-3 text-left hover:bg-primary-lighter dark:hover:bg-slate-700 transition"
                       >
                         <div>
-                          <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">{s.nome}</p>
-                          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                          <p className="font-semibold text-sm text-text-primary">{s.nome}</p>
+                          <p className="text-xs text-text-muted mt-0.5">
                             Código: <span className="font-mono font-bold text-primary">{s.codigo_convite}</span>
                             {' · '}{s.total_operadores} operador(es) · {s.total_itens} item(ns)
                           </p>
@@ -449,7 +447,7 @@ export default function Inventario() {
                   <input
                     ref={conviteRef}
                     placeholder="Código da sessão"
-                    className="flex-1 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary uppercase"
+                    className="flex-1 border border-border-input bg-bg-input text-text-primary rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary uppercase"
                     onKeyDown={(e) => e.key === 'Enter' && handleEntrarSessao()}
                   />
                   <Button onClick={handleEntrarSessao}>
@@ -493,7 +491,7 @@ export default function Inventario() {
               onChange={(e) => setNovaSessaoNome(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCriarSessao()}
               placeholder="Nome da sessão"
-              className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full border border-border-input bg-bg-input text-text-primary rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </Modal>
 
@@ -504,15 +502,13 @@ export default function Inventario() {
 
   // ─── Estado B/C: Bipagem / Consolidado ──────────────────────────────────
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-hidden">
+    <div className="flex flex-col">
       {camera && (
         <LeitorCodigo
           onLeitura={(codigo) => { handleCodigo(codigo) }}
           onFechar={() => setCamera(false)}
         />
       )}
-
-      <AdminHeader titulo="Inventário" paginaAtual="inventario" />
 
       <div className="w-full max-w-2xl flex flex-col gap-5">
 
@@ -523,8 +519,8 @@ export default function Inventario() {
               ← Voltar
             </button>
             <div className="min-w-0">
-              <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{sessaoAtiva.nome}</h2>
-              <p className="text-xs text-slate-400 dark:text-slate-500 font-mono">Código: {sessaoAtiva.codigo_convite}</p>
+              <h2 className="text-sm font-bold text-text-primary truncate">{sessaoAtiva.nome}</h2>
+              <p className="text-xs text-text-muted font-mono">Código: {sessaoAtiva.codigo_convite}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -537,13 +533,13 @@ export default function Inventario() {
         </div>
 
         {/* Input de bipagem */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-5">
-          <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-4">Bipar produtos</h2>
+        <div className="bg-bg-card rounded-xl border border-border shadow-card p-5">
+          <h2 className="text-base font-semibold text-text-primary mb-4">Bipar produtos</h2>
           <div className="flex gap-2">
             <input
               ref={inputRef}
               aria-label="Código do produto"
-              className="flex-1 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+              className="flex-1 border border-border-input bg-bg-input text-text-primary rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="Digite ou bipe o código"
               onKeyDown={handleKeyDown}
               autoFocus
@@ -566,11 +562,11 @@ export default function Inventario() {
 
         {/* Lista de itens */}
         {itens.length > 0 && (
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-5">
+          <div className="bg-bg-card rounded-xl border border-border shadow-card p-5">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
+              <h2 className="text-base font-semibold text-text-primary">
                 Contagem
-                <span className="text-slate-400 dark:text-slate-500 font-normal text-sm ml-2">
+                <span className="text-text-muted font-normal text-sm ml-2">
                   ({itens.length} produtos · {totalItens} unidades)
                 </span>
               </h2>
@@ -597,8 +593,8 @@ export default function Inventario() {
                   className="flex justify-between items-center border dark:border-slate-700 rounded-lg px-4 py-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition"
                 >
                   <div className="min-w-0 flex-1">
-                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{item.codigo}</span>
-                    <span className="text-xs text-slate-400 dark:text-slate-500 ml-2 truncate block sm:inline">
+                    <span className="text-sm font-semibold text-text-primary">{item.codigo}</span>
+                    <span className="text-xs text-text-muted ml-2 truncate block sm:inline">
                       {item.nome} {item.grupo && item.familia ? `• ${item.grupo} / ${item.familia}` : ''}
                     </span>
                     {item.nome === 'Não cadastrado' && (
@@ -607,7 +603,7 @@ export default function Inventario() {
                       </span>
                     )}
                     {item.observacao && (
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 truncate italic">
+                      <p className="text-[10px] text-text-muted mt-0.5 truncate italic">
                         Obs: {item.observacao}
                       </p>
                     )}
@@ -629,7 +625,7 @@ export default function Inventario() {
                         if (e.key === 'Enter') definirQuantidade(item.codigo, (e.target as HTMLInputElement).value)
                       }}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-14 text-center text-sm font-semibold text-slate-700 dark:text-slate-200 bg-transparent border border-slate-300 dark:border-slate-600 rounded-lg px-1 py-1 focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-14 text-center text-sm font-semibold text-text-primary bg-transparent border border-slate-300 dark:border-slate-600 rounded-lg px-1 py-1 focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                     <button
                       onClick={(e) => { e.stopPropagation(); ajustarQuantidade(item.codigo, 1) }}
@@ -645,16 +641,16 @@ export default function Inventario() {
         )}
 
         {itens.length === 0 && (
-          <p className="text-sm text-slate-400 dark:text-slate-500 text-center">Nenhum item bipado ainda</p>
+          <p className="text-sm text-text-muted text-center">Nenhum item bipado ainda</p>
         )}
 
         {/* Consolidado Geral — supervisor only */}
         {isSupervisor && (
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-5">
+          <div className="bg-bg-card rounded-xl border border-border shadow-card p-5">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
+              <h2 className="text-base font-semibold text-text-primary">
                 Consolidado Geral
-                <span className="text-slate-400 dark:text-slate-500 font-normal text-sm ml-2">
+                <span className="text-text-muted font-normal text-sm ml-2">
                   ({consolidadoItems.length} produtos · {totalConsolidado} unidades)
                 </span>
               </h2>
@@ -670,7 +666,7 @@ export default function Inventario() {
             </div>
 
             {consolidadoItems.length === 0 && !consolidadoLoading && (
-              <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4">Nenhum item em nenhuma sessão</p>
+              <p className="text-sm text-text-muted text-center py-4">Nenhum item em nenhuma sessão</p>
             )}
 
             {consolidadoItems.length > 0 && (
@@ -678,14 +674,14 @@ export default function Inventario() {
                 {consolidadoItems.slice(0, 20).map(item => (
                   <div key={item.codigo} className="flex justify-between items-center px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-700/50">
                     <div className="min-w-0 flex-1">
-                      <span className="text-xs font-mono text-slate-500 dark:text-slate-400">{item.codigo}</span>
-                      <span className="text-xs text-slate-400 dark:text-slate-500 ml-2 truncate">{item.nome}</span>
+                      <span className="text-xs font-mono text-text-muted">{item.codigo}</span>
+                      <span className="text-xs text-text-muted ml-2 truncate">{item.nome}</span>
                     </div>
-                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200 w-12 text-right">{item.quantidade}</span>
+                    <span className="text-sm font-bold text-text-primary w-12 text-right">{item.quantidade}</span>
                   </div>
                 ))}
                 {consolidadoItems.length > 20 && (
-                  <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-2">
+                  <p className="text-xs text-text-muted text-center py-2">
                     +{consolidadoItems.length - 20} produtos
                   </p>
                 )}
@@ -714,7 +710,7 @@ export default function Inventario() {
             <p className="text-sm text-slate-600 dark:text-slate-300">
               O código <strong>{naoCadastradoModal?.codigo}</strong> não está cadastrado no sistema.
             </p>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
+            <p className="text-xs text-text-muted">
               Se quiser, adicione uma observação para o supervisor ajustar o cadastro depois.
             </p>
             <input
@@ -723,7 +719,7 @@ export default function Inventario() {
               onChange={(e) => setNaoCadastradoObs(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleAdicionarNaoCadastrado() }}
               placeholder="Ex: EAN estava no rótulo do produto"
-              className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full border border-border-input bg-bg-input text-text-primary rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
         </Modal>
@@ -741,8 +737,8 @@ export default function Inventario() {
         >
           {editSheetItem && (
             <div>
-              <p className="font-semibold text-slate-800 dark:text-slate-100">{editSheetItem.codigo}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{editSheetItem.nome}</p>
+              <p className="font-semibold text-text-primary">{editSheetItem.codigo}</p>
+              <p className="text-xs text-text-muted mt-0.5">{editSheetItem.nome}</p>
               <div className="flex items-center gap-6 mt-5 justify-center">
                 <button
                   onClick={() => ajustarQuantidade(editSheetItem.codigo, -1)}
@@ -765,7 +761,7 @@ export default function Inventario() {
                       setEditSheetItem(null)
                     }
                   }}
-                  className="w-20 text-center text-xl font-bold text-slate-800 dark:text-slate-100 bg-transparent border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-20 text-center text-xl font-bold text-text-primary bg-transparent border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
                   autoFocus
                 />
                 <button
@@ -776,7 +772,7 @@ export default function Inventario() {
                 </button>
               </div>
               {editSheetItem.observacao && (
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-3 text-center italic">
+                <p className="text-xs text-text-muted mt-3 text-center italic">
                   Obs: {editSheetItem.observacao}
                 </p>
               )}

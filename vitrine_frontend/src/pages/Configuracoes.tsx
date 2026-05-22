@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import AdminHeader from '../components/AdminHeader'
+import Card from '../components/ui/Card'
 import ListaContatosWhatsApp from '../components/ListaContatosWhatsApp'
 import ListaContatosEmail from '../components/ListaContatosEmail'
 import PasswordConfigInput from '../components/PasswordConfigInput'
@@ -101,12 +101,12 @@ function CompactInput({
 }: { label: string; icon?: React.ElementType } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
-        {Icon && <Icon size={11} className="text-slate-400 dark:text-slate-500" />}
+      <label className="text-[11px] font-medium text-text-muted flex items-center gap-1">
+        {Icon && <Icon size={11} className="text-text-muted" />}
         {label}
       </label>
       <input
-        className="w-full border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary transition placeholder:text-slate-300 dark:placeholder:text-slate-600"
+        className="w-full border border-border-input bg-bg-input text-text-primary rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary transition placeholder:text-text-muted"
         {...inputProps}
       />
     </div>
@@ -118,12 +118,12 @@ function CompactSelect({
 }: { label: string; icon?: React.ElementType; children: React.ReactNode } & React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
-        {Icon && <Icon size={11} className="text-slate-400 dark:text-slate-500" />}
+      <label className="text-[11px] font-medium text-text-muted flex items-center gap-1">
+        {Icon && <Icon size={11} className="text-text-muted" />}
         {label}
       </label>
       <select
-        className="w-full border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary transition"
+        className="w-full border border-border-input bg-bg-input text-text-primary rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary transition"
         {...selectProps}
       >
         {children}
@@ -135,12 +135,12 @@ function CompactSelect({
 function SectionHeader({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description?: string }) {
   return (
     <div className="flex items-start gap-2.5 mb-3">
-      <div className="mt-0.5 p-1.5 rounded-lg bg-primary/10 dark:bg-primary/15 text-primary">
+      <div className="mt-0.5 p-1.5 rounded-lg bg-primary-light text-primary">
         <Icon size={14} />
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{title}</h3>
-        {description && <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{description}</p>}
+        <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
+        {description && <p className="text-[11px] text-text-muted mt-0.5">{description}</p>}
       </div>
     </div>
   )
@@ -241,9 +241,8 @@ export default function Configuracoes() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-auto">
-        <AdminHeader titulo="Configurações" paginaAtual="configuracoes" />
-        <div className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500 mt-8">
+      <div className="flex flex-col items-center px-4 py-6">
+        <div className="flex items-center gap-2 text-sm text-text-muted mt-8">
           <Loader2 size={16} className="animate-spin" /> Carregando...
         </div>
       </div>
@@ -251,13 +250,11 @@ export default function Configuracoes() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-auto">
-      <AdminHeader titulo="Configurações" paginaAtual="configuracoes" />
-
+    <div className="flex flex-col px-4 py-4">
       <div className="w-full max-w-3xl flex flex-col gap-4">
 
         {/* Tab bar */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-1">
+        <Card variant="default" className="p-1">
           <div className="flex gap-0.5 overflow-x-auto">
             {TABS.map(({ id, label, icon: Icon }) => (
               <button
@@ -266,7 +263,7 @@ export default function Configuracoes() {
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap shrink-0 ${
                   activeTab === id
                     ? 'bg-primary text-white shadow-sm'
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 hover:text-slate-700 dark:hover:text-slate-200'
+                    : 'text-text-muted hover:bg-bg-hover hover:text-text-primary'
                 }`}
               >
                 <Icon size={13} />
@@ -274,10 +271,10 @@ export default function Configuracoes() {
               </button>
             ))}
           </div>
-        </div>
+        </Card>
 
         {/* Tab content */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm">
+        <Card variant="default" className="!p-0">
 
           {/* ════════════════════════════════════════════ */}
           {/* ── GERAL ── */}
@@ -777,7 +774,7 @@ export default function Configuracoes() {
               </button>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Save bar */}
         <div className="flex items-center justify-center gap-3 py-2">
