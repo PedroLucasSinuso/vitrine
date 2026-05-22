@@ -14,6 +14,8 @@ class Dimensao(Enum):
 class Metrica(Enum):
     RECEITA = "receita_produto"
     QUANTIDADE = "qtd_item"
+    QTD_TICKETS = "qtd_tickets"
+    TICKET_MEDIO = "ticket_medio"
 
 @dataclass(frozen=True)
 class Colunas:

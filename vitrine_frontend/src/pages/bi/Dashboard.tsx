@@ -1,7 +1,10 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format, formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import {
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
+} from 'recharts'
 import PeriodoForm, { type Preset } from '../../components/bi/PeriodoForm'
 import BiPageLayout from '../../components/bi/BiPageLayout'
 import ExportButtons from '../../components/bi/ExportButtons'
@@ -10,14 +13,16 @@ import KpiCard from '../../components/bi/KpiCard'
 import HeroKpiCard from '../../components/bi/HeroKpiCard'
 import ErrorBanner from '../../components/ui/ErrorBanner'
 import Card from '../../components/ui/Card'
-import { fetchKpis, fetchKpisComparativo, fetchRanking, exportarExcelBI } from '../../api/bi'
+import { fetchKpis, fetchKpisComparativo, fetchRanking, fetchDiario, exportarExcelBI } from '../../api/bi'
 import { baixarCSVdeArray } from '../../utils/csv'
-import type { KpisDTO, KpisComparativoDTO, ItemRankingDTO, PeriodoBi } from '../../types'
+import { getConfigsCache } from '../../stores/configStore'
+import type { KpisDTO, KpisComparativoDTO, ItemRankingDTO, PontoDiarioDTO, PeriodoBi } from '../../types'
 import { formatCurrency } from '../../utils/formatters'
 import { useBiCache } from '../../stores/biCache'
 import { useToast } from '../../hooks/useToast'
 import { useCountUp } from '../../hooks/useCountUp'
-import { Clock, TrendingUp, ArrowRight, RefreshCw } from 'lucide-react'
+import { CHART_THEME, formatChartCurrency, formatChartNumber } from '../../config/chartTheme'
+import { Clock, TrendingUp, ArrowRight, RefreshCw, Target } from 'lucide-react'
 import Skeleton from '../../components/ui/Skeleton'
 
 const PRESETS_DASHBOARD: Preset[] = [
@@ -33,6 +38,14 @@ function periodoInicial(): PeriodoBi {
   return { data_inicio: hoje, data_fim: hoje }
 }
 
+function periodoMesAtual(): PeriodoBi {
+  const hoje = new Date()
+  return {
+    data_inicio: format(hoje, 'yyyy-MM-01'),
+    data_fim: format(hoje, 'yyyy-MM-dd'),
+  }
+}
+
 function variacaoInfo(pct: number | null): { valor: number; direcao: 'positivo' | 'negativo' | 'estavel' } | null {
   if (pct === null) return null
   if (pct > 0) return { valor: pct, direcao: 'positivo' }
@@ -40,7 +53,11 @@ function variacaoInfo(pct: number | null): { valor: number; direcao: 'positivo' 
   return { valor: 0, direcao: 'estavel' }
 }
 
-const maxValor = (items: ItemRankingDTO[]) => Math.max(...items.map((i) => i.valor), 1)
+/** Format date string for chart ticks */
+function formatDateTick(value: string): string {
+  const d = new Date(value + 'T00:00:00')
+  return format(d, 'dd/MM')
+}
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -53,8 +70,17 @@ export default function Dashboard() {
   const [erro, setErro] = useState<string | null>(null)
   const [pulseKey, setPulseKey] = useState(0)
 
+  // ── Meta / Projeção ──
+  const [metaMensal, setMetaMensal] = useState<number | null>(null)
+  const [receitaMesAtual, setReceitaMesAtual] = useState<number | null>(null)
+  const [loadingMeta, setLoadingMeta] = useState(true)
+
+  // ── Gráficos de tendência ──
+  const [diarioTicketMedio, setDiarioTicketMedio] = useState<PontoDiarioDTO[]>([])
+  const [diarioTickets, setDiarioTickets] = useState<PontoDiarioDTO[]>([])
+  const [loadingDiario, setLoadingDiario] = useState(false)
+
   const kpisAtivos = kpisComp ?? kpis
-  const topMax = useMemo(() => maxValor(topProdutos), [topProdutos])
 
   const animFatBruto = useCountUp(kpisAtivos ? (kpisComp ? kpisComp.faturamento_bruto.atual : (kpis as KpisDTO).faturamento_bruto) : 0, 600, !!kpisAtivos)
   const animFatLiq = useCountUp(kpisAtivos ? (kpisComp ? kpisComp.faturamento_liquido.atual : (kpis as KpisDTO).faturamento_liquido) : 0, 600, !!kpisAtivos)
@@ -70,8 +96,44 @@ export default function Dashboard() {
   const cacheFresh = cacheTimestamp ? cacheTimestamp > now - 300000 : false
   const { toast } = useToast()
 
+  // ── Carregar meta + receita do mês atual ──
+  useEffect(() => {
+    getConfigsCache().then((c) => {
+      const val = c.meta_faturamento_mensal
+      if (val && Number(val) > 0) setMetaMensal(Number(val))
+    }).catch(() => {})
+    fetchKpis(periodoMesAtual())
+      .then((k) => setReceitaMesAtual(k.faturamento_bruto))
+      .catch(() => {})
+      .finally(() => setLoadingMeta(false))
+  }, [])
+
+  // ── Carregar dados diários para os gráficos ──
+  const buscarDiario = useCallback(async (p: PeriodoBi) => {
+    // Só busca se período > 1 dia
+    if (p.data_inicio === p.data_fim) {
+      setDiarioTicketMedio([])
+      setDiarioTickets([])
+      return
+    }
+    setLoadingDiario(true)
+    try {
+      const [tm, qt] = await Promise.all([
+        fetchDiario(p, 'ticket_medio'),
+        fetchDiario(p, 'qtd_tickets'),
+      ])
+      setDiarioTicketMedio(tm)
+      setDiarioTickets(qt)
+    } catch {
+      // silencioso
+    } finally {
+      setLoadingDiario(false)
+    }
+  }, [])
+
   const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false) => {
     const p = periodoOverride ?? periodo
+    buscarDiario(p)
     if (!force) {
       const cached = cache.get<{ kpis: KpisDTO | KpisComparativoDTO; ranking: ItemRankingDTO[] }>(cacheKey, p)
       if (cached) {
@@ -112,7 +174,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
-  }, [periodo, comparar, cache, cacheKey])
+  }, [periodo, comparar, cache, cacheKey, buscarDiario])
 
   const isFirstRender = useRef(true)
   useEffect(() => {
@@ -130,9 +192,22 @@ export default function Dashboard() {
     buscar(periodoOverride, true)
   }
 
+  // ── Cálculos de meta / projeção ──
+  const hoje = new Date()
+  const diasCorridos = hoje.getDate()
+  const ultimoDiaMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate()
+  const pctMeta = metaMensal && receitaMesAtual ? (receitaMesAtual / metaMensal) * 100 : null
+  const projecao = receitaMesAtual != null && diasCorridos > 0
+    ? (receitaMesAtual / diasCorridos) * ultimoDiaMes
+    : null
+  const projecaoVsMeta = metaMensal && projecao ? ((projecao / metaMensal) * 100) - 100 : null
+
+  // ── Estado vazio para gráficos ──
+  const temGraficos = diarioTicketMedio.length > 1 || diarioTickets.length > 1
+
   return (
     <BiPageLayout titulo="BI" breadcrumb={[{ label: 'BI' }]}>
-      {/* Top bar: periodo + controls side by side */}
+      {/* Top bar: periodo + controls */}
       <div className="flex flex-col md:flex-row md:items-start gap-4 md:gap-6">
         <div className="flex-1 min-w-0">
           <PeriodoForm
@@ -144,7 +219,7 @@ export default function Dashboard() {
           />
         </div>
         <div className="flex flex-col gap-3 md:items-end md:pt-1 shrink-0">
-          <label className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 cursor-pointer select-none">
+          <label className="flex items-center gap-1.5 text-sm text-text-muted cursor-pointer select-none">
             <input
               type="checkbox"
               checked={comparar}
@@ -155,8 +230,8 @@ export default function Dashboard() {
           </label>
           <div className="flex items-center gap-3">
             {cacheTimestamp && (
-              <span className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 font-medium" title={`Cache atualizado às ${format(new Date(cacheTimestamp), 'HH:mm:ss')}`}>
-                <RefreshCw size={12} className={cacheFresh ? 'text-emerald-500' : 'text-amber-500'} />
+              <span className="flex items-center gap-1.5 text-xs text-text-muted font-medium" title={`Cache atualizado às ${format(new Date(cacheTimestamp), 'HH:mm:ss')}`}>
+                <RefreshCw size={12} className={cacheFresh ? 'text-success' : 'text-warning'} />
                 {formatDistanceToNow(new Date(cacheTimestamp), { locale: ptBR, addSuffix: true })}
               </span>
             )}
@@ -167,16 +242,16 @@ export default function Dashboard() {
             />
           </div>
           {kpisComp?.dados_parciais_ate && (
-            <span className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/30 dark:text-amber-400 px-2.5 py-1 rounded-full">
+            <span className="text-xs text-warning bg-warning-light px-2.5 py-1 rounded-full">
               <Clock size={12} className="inline mr-1" /> Parcial até {kpisComp.dados_parciais_ate}
             </span>
           )}
-          </div>
         </div>
+      </div>
 
       {erro && <ErrorBanner message={erro} />}
 
-      {/* KPI section */}
+      {/* ── KPI section ── */}
       {kpisAtivos && (
         <div className="flex flex-col gap-4">
           {/* Hero KPI */}
@@ -187,6 +262,57 @@ export default function Dashboard() {
             variacao={kpisComp ? variacaoInfo(kpisComp.faturamento_bruto.variacao_pct) : null}
             valorAnterior={kpisComp?.faturamento_bruto.anterior != null ? formatCurrency(kpisComp.faturamento_bruto.anterior) : undefined}
           />
+
+          {/* Meta + Projeção — só se meta configurada */}
+          {pctMeta != null && !loadingMeta && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* MetaCard */}
+              <Card variant="bordered" className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Target size={16} className="text-primary" />
+                  <span className="text-xs font-semibold text-text-primary uppercase tracking-wider">Meta do Mês</span>
+                </div>
+                <div className="flex items-baseline gap-1.5 mb-2">
+                  <span className="text-2xl font-bold text-text-primary">{pctMeta.toFixed(0)}%</span>
+                  <span className="text-xs text-text-muted">atingido</span>
+                </div>
+                {/* Barra de progresso */}
+                <div className="h-2 bg-bg-hover rounded-full overflow-hidden mb-2">
+                  <div
+                    className="h-full bg-gradient-to-r from-primary to-primary-light rounded-full transition-all duration-700"
+                    style={{ width: `${Math.min(pctMeta, 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-text-muted">
+                  <span className="font-semibold text-text-secondary">{formatCurrency(receitaMesAtual ?? 0)}</span>
+                  {' / '}
+                  <span>{formatCurrency(metaMensal ?? 0)}</span>
+                </p>
+              </Card>
+
+              {/* ProjecaoCard */}
+              <Card variant="bordered" className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp size={16} className="text-primary" />
+                  <span className="text-xs font-semibold text-text-primary uppercase tracking-wider">Projeção</span>
+                </div>
+                <div className="flex items-baseline gap-1.5 mb-1">
+                  <span className="text-2xl font-bold text-text-primary">{formatCurrency(projecao ?? 0)}</span>
+                </div>
+                {projecaoVsMeta != null && (
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-xs font-semibold ${projecaoVsMeta >= 0 ? 'text-success' : 'text-danger'}`}>
+                      {projecaoVsMeta >= 0 ? '▲' : '▼'} {Math.abs(projecaoVsMeta).toFixed(1)}% vs meta
+                    </span>
+                  </div>
+                )}
+                <p className="text-xs text-text-muted mt-1">
+                  {diasCorridos} de {ultimoDiaMes} dias • {formatCurrency((receitaMesAtual ?? 0) / diasCorridos)}/dia
+                </p>
+              </Card>
+            </div>
+          )}
+
           {/* Secondary KPIs */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <KpiCard label="Faturamento Líquido" valor={formatCurrency(animFatLiq)} delay={80}
@@ -212,25 +338,96 @@ export default function Dashboard() {
         <EmptyState title="Selecione um período" description="Escolha um período para analisar os dados." />
       )}
 
-      {/* Top 5 Ranking */}
-      {loading && topProdutos.length === 0 && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 p-5">
-          <Skeleton className="h-5 w-48 mb-4" />
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 mb-3">
-              <Skeleton className="h-6 w-6 rounded-full" />
-              <Skeleton className="h-4 flex-1" />
-              <Skeleton className="h-4 w-20" />
+      {/* ── Gráficos de Tendência ── */}
+      {temGraficos && (
+        <Card variant="bordered" className="p-5">
+          <h2 className="text-sm font-semibold text-text-primary font-display flex items-center gap-2 mb-4">
+            <TrendingUp size={16} className="text-primary" />
+            Tendências no Período
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Ticket Médio */}
+            <div>
+              <p className="text-xs text-text-muted mb-2 font-medium">Ticket Médio</p>
+              <ResponsiveContainer width="100%" height={180}>
+                <AreaChart data={diarioTicketMedio} margin={CHART_THEME.margin}>
+                  <defs>
+                    <linearGradient id="gradTm" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.2} />
+                      <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="data" tickFormatter={formatDateTick} {...CHART_THEME.xAxis} />
+                  <YAxis {...CHART_THEME.yAxis} tickFormatter={formatChartCurrency} />
+                  <Tooltip
+                    cursor={CHART_THEME.tooltip.cursor}
+                    contentStyle={CHART_THEME.tooltip.contentStyle}
+                    formatter={((v: number) => formatCurrency(v)) as never}
+                    labelFormatter={((l: string) => format(new Date(l + 'T00:00:00'), 'dd/MM/yyyy')) as never}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="valor"
+                    stroke="var(--color-primary)"
+                    fill="url(#gradTm)"
+                    strokeWidth={CHART_THEME.area.strokeWidth}
+                    fillOpacity={CHART_THEME.area.fillOpacity}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
-          ))}
+            {/* Tickets */}
+            <div>
+              <p className="text-xs text-text-muted mb-2 font-medium">Tickets</p>
+              <ResponsiveContainer width="100%" height={180}>
+                <AreaChart data={diarioTickets} margin={CHART_THEME.margin}>
+                  <defs>
+                    <linearGradient id="gradTk" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--color-chart-2)" stopOpacity={0.2} />
+                      <stop offset="100%" stopColor="var(--color-chart-2)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="data" tickFormatter={formatDateTick} {...CHART_THEME.xAxis} />
+                  <YAxis {...CHART_THEME.yAxis} tickFormatter={formatChartNumber} />
+                  <Tooltip
+                    cursor={CHART_THEME.tooltip.cursor}
+                    contentStyle={CHART_THEME.tooltip.contentStyle}
+                    formatter={((v: number) => (v ?? 0).toLocaleString('pt-BR')) as never}
+                    labelFormatter={((l: string) => format(new Date(l + 'T00:00:00'), 'dd/MM/yyyy')) as never}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="valor"
+                    stroke="var(--color-chart-2)"
+                    fill="url(#gradTk)"
+                    strokeWidth={CHART_THEME.area.strokeWidth}
+                    fillOpacity={CHART_THEME.area.fillOpacity}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* ── Loading dos gráficos ── */}
+      {loadingDiario && !temGraficos && periodo.data_inicio !== periodo.data_fim && (
+        <div className="bg-bg-card border border-border rounded-xl p-5">
+          <Skeleton className="h-5 w-48 mb-4" />
+          <div className="grid grid-cols-2 gap-6">
+            <Skeleton className="h-[180px] rounded-lg" />
+            <Skeleton className="h-[180px] rounded-lg" />
+          </div>
         </div>
       )}
+
+      {/* ── Mini Ranking Compacto ── */}
       {topProdutos.length > 0 && (
-        <Card variant="bordered">
-          <div className="flex items-center justify-between mb-4">
+        <Card variant="bordered" className="p-4">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <TrendingUp size={16} className="text-primary" />
-              <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Top 5 Produtos</h2>
+              <TrendingUp size={15} className="text-primary" />
+              <h2 className="text-sm font-semibold text-text-primary">Top Produtos</h2>
             </div>
             <button
               onClick={() => navigate('/bi/ranking')}
@@ -239,40 +436,40 @@ export default function Dashboard() {
               Ver completo <ArrowRight size={12} />
             </button>
           </div>
-          <div className="flex flex-col gap-2">
-            {topProdutos.map((item, i) => {
-              const pct = (item.valor / topMax) * 100
-              return (
-                <div
-                  key={item.codigo}
-                  onClick={() => navigate(`/bi/sku?codigo=${item.codigo}`)}
-                  className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition"
-                >
-                  <span className="text-xs font-bold text-slate-300 dark:text-slate-600 w-5 shrink-0 text-center">
-                    {i + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-mono text-slate-400 dark:text-slate-500 shrink-0">{item.codigo}</span>
-                      <span className="text-sm text-slate-700 dark:text-slate-300 truncate" title={item.produto}>
-                        {item.produto}
-                      </span>
-                    </div>
-                    <div className="h-1.5 bg-slate-50 dark:bg-slate-700 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-primary to-primary-light rounded-full transition-all duration-500"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 shrink-0">
-                    {formatCurrency(item.valor)}
-                  </span>
-                </div>
-              )
-            })}
+          <div className="flex flex-col gap-1">
+            {topProdutos.map((item, i) => (
+              <div
+                key={item.codigo}
+                onClick={() => navigate(`/bi/sku?codigo=${item.codigo}`)}
+                className="group flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-bg-hover cursor-pointer transition"
+              >
+                <span className="text-xs font-bold text-text-muted w-5 shrink-0 text-center">
+                  {i + 1}
+                </span>
+                <span className="flex-1 text-sm text-text-primary truncate min-w-0" title={item.produto}>
+                  {item.produto}
+                </span>
+                <span className="text-xs font-semibold text-text-primary shrink-0 tabular-nums">
+                  {formatCurrency(item.valor)}
+                </span>
+              </div>
+            ))}
           </div>
         </Card>
+      )}
+
+      {/* ── Ranking Skeleton ── */}
+      {loading && topProdutos.length === 0 && (
+        <div className="bg-bg-card border border-border rounded-xl p-4">
+          <Skeleton className="h-5 w-36 mb-3" />
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 px-2 py-1.5">
+              <Skeleton className="h-4 w-5" />
+              <Skeleton className="h-4 flex-1" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+          ))}
+        </div>
       )}
     </BiPageLayout>
   )

@@ -21,6 +21,7 @@ import {
   Check, Loader2, Database, Mail, MessageSquare, Brain, Settings, Store,
   Activity, RefreshCw, Eye, EyeOff, MapPin, Building2, Clock,
   Key, Globe, Hash, Lock, Send, Calendar, FileText, Upload, Image as ImageIcon,
+  Target, DollarSign,
 } from 'lucide-react'
 
 const REPORT_DAYS = [
@@ -91,6 +92,7 @@ interface ConfigForm {
   anthropic_api_key?: string
   openai_api_key?: string
   relatorio_dias_retroativos?: string
+  meta_faturamento_mensal?: string
 }
 
 const TEST_WARNING = 'Testa a configuração salva no servidor, não as alterações pendentes'
@@ -325,7 +327,6 @@ export default function Configuracoes() {
                     <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 ml-1">
                       Exibido no cabeçalho e nos relatórios
                     </p>
-                  </div>
                 </div>
               </div>
 
@@ -399,6 +400,25 @@ export default function Configuracoes() {
                   </div>
                 </div>
               </div>
+
+              {/* Metas section */}
+              <div>
+                <SectionHeader icon={Target} title="Metas" description="Metas de faturamento para projeção no dashboard" />
+                <div className="ml-9 flex flex-col gap-3">
+                  <CompactInput
+                    label="Meta de Faturamento Mensal (R$)"
+                    icon={DollarSign}
+                    type="number"
+                    value={form.meta_faturamento_mensal ?? ''}
+                    onChange={(e) => updateField('meta_faturamento_mensal', e.target.value)}
+                    placeholder="100000"
+                  />
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 ml-1">
+                    Usada para calcular o percentual atingido e a projeção de receita no Dashboard
+                  </p>
+                </div>
+              </div>
+            </div>
             </div>
           )}
 

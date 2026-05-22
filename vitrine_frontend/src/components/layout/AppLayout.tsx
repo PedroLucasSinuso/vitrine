@@ -10,8 +10,8 @@ export default function AppLayout() {
       <AppHeader />
 
       {/* Main content */}
-      <main className="lg:ml-[240px] pt-[64px] pb-[64px] lg:pb-0">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+      <main className="lg:ml-[240px] pt-16 pb-[64px] lg:pb-0">
+        <div className="px-4 sm:px-6 py-6">
           <Outlet />
         </div>
       </main>

@@ -11,11 +11,11 @@ interface MobileTab {
 }
 
 const tabs: MobileTab[] = [
-  { label: 'Dashboard',   path: '/bi',          icon: <LayoutDashboard size={22} />, roles: ['supervisor', 'admin'] },
-  { label: 'Busca',       path: '/busca',       icon: <Search size={22} />,          roles: ['operador', 'supervisor', 'admin'] },
-  { label: 'Inventário',  path: '/inventario',  icon: <Package size={22} />,         roles: ['operador', 'supervisor', 'admin'] },
-  { label: 'Admin',       path: '/admin',                icon: <ShieldAlert size={22} />, roles: ['admin'] },
-  { label: 'Config',      path: '/admin/configuracoes', icon: <Settings size={22} />,    roles: ['admin'] },
+  { label: 'Resumo',     path: '/bi/dashboard-consolidado', icon: <LayoutDashboard size={22} />, roles: ['supervisor', 'admin'] },
+  { label: 'Busca',      path: '/busca',                    icon: <Search size={22} />,          roles: ['operador', 'supervisor', 'admin'] },
+  { label: 'Inventário', path: '/inventario',               icon: <Package size={22} />,         roles: ['operador', 'supervisor', 'admin'] },
+  { label: 'Admin',      path: '/admin',                    icon: <ShieldAlert size={22} />,     roles: ['admin'] },
+  { label: 'Config',     path: '/admin/configuracoes',      icon: <Settings size={22} />,        roles: ['admin'] },
 ]
 
 export default function MobileNav() {
@@ -27,7 +27,8 @@ export default function MobileNav() {
   const visibleTabs = tabs.filter(tab => role && tab.roles.includes(role))
 
   const isActive = (path: string) => {
-    if (path === '/bi') return location.pathname.startsWith('/bi')
+    // Resumo tab lights up for any BI page on mobile (it's the BI hub)
+    if (path === '/bi/dashboard-consolidado') return location.pathname.startsWith('/bi')
     return location.pathname === path
   }
 

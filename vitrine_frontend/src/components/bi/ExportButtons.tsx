@@ -1,3 +1,5 @@
+import Button from '../ui/Button'
+
 interface Props {
   onExcel?: () => void
   onCsv?: () => void
@@ -8,22 +10,14 @@ export default function ExportButtons({ onExcel, onCsv, disabled }: Props) {
   return (
     <div className="flex gap-2">
       {onExcel && (
-        <button
-          onClick={onExcel}
-          disabled={disabled}
-          className="text-xs bg-green-600 hover:bg-green-700 disabled:opacity-40 text-white font-semibold px-3 py-1.5 rounded-lg transition"
-        >
+        <Button size="sm" variant="secondary" onClick={onExcel} disabled={disabled}>
           Excel
-        </button>
+        </Button>
       )}
       {onCsv && (
-        <button
-          onClick={onCsv}
-          disabled={disabled}
-          className="text-xs bg-gray-600 hover:bg-slate-700 disabled:opacity-40 text-white font-semibold px-3 py-1.5 rounded-lg transition"
-        >
+        <Button size="sm" variant="secondary" onClick={onCsv} disabled={disabled}>
           CSV
-        </button>
+        </Button>
       )}
     </div>
   )

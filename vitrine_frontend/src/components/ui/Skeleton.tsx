@@ -15,7 +15,7 @@ const variants: Record<string, string> = {
 export default function Skeleton({ className = '', variant = 'text' }: Props) {
   return (
     <div
-      className={`animate-pulse bg-slate-200 dark:bg-slate-700/50 ${variants[variant]} ${className}`}
+      className={`animate-pulse bg-bg-hover ${variants[variant]} ${className}`}
     />
   )
 }

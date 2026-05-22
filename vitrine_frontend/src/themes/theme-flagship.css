@@ -9,84 +9,85 @@
 [data-theme="flagship"] {
   /* ========================= COLORS ========================= */
 
-  /* Brand */
-  --color-primary: #6366f1;
-  --color-primary-hover: #4f46e5;
-  --color-primary-light: rgba(99, 102, 241, 0.10);
-  --color-primary-lighter: rgba(99, 102, 241, 0.06);
-  --color-primary-dark: #3730a3;
+  /* Brand — indigo-violet vibrante */
+  --color-primary: #818cf8;
+  --color-primary-hover: #6366f1;
+  --color-primary-light: rgba(129, 140, 248, 0.15);
+  --color-primary-lighter: rgba(129, 140, 248, 0.08);
+  --color-primary-dark: #4f46e5;
 
-  /* Accent */
-  --color-accent: #f59e0b;
-  --color-accent-hover: #d97706;
-  --color-accent-light: rgba(245, 158, 11, 0.10);
+  /* Accent — amber quente */
+  --color-accent: #fbbf24;
+  --color-accent-hover: #f59e0b;
+  --color-accent-light: rgba(251, 191, 36, 0.15);
 
-  /* Semantic */
-  --color-info: #3b82f6;
-  --color-success: #10b981;
-  --color-success-light: rgba(16, 185, 129, 0.10);
-  --color-warning: #f59e0b;
-  --color-warning-light: rgba(245, 158, 11, 0.10);
-  --color-danger: #f43f5e;
-  --color-danger-light: rgba(244, 63, 94, 0.10);
+  /* Semantic — mais saturados para destaque */
+  --color-info: #60a5fa;
+  --color-success: #34d399;
+  --color-success-light: rgba(52, 211, 153, 0.15);
+  --color-warning: #fbbf24;
+  --color-warning-light: rgba(251, 191, 36, 0.15);
+  --color-danger: #fb7185;
+  --color-danger-light: rgba(251, 113, 133, 0.15);
 
-  /* Background */
-  --color-bg-page: #0f172a;               /* slate-900 */
-  --color-bg-sidebar: #020617;            /* slate-950 */
-  --color-bg-header: rgba(15, 23, 42, 0.80); /* slate-900/80 */
-  --color-bg-card: rgba(30, 41, 59, 0.30);  /* slate-800/30 */
-  --color-bg-card-hover: rgba(30, 41, 59, 0.40);
-  --color-bg-input: #020617;              /* slate-950 */
-  --color-bg-hover: rgba(30, 41, 59, 0.50);
-  --color-bg-modal-overlay: rgba(2, 6, 23, 0.65);
+  /* Background — deep navy com toque indigo */
+  --color-bg-page: #0b1120;
+  --color-bg-sidebar: #060d1a;
+  --color-bg-header: rgba(11, 17, 32, 0.80);
+  --color-bg-card: rgba(30, 41, 59, 0.45);
+  --color-bg-card-hover: rgba(30, 41, 59, 0.60);
+  --color-bg-input: #060d1a;
+  --color-bg-hover: rgba(51, 65, 85, 0.40);
+  --color-bg-modal-overlay: rgba(2, 6, 23, 0.70);
+  --color-bg-sidebar-item-active: rgba(129, 140, 248, 0.10);
 
-  /* Border */
-  --color-border: #334155;                /* slate-700 */
-  --color-border-light: rgba(51, 65, 85, 0.50);
-  --color-border-input: #1e293b;          /* slate-800 */
-  --color-border-focus: #6366f1;          /* indigo-500 */
+  /* Border — mais sutis */
+  --color-border: rgba(51, 65, 85, 0.60);
+  --color-border-light: rgba(51, 65, 85, 0.30);
+  --color-border-input: #1e293b;
+  --color-border-focus: #818cf8;
 
-  /* Text */
-  --color-text-primary: #f1f5f9;          /* slate-100 */
-  --color-text-secondary: #94a3b8;        /* slate-400 */
-  --color-text-muted: #64748b;            /* slate-500 */
-  --color-text-inverse: #0f172a;          /* slate-900 */
-  --color-text-link: #818cf8;             /* indigo-400 */
-  --color-text-accent: #6366f1;           /* indigo-500 */
+  /* Text — alto contraste */
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #e2e8f0;
+  --color-text-muted: #94a3b8;
+  --color-text-inverse: #0b1120;
+  --color-text-link: #a5b4fc;
+  --color-text-accent: #818cf8;
 
   /* Surface */
-  --color-surface: #1e293b;               /* slate-800 */
-  --color-surface-raised: #334155;        /* slate-700 */
-  --color-surface-overlay: rgba(2, 6, 23, 0.65);
-  --color-surface-modal: #020617;         /* slate-950 */
+  --color-surface: rgba(30, 41, 59, 0.45);
+  --color-surface-raised: rgba(51, 65, 85, 0.50);
+  --color-surface-overlay: rgba(2, 6, 23, 0.70);
+  --color-surface-modal: #060d1a;
 
-  /* Status */
-  --color-online: #10b981;
-  --color-online-light: rgba(16, 185, 129, 0.10);
-  --color-offline: #f43f5e;
-  --color-offline-light: rgba(244, 63, 94, 0.10);
-  --color-idle: #f59e0b;
-  --color-idle-light: rgba(245, 158, 11, 0.10);
+  /* Status — vibrantes */
+  --color-online: #34d399;
+  --color-online-light: rgba(52, 211, 153, 0.15);
+  --color-offline: #fb7185;
+  --color-offline-light: rgba(251, 113, 133, 0.15);
+  --color-idle: #fbbf24;
+  --color-idle-light: rgba(251, 191, 36, 0.15);
 
   /* ABC Rank */
-  --color-abc-a: #10b981;
-  --color-abc-a-light: rgba(16, 185, 129, 0.15);
-  --color-abc-b: #f59e0b;
-  --color-abc-b-light: rgba(245, 158, 11, 0.15);
-  --color-abc-c: #f43f5e;
-  --color-abc-c-light: rgba(244, 63, 94, 0.15);
+  --color-abc-a: #34d399;
+  --color-abc-a-light: rgba(52, 211, 153, 0.20);
+  --color-abc-b: #fbbf24;
+  --color-abc-b-light: rgba(251, 191, 36, 0.20);
+  --color-abc-c: #fb7185;
+  --color-abc-c-light: rgba(251, 113, 133, 0.20);
 
   /* Stock gauge */
-  --color-stock-high: #10b981;
-  --color-stock-medium: #f59e0b;
-  --color-stock-low: #f43f5e;
+  --color-stock-high: #34d399;
+  --color-stock-medium: #fbbf24;
+  --color-stock-low: #fb7185;
 
-  /* Chart */
-  --color-chart-1: #6366f1;               /* indigo-500 */
-  --color-chart-2: #64748b;               /* slate-500 */
-  --color-chart-3: #10b981;               /* emerald-500 */
-  --color-chart-4: #f59e0b;               /* amber-500 */
-  --color-chart-5: #f43f5e;               /* rose-500 */
+  /* Chart — paleta rica para data viz */
+  --color-chart-1: #818cf8;
+  --color-chart-2: #34d399;
+  --color-chart-3: #fbbf24;
+  --color-chart-4: #fb7185;
+  --color-chart-5: #60a5fa;
 
   /* ========================= TYPOGRAPHY ========================= */
 
@@ -115,11 +116,11 @@
 
   /* ========================= SHADOWS ========================= */
 
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.30);
-  --shadow-card-hover: 0 8px 12px -2px rgba(0, 0, 0, 0.40);
-  --shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.50);
-  --shadow-kpi: 0 4px 6px -1px rgba(99, 102, 241, 0.10);
-  --shadow-toast: 0 10px 15px -3px rgba(0, 0, 0, 0.40);
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.30);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.30);
+  --shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.60);
+  --shadow-kpi: 0 4px 12px rgba(129, 140, 248, 0.15);
+  --shadow-toast: 0 10px 20px rgba(0, 0, 0, 0.40);
 
   /* ========================= SPACING / LAYOUT ========================= */
 

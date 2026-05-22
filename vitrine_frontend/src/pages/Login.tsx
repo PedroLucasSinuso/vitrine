@@ -5,6 +5,7 @@ import { TrendingUp, Shield, BarChart3, AlertCircle } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
+import Logo from '../components/ui/Logo'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -39,7 +40,7 @@ export default function Login() {
       {/* Left panel — brand / value prop (hidden on mobile) */}
       <div className="hidden md:flex flex-col justify-between px-16 py-12 flex-1 relative">
         <div>
-          <img src="/vitrine_logo.svg" alt="Vitrine" className="h-8 w-auto mb-12" />
+          <Logo height={32} className="text-text-primary mb-12" />
           <h1 className="text-4xl font-bold text-text-primary mb-6 leading-tight tracking-tight">
             Gestão inteligente<br />
             <span className="text-primary">para o seu supermercado</span>
@@ -85,7 +86,7 @@ export default function Login() {
         <div className="w-full max-w-sm">
           {/* Logo on mobile */}
           <div className="lg:hidden text-center mb-10">
-            <img src="/vitrine_logo.svg" alt="Vitrine" className="h-8 mx-auto mb-4" />
+            <Logo height={32} className="text-text-primary mx-auto" />
           </div>
 
           <Card variant="elevated" className="p-8">

@@ -84,6 +84,8 @@ CHAVES_EDITAVEIS: set[str] = {
     # Aba Sistema
     "anthropic_api_key",
     "openai_api_key",
+    # Aba Metas
+    "meta_faturamento_mensal",
 }
 
 # Chaves sensíveis — nunca retornar valor real no GET.

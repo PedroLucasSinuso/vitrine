@@ -34,9 +34,9 @@ function periodoInicial(): PeriodoBi {
 }
 
 const CURVA_BADGE: Record<CurvaAbc, string> = {
-  A: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
-  B: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
-  C: 'bg-slate-100 text-slate-700 dark:bg-slate-600 dark:text-slate-200',
+  A: 'bg-abc-a-light text-abc-a',
+  B: 'bg-abc-b-light text-abc-b',
+  C: 'bg-abc-c-light text-abc-c',
 }
 
 export default function CurvaAbc() {
@@ -179,7 +179,7 @@ export default function CurvaAbc() {
                       <Cell key={idx} fill={CURVA_CORES[statsPorCurva[idx].curva]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v) => formatCurrency(Number(v))} />
+                  <Tooltip formatter={(v) => formatCurrency(Number(v))} cursor={{ fill: 'rgba(100,100,100,0.06)' }} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex justify-center gap-4 mt-2">

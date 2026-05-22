@@ -31,10 +31,10 @@ export default function KpiCard({ label, valor, delay = 0, pulseKey, variacao, i
 
   const varColor = variacao
     ? invertVariation
-      ? variacao.direcao === 'negativo' ? 'text-green-600 dark:text-green-400'
-        : variacao.direcao === 'positivo' ? 'text-red-600 dark:text-red-400' : 'text-slate-400'
-      : variacao.direcao === 'positivo' ? 'text-green-600 dark:text-green-400'
-        : variacao.direcao === 'negativo' ? 'text-red-600 dark:text-red-400' : 'text-slate-400'
+      ? variacao.direcao === 'negativo' ? 'text-success'
+        : variacao.direcao === 'positivo' ? 'text-danger' : 'text-text-muted'
+      : variacao.direcao === 'positivo' ? 'text-success'
+        : variacao.direcao === 'negativo' ? 'text-danger' : 'text-text-muted'
     : ''
 
   const VarIcon = variacao
@@ -44,11 +44,11 @@ export default function KpiCard({ label, valor, delay = 0, pulseKey, variacao, i
 
   return (
     <div
-      className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/50 p-4 md:p-5 flex flex-col animate-fade-in-up ${pulsing ? 'animate-pulse-glow' : ''}`}
+      className={`bg-bg-card border border-border rounded-xl p-4 md:p-5 flex flex-col animate-fade-in-up ${pulsing ? 'animate-pulse-glow' : ''}`}
       style={{ animationDelay: `${delay}ms` }}
     >
-      <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mb-1.5">{label}</p>
-      <p className="text-base md:text-xl font-bold text-slate-800 dark:text-slate-100 break-words mb-2">
+      <p className="text-xs text-text-muted font-medium mb-1.5">{label}</p>
+      <p className="text-base md:text-xl font-bold text-text-primary break-words mb-2">
         {valor}
       </p>
       {variacao && (
@@ -58,8 +58,8 @@ export default function KpiCard({ label, valor, delay = 0, pulseKey, variacao, i
         </span>
       )}
       {valorAnterior && !variacao && (
-        <span className="text-xs text-slate-400 dark:text-slate-500 mt-auto">
-          Ano passado: <span className="font-medium text-slate-500 dark:text-slate-300">{valorAnterior}</span>
+          <span className="text-xs text-text-muted mt-auto">
+            Ano passado: <span className="font-medium text-text-secondary">{valorAnterior}</span>
         </span>
       )}
     </div>

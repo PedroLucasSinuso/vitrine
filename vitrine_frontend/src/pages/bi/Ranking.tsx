@@ -94,9 +94,9 @@ export default function Ranking() {
           <PeriodoForm value={periodo} onChange={setPeriodo} onBuscar={handleBuscar} loading={loading} presets={PRESETS_RANKING} />
           <div className="flex gap-4 flex-wrap">
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-500 dark:text-slate-400">Métrica</label>
+              <label className="text-xs text-text-muted">Métrica</label>
               <select
-                className="border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="border border-border-input bg-bg-input text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 value={metrica}
                 onChange={(e) => { const val = e.target.value as Metrica; setMetrica(val); syncParams(val, top) }}
               >
@@ -105,9 +105,9 @@ export default function Ranking() {
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-500 dark:text-slate-400">Top</label>
+              <label className="text-xs text-text-muted">Top</label>
               <select
-                className="border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="border border-border-input bg-bg-input text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 value={top}
                 onChange={(e) => { const val = Number(e.target.value); setTop(val); syncParams(metrica, val) }}
               >
@@ -150,11 +150,11 @@ export default function Ranking() {
             {dados.map((item, i) => (
               <div key={item.codigo} className="flex flex-col gap-1">
                 <div className="flex justify-between items-baseline">
-                  <span className="text-sm text-slate-700 dark:text-slate-300">
-                    <span className="text-slate-400 dark:text-slate-500 mr-2">{i + 1}.</span>
+                  <span className="text-sm text-text-primary">
+                    <span className="text-text-muted mr-2">{i + 1}.</span>
                     {item.produto}
                   </span>
-                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                  <span className="text-sm font-semibold text-text-primary">
                     {isReceita ? formatCurrency(item.valor) : item.valor.toLocaleString('pt-BR')}
                   </span>
                 </div>

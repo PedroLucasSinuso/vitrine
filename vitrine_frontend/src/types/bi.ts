@@ -1,5 +1,5 @@
 export type Dimensao = 'produto' | 'grupo' | 'familia'
-export type Metrica = 'receita_produto' | 'qtd_item'
+export type Metrica = 'receita_produto' | 'qtd_item' | 'qtd_tickets' | 'ticket_medio'
 export type CurvaAbc = 'A' | 'B' | 'C'
 
 export interface KpisDTO {

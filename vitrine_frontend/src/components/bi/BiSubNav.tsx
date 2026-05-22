@@ -1,20 +1,24 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { LayoutDashboard, TrendingUp, BarChart3, PieChart, RefreshCw, Percent, Clock, Search } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
 interface Tab {
   label: string
+  icon: LucideIcon
   path: string
 }
 
 const TABS: Tab[] = [
-  { label: 'Dashboard', path: '/bi' },
-  { label: 'Receita', path: '/bi/receita' },
-  { label: 'Ranking', path: '/bi/ranking' },
-  { label: 'Curva ABC', path: '/bi/curva-abc' },
-  { label: 'Trocas', path: '/bi/trocas' },
-  { label: 'Perdas e Consumo', path: '/bi/perdas-consumo' },
-  { label: 'Temporal', path: '/bi/temporal' },
-  { label: 'SKU', path: '/bi/sku' },
+  { label: 'Dashboard', icon: LayoutDashboard, path: '/bi' },
+  { label: 'Consolidado', icon: LayoutDashboard, path: '/bi/dashboard-consolidado' },
+  { label: 'Receita', icon: TrendingUp, path: '/bi/receita' },
+  { label: 'Ranking', icon: BarChart3, path: '/bi/ranking' },
+  { label: 'Curva ABC', icon: PieChart, path: '/bi/curva-abc' },
+  { label: 'Trocas', icon: RefreshCw, path: '/bi/trocas' },
+  { label: 'Perdas', icon: Percent, path: '/bi/perdas-consumo' },
+  { label: 'Temporal', icon: Clock, path: '/bi/temporal' },
+  { label: 'SKU', icon: Search, path: '/bi/sku' },
 ]
 
 export default function BiSubNav() {
@@ -28,24 +32,22 @@ export default function BiSubNav() {
     return () => clearTimeout(t)
   }, [])
 
-  // Scroll active tab into view within the scroll container
+  const activeIndex = TABS.findIndex((tab) => location.pathname === tab.path)
+
   const scrollActiveTab = useCallback(() => {
-    const activeIndex = TABS.findIndex((tab) => location.pathname === tab.path)
     const container = scrollRef.current
     if (!container || activeIndex < 0) return
 
-    const activeEl = container.children[0]?.children[activeIndex] as HTMLElement
-    if (!activeEl) return
+    const children = container.children[0]?.children
+    if (!children || !children[activeIndex]) return
 
+    const activeEl = children[activeIndex] as HTMLElement
     const targetScroll = activeEl.offsetLeft - container.offsetWidth / 2 + activeEl.offsetWidth / 2
     container.scrollTo({ left: targetScroll, behavior: 'smooth' })
-  }, [location.pathname])
+  }, [activeIndex])
 
-  useEffect(() => {
-    scrollActiveTab()
-  }, [scrollActiveTab])
+  useEffect(() => { scrollActiveTab() }, [scrollActiveTab])
 
-  // Re-scroll on resize/orientation change — fixes mobile auto-rotate layout break
   useEffect(() => {
     const handleResize = () => requestAnimationFrame(scrollActiveTab)
     window.addEventListener('resize', handleResize)
@@ -58,14 +60,13 @@ export default function BiSubNav() {
 
   return (
     <div
-      className={`w-full mb-4 transition-all duration-300 ease-in-out ${
+      className={`w-full transition-all duration-300 ease-in-out ${
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
       }`}
     >
-      {/* Outer scroll container — block element, overflow triggers scroll */}
       <div
         ref={scrollRef}
-        className="overflow-x-auto pb-2"
+        className="overflow-x-auto"
         style={{
           WebkitOverflowScrolling: 'touch',
           overscrollBehaviorX: 'contain',
@@ -73,22 +74,28 @@ export default function BiSubNav() {
           scrollbarWidth: 'none',
         }}
       >
-        {/* Inner wrapper — inline-flex sizes to content, forcing overflow */}
-        <div style={{ display: 'inline-flex', gap: '8px', whiteSpace: 'nowrap' }}>
-          {TABS.map((tab) => {
-            const ativo = location.pathname === tab.path
+        <div className="inline-flex gap-1 p-1 rounded-xl bg-bg-card border border-border min-w-0">
+          {TABS.map((tab, i) => {
+            const ativo = activeIndex === i
             return (
               <button
                 key={tab.path}
                 onClick={() => navigate(tab.path)}
-                style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
-                className={`rounded-xl py-2 px-3 text-xs font-semibold transition shadow-sm ${
-                  ativo
-                    ? 'bg-primary text-white'
-                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                }`}
+                className={`
+                  relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                  transition-all duration-200 shrink-0
+                  ${ativo
+                    ? 'bg-primary text-white shadow-sm shadow-primary/20'
+                    : 'text-text-muted hover:text-text-primary hover:bg-bg-hover'
+                  }
+                `}
               >
-                {tab.label}
+                <tab.icon size={14} strokeWidth={ativo ? 2.5 : 1.5} />
+                <span className="whitespace-nowrap">{tab.label}</span>
+                {/* Active glow dot */}
+                {ativo && (
+                  <span className="absolute -bottom-[3px] left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white" />
+                )}
               </button>
             )
           })}

@@ -20,6 +20,7 @@ const BiTrocas = React.lazy(() => import('./pages/bi/Trocas'))
 const BiPerdasConsumo = React.lazy(() => import('./pages/bi/PerdasConsumo'))
 const BiTemporal = React.lazy(() => import('./pages/bi/Temporal'))
 const BiSku = React.lazy(() => import('./pages/bi/Sku'))
+const BiDashboardConsolidado = React.lazy(() => import('./pages/bi/DashboardConsolidado'))
 import { BiCacheProvider } from './stores/biCache'
 import { ToastProvider } from './hooks/useToast'
 import ToastContainer from './components/ToastContainer'
@@ -67,6 +68,7 @@ function App() {
                 <Route path="/bi/perdas-consumo" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiPerdasConsumo /></ProtectedRoute>} />
                 <Route path="/bi/temporal" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiTemporal /></ProtectedRoute>} />
                 <Route path="/bi/sku" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiSku /></ProtectedRoute>} />
+                <Route path="/bi/dashboard-consolidado" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiDashboardConsolidado /></ProtectedRoute>} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

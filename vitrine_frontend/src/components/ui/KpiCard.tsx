@@ -15,9 +15,11 @@ interface Props {
 
 export default function KpiCard({ label, value, trend, icon, className = '' }: Props) {
   return (
-    <div className={`bg-bg-card border border-border rounded-xl p-6 transition-all hover:border-border-light ${className}`}>
+    <div className={`relative bg-bg-card border border-border rounded-xl p-6 transition-all duration-fast hover:shadow-card-hover hover:-translate-y-0.5 overflow-hidden ${className}`}>
+      {/* Accent bar — primary color on top */}
+      <div className="absolute inset-x-0 top-0 h-0.5 bg-primary rounded-t-xl" />
       <div className="flex justify-between items-start mb-4">
-        <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-text-muted">
+        <span className="text-[11px] font-mono font-bold uppercase tracking-widest text-text-muted">
           {label}
         </span>
         {icon && (
@@ -27,7 +29,7 @@ export default function KpiCard({ label, value, trend, icon, className = '' }: P
         )}
       </div>
       <div className="space-y-1">
-        <h3 className="text-2xl font-black font-display text-text-primary">
+        <h3 className="text-2xl font-black font-display text-text-primary tabular-nums tracking-tight">
           {value}
         </h3>
         {trend && (

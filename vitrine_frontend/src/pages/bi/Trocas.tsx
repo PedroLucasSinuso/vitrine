@@ -117,18 +117,18 @@ export default function Trocas() {
 
           <Card variant="bordered">
             <SectionHeader>
-              Por produto <span className="text-slate-400 dark:text-slate-500 font-normal">({dados.por_produto.length})</span>
+              Por produto <span className="text-text-muted font-normal">({dados.por_produto.length})</span>
             </SectionHeader>
             {dados.por_produto.length === 0 ? (
-              <p className="text-sm text-slate-400 dark:text-slate-500">Nenhuma troca no período.</p>
+              <p className="text-sm text-text-muted">Nenhuma troca no período.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm table-fixed">
                   <thead>
-                    <tr className="border-b dark:border-slate-700 text-left">
-                      <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium w-28">Código</th>
-                      <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium w-full">Produto</th>
-                      <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium text-right w-28">Valor</th>
+                    <tr className="border-b border-border text-left">
+                      <th className="pb-2 text-xs text-text-muted font-medium w-28">Código</th>
+                      <th className="pb-2 text-xs text-text-muted font-medium w-full">Produto</th>
+                      <th className="pb-2 text-xs text-text-muted font-medium text-right w-28">Valor</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -136,11 +136,11 @@ export default function Trocas() {
                         <tr
                           key={i}
                           onClick={() => navigate(`/bi/sku?codigo=${item.codigo}`)}
-                          className="border-b dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer"
+                          className="border-b border-border last:border-0 hover:bg-bg-hover cursor-pointer"
                         >
-                          <td className="py-2 text-slate-400 dark:text-slate-500 font-mono truncate" title={item.codigo}>{item.codigo}</td>
-                          <td className="py-2 text-slate-700 dark:text-slate-300 truncate" title={item.produto}>{item.produto}</td>
-                          <td className="py-2 text-right font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(item.receita)}</td>
+                          <td className="py-2 text-text-muted font-mono truncate" title={item.codigo}>{item.codigo}</td>
+                          <td className="py-2 text-text-primary truncate" title={item.produto}>{item.produto}</td>
+                          <td className="py-2 text-right font-semibold text-text-primary">{formatCurrency(item.receita)}</td>
                         </tr>
                       ))}
                   </tbody>
