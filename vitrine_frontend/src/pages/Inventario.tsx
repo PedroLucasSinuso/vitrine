@@ -16,6 +16,7 @@ import { useToast } from '../hooks/useToast'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import Skeleton from '../components/ui/Skeleton'
+import Card from '../components/ui/Card'
 import {
   getSessoesInventario,
   criarSessaoInventario,
@@ -434,7 +435,7 @@ export default function Inventario() {
           ) : (
             <>
               {sessoes.length > 0 && (
-                <div className="bg-bg-card rounded-xl border border-border shadow-card p-5">
+                <Card variant="bordered" padding="md">
                   <h2 className="text-base font-semibold text-text-primary mb-4">Sessões ativas</h2>
                   <div className="flex flex-col gap-2">
                     {sessoes.map(s => (
@@ -454,7 +455,7 @@ export default function Inventario() {
                       </button>
                     ))}
                   </div>
-                </div>
+                </Card>
               )}
 
               <div className="flex flex-col sm:flex-row gap-3">
@@ -553,7 +554,7 @@ export default function Inventario() {
         </div>
 
         {/* Input de bipagem */}
-        <div className="bg-bg-card rounded-xl border border-border shadow-card p-5">
+        <Card variant="bordered" padding="md">
           <h2 className="text-base font-semibold text-text-primary mb-4">Bipar produtos</h2>
           <div className="flex gap-2">
             <input
@@ -578,11 +579,11 @@ export default function Inventario() {
             </div>
           )}
           {erro && <p className="text-red-500 text-sm mt-2" role="alert">{erro}</p>}
-        </div>
+        </Card>
 
         {/* Lista de itens */}
         {itens.length > 0 && (
-          <div className="bg-bg-card rounded-xl border border-border shadow-card p-5">
+          <Card variant="bordered" padding="md">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-base font-semibold text-text-primary">
                 Contagem
@@ -661,7 +662,7 @@ export default function Inventario() {
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         )}
 
         {itens.length === 0 && (
@@ -670,7 +671,7 @@ export default function Inventario() {
 
         {/* Consolidado Geral — supervisor only */}
         {isSupervisor && (
-          <div className="bg-bg-card rounded-xl border border-border shadow-card p-5">
+          <Card variant="bordered" padding="md">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-base font-semibold text-text-primary">
                 Consolidado Geral
@@ -711,7 +712,7 @@ export default function Inventario() {
                 )}
               </div>
             )}
-          </div>
+          </Card>
         )}
 
         {/* Modal Produto Não Cadastrado */}

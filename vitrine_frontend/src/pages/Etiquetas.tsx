@@ -70,7 +70,7 @@ export default function Etiquetas() {
       <div className="w-full max-w-md flex flex-col gap-5">
 
         {/* Input card */}
-        <Card variant="elevated" className="p-6">
+        <Card variant="elevated" padding="lg">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-primary-light flex items-center justify-center">
               <Tag size={20} className="text-primary" />
@@ -102,7 +102,7 @@ export default function Etiquetas() {
 
         {/* Lista card */}
         {itens.length > 0 && (
-          <Card variant="elevated" className="p-6">
+          <Card variant="elevated" padding="lg">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
                 <Plus size={16} className="text-text-muted" />

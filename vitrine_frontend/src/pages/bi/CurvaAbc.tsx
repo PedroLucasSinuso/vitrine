@@ -147,7 +147,7 @@ export default function CurvaAbc() {
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {statsPorCurva.map(({ curva, qtd, receita, pctReceita }) => (
-              <Card key={curva} variant="bordered" className="flex flex-col items-center text-center gap-1 p-4">
+              <Card key={curva} variant="bordered" padding="sm" className="flex flex-col items-center text-center gap-1">
                 <span className={`text-xs font-semibold px-2 py-1 rounded-full ${CURVA_BADGE[curva]}`}>
                   Curva {curva}
                 </span>

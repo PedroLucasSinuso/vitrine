@@ -243,7 +243,7 @@ export default function DashboardConsolidado() {
       {/* ── Chart + Ranking grid ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Revenue chart */}
-        <Card variant="default" className="lg:col-span-2 p-5">
+        <Card variant="default" className="lg:col-span-2" padding="md">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-text-primary font-display flex items-center gap-2">
               <TrendingUp size={16} className="text-primary" />
@@ -308,7 +308,7 @@ export default function DashboardConsolidado() {
         </Card>
 
         {/* Top 5 ranking */}
-        <Card variant="default" className="p-5">
+        <Card variant="default" padding="md">
           <h2 className="text-sm font-semibold text-text-primary font-display flex items-center gap-2 mb-4">
             <BarChart3 size={16} className="text-primary" />
             Top 5 Produtos

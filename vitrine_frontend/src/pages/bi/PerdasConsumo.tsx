@@ -149,19 +149,19 @@ export default function PerdasConsumo() {
         <>
           {perdas && consumo && (
             <div className="grid grid-cols-2 gap-3">
-              <Card variant="bordered" className="flex flex-col items-center text-center gap-1 p-4">
+              <Card variant="bordered" padding="sm" className="flex flex-col items-center text-center gap-1">
                 <TrendingDown size={16} className="text-danger" />
                 <p className="text-xs text-text-muted font-medium">Perdas</p>
                 <p className="text-xl font-bold text-danger">{formatCurrency(animPerdas)}</p>
                 <p className="text-xs text-text-muted">{perdas.por_produto.length} produtos</p>
               </Card>
-              <Card variant="bordered" className="flex flex-col items-center text-center gap-1 p-4">
+              <Card variant="bordered" padding="sm" className="flex flex-col items-center text-center gap-1">
                 <PackageOpen size={16} className="text-warning" />
                 <p className="text-xs text-text-muted font-medium">Consumo</p>
                 <p className="text-xl font-bold text-warning">{formatCurrency(animConsumo)}</p>
                 <p className="text-xs text-text-muted">{consumo.por_produto.length} produtos</p>
               </Card>
-              <Card variant="bordered" className="flex flex-col items-center text-center gap-1 p-4 col-span-2">
+              <Card variant="bordered" padding="sm" className="flex flex-col items-center text-center gap-1 col-span-2">
                 <p className="text-xs text-text-muted font-medium">Proporção</p>
                 <p className="text-xl font-bold text-text-primary">
                   {perdas.total > 0

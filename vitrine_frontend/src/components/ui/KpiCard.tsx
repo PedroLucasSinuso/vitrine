@@ -97,7 +97,7 @@ export default function KpiCard({
 
   return (
     <div
-      className={`relative bg-bg-card border border-border rounded-xl p-6 transition-all duration-fast hover:shadow-card-hover hover:-translate-y-0.5 overflow-hidden animate-fade-in-up ${pulsing ? 'animate-pulse-glow' : ''} ${className}`}
+      className={`relative card-bordered p-5 transition-all duration-fast hover:shadow-card-hover hover:-translate-y-0.5 overflow-hidden animate-fade-in-up ${pulsing ? 'animate-pulse-glow' : ''} ${className}`}
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="absolute inset-x-0 top-0 h-0.5 bg-primary rounded-t-xl" />

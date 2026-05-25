@@ -194,7 +194,7 @@ export default function Busca() {
 
       {produto && (
         <>
-        <Card variant="elevated" className="w-full max-w-md">
+        <Card variant="elevated" padding="md" className="w-full max-w-md">
           <div>
             <p className="text-xs text-text-muted uppercase tracking-wider font-medium">Produto</p>
             <p className="text-base md:text-lg font-bold text-text-primary break-words">{produto.nome}</p>

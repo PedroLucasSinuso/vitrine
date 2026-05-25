@@ -277,7 +277,7 @@ export default function Configuracoes() {
         </Card>
 
         {/* Tab content */}
-        <Card variant="default" className="!p-0">
+        <Card variant="default" padding="none">
 
           {/* ════════════════════════════════════════════ */}
           {/* ── GERAL ── */}

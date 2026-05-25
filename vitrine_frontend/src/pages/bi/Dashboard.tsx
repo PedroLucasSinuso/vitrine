@@ -267,7 +267,7 @@ export default function Dashboard() {
           {pctMeta != null && !loadingMeta && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* MetaCard */}
-              <Card variant="bordered" className="p-4">
+              <Card variant="bordered" padding="sm">
                 <div className="flex items-center gap-2 mb-3">
                   <Target size={16} className="text-primary" />
                   <span className="text-xs font-semibold text-text-primary uppercase tracking-wider">Meta do Mês</span>
@@ -291,7 +291,7 @@ export default function Dashboard() {
               </Card>
 
               {/* ProjecaoCard */}
-              <Card variant="bordered" className="p-4">
+              <Card variant="bordered" padding="sm">
                 <div className="flex items-center gap-2 mb-3">
                   <TrendingUp size={16} className="text-primary" />
                   <span className="text-xs font-semibold text-text-primary uppercase tracking-wider">Projeção</span>
@@ -340,7 +340,7 @@ export default function Dashboard() {
 
       {/* ── Gráficos de Tendência ── */}
       {temGraficos && (
-        <Card variant="bordered" className="p-5">
+        <Card variant="bordered" padding="md">
           <h2 className="text-sm font-semibold text-text-primary font-display flex items-center gap-2 mb-4">
             <TrendingUp size={16} className="text-primary" />
             Tendências no Período
@@ -412,18 +412,18 @@ export default function Dashboard() {
 
       {/* ── Loading dos gráficos ── */}
       {loadingDiario && !temGraficos && periodo.data_inicio !== periodo.data_fim && (
-        <div className="bg-bg-card border border-border rounded-xl p-5">
+        <Card variant="bordered" padding="md">
           <Skeleton className="h-5 w-48 mb-4" />
           <div className="grid grid-cols-2 gap-6">
             <Skeleton className="h-[180px] rounded-lg" />
             <Skeleton className="h-[180px] rounded-lg" />
           </div>
-        </div>
+        </Card>
       )}
 
       {/* ── Mini Ranking Compacto ── */}
       {topProdutos.length > 0 && (
-        <Card variant="bordered" className="p-4">
+        <Card variant="bordered" padding="sm">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <TrendingUp size={15} className="text-primary" />
@@ -460,7 +460,7 @@ export default function Dashboard() {
 
       {/* ── Ranking Skeleton ── */}
       {loading && topProdutos.length === 0 && (
-        <div className="bg-bg-card border border-border rounded-xl p-4">
+        <Card variant="bordered" padding="sm">
           <Skeleton className="h-5 w-36 mb-3" />
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3 px-2 py-1.5">
@@ -469,7 +469,7 @@ export default function Dashboard() {
               <Skeleton className="h-4 w-16" />
             </div>
           ))}
-        </div>
+        </Card>
       )}
     </BiPageLayout>
   )

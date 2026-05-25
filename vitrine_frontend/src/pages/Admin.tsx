@@ -166,7 +166,7 @@ export default function Admin() {
         </Card>
 
         {/* History */}
-        <Card variant="elevated" className="p-6">
+        <Card variant="elevated" padding="lg">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-bg-card flex items-center justify-center">
               <Clock size={20} className="text-text-muted" />
