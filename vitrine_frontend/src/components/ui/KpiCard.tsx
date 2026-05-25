@@ -6,6 +6,20 @@ interface VariacaoInfo {
   direcao: 'positivo' | 'negativo' | 'estavel'
 }
 
+interface MetaInfo {
+  pct: number
+  atual: number
+  meta: number
+}
+
+interface ProjecaoInfo {
+  valor: number
+  vsMetaPct: number | null
+  diasCorridos: number
+  diasTotal: number
+  mediaDiaria: number
+}
+
 interface Props {
   label: string
   value?: string
@@ -23,6 +37,18 @@ interface Props {
   variacao?: VariacaoInfo | null
   invertVariation?: boolean
   valorAnterior?: string
+  meta?: MetaInfo | null
+  projecao?: ProjecaoInfo | null
+}
+
+function formatCurrencyShort(value: number): string {
+  if (value >= 1_000_000) {
+    return `R$ ${(value / 1_000_000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}M`
+  }
+  if (value >= 1_000) {
+    return `R$ ${(value / 1_000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}k`
+  }
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
 export default function KpiCard({
@@ -38,6 +64,8 @@ export default function KpiCard({
   variacao,
   invertVariation,
   valorAnterior,
+  meta,
+  projecao,
 }: Props) {
   const [pulsing, setPulsing] = useState(false)
   const pulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -91,6 +119,45 @@ export default function KpiCard({
             </span>
           )}
         </div>
+
+        {/* Meta + Projeção inline */}
+        {meta && (
+          <div className="mt-5 pt-4 border-t border-primary/10">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-text-primary uppercase tracking-wider">Meta do Mês</span>
+              <span className="text-xs font-bold text-text-primary">{meta.pct.toFixed(0)}%</span>
+            </div>
+            <div className="h-2 bg-bg-hover rounded-full overflow-hidden mb-2">
+              <div
+                className="h-full bg-gradient-to-r from-primary to-primary-light rounded-full transition-all duration-700"
+                style={{ width: `${Math.min(meta.pct, 100)}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between text-xs text-text-muted">
+              <span>
+                <span className="font-semibold text-text-secondary">{formatCurrencyShort(meta.atual)}</span>
+                {' / '}
+                <span>{formatCurrencyShort(meta.meta)}</span>
+              </span>
+              {projecao && (
+                <span className="flex items-center gap-1.5">
+                  <span className="text-text-muted">Projeção:</span>
+                  <span className="font-semibold text-text-secondary">{formatCurrencyShort(projecao.valor)}</span>
+                  {projecao.vsMetaPct != null && (
+                    <span className={`font-semibold ${projecao.vsMetaPct >= 0 ? 'text-success' : 'text-danger'}`}>
+                      {projecao.vsMetaPct >= 0 ? '▲' : '▼'} {Math.abs(projecao.vsMetaPct).toFixed(1)}%
+                    </span>
+                  )}
+                </span>
+              )}
+            </div>
+            {projecao && (
+              <p className="text-[11px] text-text-muted mt-1.5">
+                {projecao.diasCorridos} de {projecao.diasTotal} dias · {formatCurrencyShort(projecao.mediaDiaria)}/dia
+              </p>
+            )}
+          </div>
+        )}
       </div>
     )
   }
