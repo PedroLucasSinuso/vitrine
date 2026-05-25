@@ -75,8 +75,8 @@ class ProdutoRepository(IProdutoRepository):
             grupo, familia, search, sort_by, sort_order, limit, offset,
         )
         with temporizador("SQL listar_tabela", logger):
-            stmt = select(Produto)
-            count_stmt = select(func.count(Produto.codigo_chamada))
+            stmt = select(Produto).where(Produto.ativo == True)
+            count_stmt = select(func.count(Produto.codigo_chamada)).where(Produto.ativo == True)
 
             if grupo:
                 stmt = stmt.where(Produto.grupo == grupo)
@@ -116,14 +116,14 @@ class ProdutoRepository(IProdutoRepository):
         with temporizador("SQL obter_grupos_e_familias", logger):
             grupos = (
                 self._session.execute(
-                    select(Produto.grupo).distinct().order_by(Produto.grupo)
+                    select(Produto.grupo).distinct().where(Produto.ativo == True).order_by(Produto.grupo)
                 )
                 .scalars()
                 .all()
             )
             familias = (
                 self._session.execute(
-                    select(Produto.familia).distinct().order_by(Produto.familia)
+                    select(Produto.familia).distinct().where(Produto.ativo == True).order_by(Produto.familia)
                 )
                 .scalars()
                 .all()

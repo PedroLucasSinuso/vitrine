@@ -1,13 +1,12 @@
 import { useState } from 'react'
-import { useTabelaProdutos } from '../../hooks/useTabelaProdutos'
+import { useTabelaProdutos } from '../hooks/useTabelaProdutos'
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
-import BiPageLayout from '../../components/bi/BiPageLayout'
-import Card from '../../components/ui/Card'
-import Badge from '../../components/ui/Badge'
-import EmptyState from '../../components/ui/EmptyState'
-import ErrorBanner from '../../components/ui/ErrorBanner'
-import Skeleton from '../../components/ui/Skeleton'
-import { formatCurrency } from '../../utils/formatters'
+import Card from '../components/ui/Card'
+import Badge from '../components/ui/Badge'
+import EmptyState from '../components/ui/EmptyState'
+import ErrorBanner from '../components/ui/ErrorBanner'
+import Skeleton from '../components/ui/Skeleton'
+import { formatCurrency } from '../utils/formatters'
 
 function margemVariant(margem: number): 'danger' | 'warning' | 'success' {
   if (margem < 10) return 'danger'
@@ -19,7 +18,7 @@ function formatPercent(value: number): string {
   return `${value.toFixed(1).replace('.', ',')}%`
 }
 
-export default function TabelaProdutos() {
+export default function Produtos() {
   const {
     items, total, loading, erro,
     search, setSearch,
@@ -73,10 +72,11 @@ export default function TabelaProdutos() {
   const endRecord = Math.min((page + 1) * pageSize, total)
 
   return (
-    <BiPageLayout
-      titulo="Tabela de Preços"
-      breadcrumb={[{ label: 'BI', path: '/bi' }, { label: 'Tabela de Preços' }]}
-    >
+    <div className="flex flex-col gap-5">
+      <div>
+        <h1 className="text-xl md:text-2xl font-bold text-text-primary tracking-tight">Tabela de Preços</h1>
+      </div>
+
       <Card variant="bordered">
         <div className="flex flex-col gap-4">
           {erro && (
@@ -296,6 +296,6 @@ export default function TabelaProdutos() {
           )}
         </div>
       </Card>
-    </BiPageLayout>
+    </div>
   )
 }

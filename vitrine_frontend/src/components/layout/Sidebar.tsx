@@ -17,6 +17,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'BI',         path: '/bi',               icon: <BarChart3 size={18} />,          roles: ['supervisor', 'admin'] },
+  { label: 'Produtos',   path: '/produtos',         icon: <Package size={18} />,            roles: ['supervisor', 'admin'] },
   { label: 'Busca',       path: '/busca',            icon: <Search size={18} />,          roles: ['operador', 'supervisor', 'admin'] },
   { label: 'Inventário',  path: '/inventario',       icon: <Package size={18} />,         roles: ['operador', 'supervisor', 'admin'] },
   { label: 'Usuários',    path: '/admin/usuarios',   icon: <Users size={18} />,           roles: ['admin'] },

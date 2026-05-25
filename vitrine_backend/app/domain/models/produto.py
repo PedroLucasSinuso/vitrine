@@ -1,5 +1,5 @@
 ﻿from app.infrastructure.db.database import Base
-from sqlalchemy import Float, ForeignKey, String
+from sqlalchemy import Boolean, Float, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
@@ -15,6 +15,7 @@ class Produto(Base):
     preco_venda: Mapped[float] = mapped_column(Float)
     preco_custo: Mapped[float] = mapped_column(Float)
     estoque: Mapped[float] = mapped_column(Float)
+    ativo: Mapped[bool] = mapped_column(Boolean, default=True)
 
     codigos = relationship("ProdutoCodigo", back_populates="produto", cascade="all, delete-orphan", lazy="selectin")
 

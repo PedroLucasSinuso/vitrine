@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, LayoutDashboard, TrendingUp, BarChart3, PieChart, RefreshCw, Percent, Clock, Search as SearchIcon, Command, DollarSign } from 'lucide-react'
+import { Search, LayoutDashboard, TrendingUp, BarChart3, PieChart, RefreshCw, Percent, Clock, Search as SearchIcon, Command, Package } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 interface RouteEntry {
@@ -19,7 +19,7 @@ const ROUTES: RouteEntry[] = [
   { label: 'Perdas e Consumo', path: '/bi/perdas-consumo', icon: Percent, keywords: 'perdas consumo interno quebra' },
   { label: 'Temporal', path: '/bi/temporal', icon: Clock, keywords: 'temporal hora dia semana distribuicao' },
   { label: 'Análise SKU', path: '/bi/sku', icon: SearchIcon, keywords: 'sku codigo produto ean plu detalhe' },
-  { label: 'Tabela de Preços', path: '/bi/tabela-precos', icon: DollarSign, keywords: 'preco tabela preços markup margem custo venda' },
+  { label: 'Tabela de Preços', path: '/produtos', icon: Package, keywords: 'preco tabela preços markup margem custo venda' },
   { label: 'Busca de Produtos', path: '/busca', icon: Search, keywords: 'busca produto preco estoque codigo' },
   { label: 'Admin — Sync ETL', path: '/admin', icon: RefreshCw, keywords: 'sync etl administracao' },
 ]

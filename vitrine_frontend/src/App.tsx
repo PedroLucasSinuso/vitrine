@@ -12,6 +12,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import { useAuth } from './hooks/useAuth'
 import Usuarios from './pages/Usuarios'
 import Configuracoes from './pages/Configuracoes'
+import Produtos from './pages/Produtos'
 const BiDashboard = React.lazy(() => import('./pages/bi/Dashboard'))
 const BiReceita = React.lazy(() => import('./pages/bi/Receita'))
 const BiCurvaAbc = React.lazy(() => import('./pages/bi/CurvaAbc'))
@@ -21,7 +22,6 @@ const BiPerdasConsumo = React.lazy(() => import('./pages/bi/PerdasConsumo'))
 const BiTemporal = React.lazy(() => import('./pages/bi/Temporal'))
 const BiSku = React.lazy(() => import('./pages/bi/Sku'))
 const BiDashboardConsolidado = React.lazy(() => import('./pages/bi/DashboardConsolidado'))
-const BiTabelaPrecos = React.lazy(() => import('./pages/bi/TabelaProdutos'))
 import { BiCacheProvider } from './stores/biCache'
 import { ToastProvider } from './hooks/useToast'
 import ToastContainer from './components/ToastContainer'
@@ -70,6 +70,7 @@ function App() {
                 <Route path="/home/operador" element={<ProtectedRoute allowedRoles={['operador']}><OperadorHome /></ProtectedRoute>} />
                 <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><Admin /></ProtectedRoute>} />
                 <Route path="/inventario" element={<ProtectedRoute allowedRoles={['operador', 'supervisor', 'admin']}><Inventario /></ProtectedRoute>} />
+                <Route path="/produtos" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><Produtos /></ProtectedRoute>} />
                 <Route path="/admin/etiquetas" element={<ProtectedRoute allowedRoles={['admin', 'supervisor']}><Etiquetas /></ProtectedRoute>} />
                 <Route path="/admin/inventario" element={<ProtectedRoute allowedRoles={['admin', 'supervisor', 'operador']}><Inventario /></ProtectedRoute>} />
                 <Route path="/admin/usuarios" element={<ProtectedRoute allowedRoles={['admin']}><Usuarios /></ProtectedRoute>} />
@@ -83,7 +84,6 @@ function App() {
                 <Route path="/bi/temporal" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiTemporal /></ProtectedRoute>} />
                 <Route path="/bi/sku" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiSku /></ProtectedRoute>} />
                 <Route path="/bi/dashboard-consolidado" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiDashboardConsolidado /></ProtectedRoute>} />
-                <Route path="/bi/tabela-precos" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiTabelaPrecos /></ProtectedRoute>} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

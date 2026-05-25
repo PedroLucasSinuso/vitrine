@@ -71,6 +71,15 @@ def _run_migrations():
     except Exception:
         pass
 
+    # Migration: coluna 'ativo' em produtos
+    try:
+        with sqlite_engine.connect() as conn:
+            conn.execute(text("ALTER TABLE produtos ADD COLUMN ativo BOOLEAN NOT NULL DEFAULT 1"))
+            conn.commit()
+            logger.info("Migration: coluna 'ativo' adicionada a produtos")
+    except Exception:
+        pass
+
 
 def init_db():
     global _migration_feita

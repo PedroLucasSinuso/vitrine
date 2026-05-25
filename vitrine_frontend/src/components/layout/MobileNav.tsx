@@ -11,11 +11,11 @@ interface MobileTab {
 }
 
 const tabs: MobileTab[] = [
-  { label: 'Resumo',     path: '/bi/dashboard-consolidado', icon: <LayoutDashboard size={22} />, roles: ['supervisor', 'admin'] },
-  { label: 'Busca',      path: '/busca',                    icon: <Search size={22} />,          roles: ['operador', 'supervisor', 'admin'] },
-  { label: 'Inventário', path: '/inventario',               icon: <Package size={22} />,         roles: ['operador', 'supervisor', 'admin'] },
-  { label: 'Admin',      path: '/admin',                    icon: <ShieldAlert size={22} />,     roles: ['admin'] },
-  { label: 'Config',     path: '/admin/configuracoes',      icon: <Settings size={22} />,        roles: ['admin'] },
+  { label: 'Resumo',   path: '/bi/dashboard-consolidado', icon: <LayoutDashboard size={22} />, roles: ['supervisor', 'admin'] },
+  { label: 'Busca',    path: '/busca',                    icon: <Search size={22} />,          roles: ['operador', 'supervisor', 'admin'] },
+  { label: 'Produtos', path: '/produtos',                 icon: <Package size={22} />,         roles: ['supervisor', 'admin'] },
+  { label: 'Admin',    path: '/admin',                    icon: <ShieldAlert size={22} />,     roles: ['admin'] },
+  { label: 'Config',   path: '/admin/configuracoes',      icon: <Settings size={22} />,        roles: ['admin'] },
 ]
 
 export default function MobileNav() {

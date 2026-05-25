@@ -113,6 +113,7 @@ class SyncService:
             preco_venda=float(p.sale_price),
             preco_custo=float(p.cost_price),
             estoque=p.stock,
+            ativo=p.is_active,
             codigos=[
                 ProdutoCodigo(codigo=b, codigo_chamada=p.internal_code)
                 for b in p.barcodes
