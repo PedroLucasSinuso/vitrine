@@ -6,6 +6,7 @@ import { buscarProduto, buscarProdutosPorNome, registrarNaoEncontrado } from '..
 import type { ProdutoBasico, ProdutoCompleto } from '../types'
 import { useAuth } from '../hooks/useAuth'
 import LeitorCodigo from '../components/LeitorCodigo'
+import PageContainer from '../components/layout/PageContainer'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
@@ -93,7 +94,8 @@ export default function Busca() {
   }
 
   return (
-    <div className="flex flex-col items-center px-4 py-4 overflow-x-auto">
+    <PageContainer maxWidth="full">
+      <div className="flex flex-col items-center px-4 py-4">
       {cameras && (
         <LeitorCodigo onLeitura={handleLeitura} onFechar={() => setCameras(false)} />
       )}
@@ -261,6 +263,7 @@ export default function Busca() {
           description="Digite o código EAN/PLU, use a câmera ou busque por nome"
         />
       )}
-    </div>
+      </div>
+    </PageContainer>
   )
 }

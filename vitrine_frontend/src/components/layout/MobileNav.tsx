@@ -27,31 +27,42 @@ export default function MobileNav() {
   const visibleTabs = tabs.filter(tab => role && tab.roles.includes(role))
 
   const isActive = (path: string) => {
-    // Resumo tab lights up for any BI page on mobile (it's the BI hub)
     if (path === '/bi/dashboard-consolidado') return location.pathname.startsWith('/bi')
     return location.pathname === path
   }
 
-  // Se o usuário não tem nenhuma tab visível, não renderiza
   if (visibleTabs.length === 0) return null
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-[64px] bg-bg-sidebar border-t border-border z-50 flex items-center justify-around px-2 safe-area-bottom">
-      {visibleTabs.map((tab) => (
-        <button
-          key={tab.path}
-          onClick={() => navigate(tab.path)}
-          className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-lg transition-all duration-fast min-w-[64px]
-            ${isActive(tab.path)
-              ? 'text-primary scale-110'
-              : 'text-text-muted hover:text-text-secondary'
-            }`}
-          aria-label={tab.label}
-        >
-          {tab.icon}
-          <span className="text-[10px] font-medium leading-none">{tab.label}</span>
-        </button>
-      ))}
+    <nav
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2"
+      style={{ height: 'var(--mobile-nav-height)' }}
+    >
+      {/* Frosted background */}
+      <div className="absolute inset-0 bg-bg-sidebar/90 backdrop-blur-lg border-t border-border" />
+
+      {/* Tabs */}
+      <div className="relative flex items-center justify-around w-full max-w-lg mx-auto">
+        {visibleTabs.map((tab) => {
+          const active = isActive(tab.path)
+          return (
+            <button
+              key={tab.path}
+              onClick={() => navigate(tab.path)}
+              className={`flex flex-col items-center justify-center gap-0.5 rounded-lg transition-all duration-fast min-w-[56px] py-1
+                ${active
+                  ? 'text-primary scale-110'
+                  : 'text-text-muted hover:text-text-secondary'
+                }`}
+              aria-label={tab.label}
+              aria-current={active ? 'page' : undefined}
+            >
+              {tab.icon}
+              <span className="text-[10px] font-medium leading-none">{tab.label}</span>
+            </button>
+          )
+        })}
+      </div>
     </nav>
   )
 }

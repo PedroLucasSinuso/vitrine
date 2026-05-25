@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Trash2, UserPlus, Edit2, Users } from 'lucide-react'
+import { Trash2, UserPlus, Edit2 } from 'lucide-react'
 import {
   listarUsuarios,
   criarUsuario,
@@ -8,16 +8,23 @@ import {
   type Usuario,
 } from '../api/usuarios'
 import { useAuth } from '../hooks/useAuth'
+import PageContainer from '../components/layout/PageContainer'
+import PageSection from '../components/layout/PageSection'
+import Card from '../components/ui/Card'
+import UserAvatar from '../components/ui/UserAvatar'
+import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
+import Badge from '../components/ui/Badge'
+import EmptyState from '../components/ui/EmptyState'
 import type { Role } from '../types'
 
 const ROLES: Role[] = ['operador', 'supervisor', 'admin']
 
-const roleBadgeClass: Record<Role, string> = {
-  operador: 'bg-bg-hover text-text-secondary',
-  supervisor: 'bg-info/10 text-info',
-  admin: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+const roleBadgeVariant: Record<Role, 'default' | 'info' | 'warning' | 'success'> = {
+  operador: 'default',
+  supervisor: 'info',
+  admin: 'warning',
 }
 
 const roleLabels: Record<Role, string> = {
@@ -26,29 +33,18 @@ const roleLabels: Record<Role, string> = {
   admin: 'Admin',
 }
 
+const ROLES_CONFIG: { value: Role; label: string; desc: string }[] = [
+  { value: 'operador', label: 'Operador', desc: 'Acesso a busca e inventário' },
+  { value: 'supervisor', label: 'Supervisor', desc: 'Acesso a relatórios e etiquetas' },
+  { value: 'admin', label: 'Admin', desc: 'Acesso total ao sistema' },
+]
+
 interface ModalEdicao {
   usuario: Usuario
   password: string
   role: Role
   loading: boolean
   erro: string
-}
-
-function UserAvatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' | 'lg' }) {
-  const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-  const sizeClass = size === 'sm' ? 'w-8 h-8 text-xs' : size === 'lg' ? 'w-12 h-12 text-base' : 'w-10 h-10 text-sm'
-  const colors = [
-    'bg-primary/10 text-primary dark:bg-primary/20',
-    'bg-info/10 text-info',
-    'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-    'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  ]
-  const colorIdx = name.charCodeAt(0) % colors.length
-  return (
-    <div className={`${sizeClass} rounded-xl ${colors[colorIdx]} flex items-center justify-center font-bold shrink-0`}>
-      {initials}
-    </div>
-  )
 }
 
 export default function Usuarios() {
@@ -60,6 +56,7 @@ export default function Usuarios() {
 
   const [modal, setModal] = useState<ModalEdicao | null>(null)
 
+  // Novo usuário form
   const [novoUsername, setNovoUsername] = useState('')
   const [novoNome, setNovoNome] = useState('')
   const [novoPassword, setNovoPassword] = useState('')
@@ -82,10 +79,7 @@ export default function Usuarios() {
     }
   }
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    carregar()
-  }, [])
+  useEffect(() => { carregar() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleCriar() {
     setErroCriacao('')
@@ -95,8 +89,16 @@ export default function Usuarios() {
     }
     setCriando(true)
     try {
-      await criarUsuario({ username: novoUsername.trim(), nome_exibicao: novoNome.trim(), password: novoPassword, role: novoRole })
-      setNovoUsername(''); setNovoNome(''); setNovoPassword(''); setNovoRole('operador')
+      await criarUsuario({
+        username: novoUsername.trim(),
+        nome_exibicao: novoNome.trim(),
+        password: novoPassword,
+        role: novoRole,
+      })
+      setNovoUsername('')
+      setNovoNome('')
+      setNovoPassword('')
+      setNovoRole('operador')
       await carregar()
     } catch {
       setErroCriacao('Erro ao criar usuário.')
@@ -109,7 +111,10 @@ export default function Usuarios() {
     if (!modal) return
     setModal(m => m ? { ...m, loading: true, erro: '' } : null)
     try {
-      await atualizarUsuario(modal.usuario.id, { role: modal.role, ...(modal.password ? { password: modal.password } : {}) })
+      await atualizarUsuario(modal.usuario.id, {
+        role: modal.role,
+        ...(modal.password ? { password: modal.password } : {}),
+      })
       setModal(null)
       await carregar()
     } catch {
@@ -131,8 +136,7 @@ export default function Usuarios() {
   }
 
   return (
-    <div className="flex flex-col items-center px-4 py-4 overflow-x-auto">
-
+    <PageContainer maxWidth="md">
       {/* Modal de edição */}
       {modal && (
         <Modal
@@ -141,156 +145,60 @@ export default function Usuarios() {
           title={`Editar: ${modal.usuario.nome_exibicao}`}
           actions={
             <>
-              <Button variant="ghost" onClick={() => setModal(null)} fullWidth>Cancelar</Button>
-              <Button onClick={handleAtualizar} loading={modal.loading} fullWidth>Salvar</Button>
+              <Button variant="ghost" onClick={() => setModal(null)}>Cancelar</Button>
+              <Button onClick={handleAtualizar} loading={modal.loading}>Salvar</Button>
             </>
           }
         >
           <div className="flex flex-col gap-4">
-            <p className="text-xs text-text-muted">{modal.usuario.username}</p>
-            <div>
-              <label className="text-xs text-text-muted mb-1.5 block">Nova senha (opcional)</label>
-              <input
-                type="password"
-                className="w-full border border-border-input bg-bg-input text-text-primary rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Deixe em branco para não alterar"
-                value={modal.password}
-                onChange={(e) => setModal(m => m ? { ...m, password: e.target.value } : null)}
-              />
+            <div className="flex items-center gap-3 mb-2">
+              <UserAvatar name={modal.usuario.nome_exibicao} size="sm" />
+              <div>
+                <p className="text-sm font-semibold text-text-primary">{modal.usuario.nome_exibicao}</p>
+                <p className="text-xs text-text-muted font-mono">{modal.usuario.username}</p>
+              </div>
             </div>
-            <div>
-              <label className="text-xs text-text-muted mb-1.5 block">Permissão</label>
-              <select
-                className="w-full border border-border-input bg-bg-input text-text-primary rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                value={modal.role}
-                onChange={(e) => setModal(m => m ? { ...m, role: e.target.value as Role } : null)}
-              >
-                {ROLES.map(r => <option key={r} value={r}>{roleLabels[r]}</option>)}
-              </select>
+            <Input
+              label="Nova senha (opcional)"
+              type="password"
+              placeholder="Deixe em branco para não alterar"
+              value={modal.password}
+              onChange={(e) => setModal(m => m ? { ...m, password: e.target.value } : null)}
+            />
+            <div className="flex flex-col gap-1.5">
+              <label className="form-label">Permissão</label>
+              <div className="grid grid-cols-1 gap-1.5">
+                {ROLES_CONFIG.map(r => (
+                  <button
+                    key={r.value}
+                    onClick={() => setModal(m => m ? { ...m, role: r.value } : null)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border text-sm text-left transition ${
+                      modal.role === r.value
+                        ? 'border-primary bg-primary-light text-primary'
+                        : 'border-border text-text-secondary hover:border-border-input hover:bg-bg-hover'
+                    }`}
+                  >
+                    <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                      modal.role === r.value ? 'border-primary' : 'border-text-muted'
+                    }`}>
+                      {modal.role === r.value && (
+                        <span className="w-2 h-2 rounded-full bg-primary" />
+                      )}
+                    </span>
+                    <div>
+                      <p className="font-medium">{r.label}</p>
+                      <p className="text-xs text-text-muted">{r.desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
-            {modal.erro && <p className="text-red-500 text-sm">{modal.erro}</p>}
+            {modal.erro && <p className="text-danger text-sm">{modal.erro}</p>}
           </div>
         </Modal>
       )}
 
-      {/* AppLayout already provides header/nav */}
-
-      <div className="w-full max-w-2xl flex flex-col gap-5">
-
-        {/* Formulário de criação */}
-        <div className="bg-bg-card rounded-xl border border-border shadow-card p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
-              <UserPlus size={20} className="text-primary" />
-            </div>
-            <div>
-              <h2 className="text-base font-semibold text-text-primary">Novo usuário</h2>
-              <p className="text-xs text-text-muted">Adicione um novo membro à equipe</p>
-            </div>
-          </div>
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <input
-                className="w-full sm:flex-1 border border-border-input bg-bg-input text-text-primary rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Username"
-                value={novoUsername}
-                onChange={(e) => setNovoUsername(e.target.value)}
-              />
-              <input
-                className="w-full sm:flex-1 border border-border-input bg-bg-input text-text-primary rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Nome de exibição"
-                value={novoNome}
-                onChange={(e) => setNovoNome(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <input
-                type="password"
-                className="w-full sm:w-auto sm:min-w-[200px] border border-border-input bg-bg-input text-text-primary rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Senha"
-                value={novoPassword}
-                onChange={(e) => setNovoPassword(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleCriar()}
-              />
-              <select
-                className="w-full sm:w-auto border border-border-input bg-bg-input text-text-primary rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                value={novoRole}
-                onChange={(e) => setNovoRole(e.target.value as Role)}
-              >
-                {ROLES.map(r => <option key={r} value={r}>{roleLabels[r]}</option>)}
-              </select>
-              <Button onClick={handleCriar} loading={criando}>
-                Criar
-              </Button>
-            </div>
-            {erroCriacao && <p className="text-red-500 text-sm">{erroCriacao}</p>}
-          </div>
-        </div>
-
-        {/* Lista de usuários */}
-        <div className="bg-bg-card rounded-xl border border-border shadow-card p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-xl bg-bg-hover flex items-center justify-center">
-              <Users size={20} className="text-text-muted" />
-            </div>
-            <div>
-              <h2 className="text-base font-semibold text-text-primary">
-                Equipe
-              </h2>
-              {!carregando && (
-                <p className="text-xs text-text-muted">{usuarios.length} membro(s)</p>
-              )}
-            </div>
-          </div>
-
-          {erroGeral && <p className="text-red-500 text-sm mb-3">{erroGeral}</p>}
-          {carregando && <p className="text-sm text-text-muted">Carregando...</p>}
-
-          {!carregando && (
-            <div className="flex flex-col gap-2">
-              {usuarios.map(usuario => (
-                <div key={usuario.id} className="flex justify-between items-center border border-border rounded-xl px-4 py-3 hover:bg-bg-hover transition group">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <UserAvatar name={usuario.nome_exibicao} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-text-primary truncate">{usuario.nome_exibicao}</p>
-                      <p className="text-xs text-text-muted font-mono">{usuario.username}</p>
-                    </div>
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${roleBadgeClass[usuario.role]}`}>
-                      {roleLabels[usuario.role]}
-                    </span>
-                  </div>
-                  <div className="flex gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition">
-                    <button
-                      onClick={() => setModal({
-                        usuario,
-                        password: '',
-                        role: usuario.role,
-                        loading: false,
-                        erro: '',
-                      })}
-                      className="text-text-muted hover:text-primary transition p-1.5 rounded-lg hover:bg-bg-hover"
-                      aria-label={`Editar ${usuario.nome_exibicao}`}
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    <button
-                      onClick={() => setExcluirUsuarioObj(usuario)}
-                      disabled={usuario.username === meuUsername}
-                      className="text-slate-400 hover:text-red-500 transition disabled:opacity-30 disabled:cursor-not-allowed p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
-                      aria-label={`Excluir ${usuario.nome_exibicao}`}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Modal Confirmar Exclusão */}
+      {/* Modal confirmar exclusão */}
       <Modal
         open={!!excluirUsuarioObj}
         onClose={() => setExcluirUsuarioObj(null)}
@@ -305,9 +213,129 @@ export default function Usuarios() {
           </>
         }
       >
-        <p>Esta ação não pode ser desfeita. O usuário perderá acesso ao sistema.</p>
+        <p className="text-sm text-text-secondary">
+          Esta ação não pode ser desfeita. O usuário perderá acesso ao sistema.
+        </p>
       </Modal>
 
-    </div>
+      {/* Novo usuário */}
+      <PageSection
+        title="Novo usuário"
+        subtitle="Adicione um novo membro à equipe"
+      >
+        <Card variant="bordered" padding="md">
+          <div className="flex flex-col gap-4">
+            {erroGeral && (
+              <p className="text-sm text-danger">{erroGeral}</p>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                placeholder="Username"
+                value={novoUsername}
+                onChange={(e) => setNovoUsername(e.target.value)}
+              />
+              <Input
+                placeholder="Nome de exibição"
+                value={novoNome}
+                onChange={(e) => setNovoNome(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Input
+                type="password"
+                placeholder="Senha"
+                value={novoPassword}
+                onChange={(e) => setNovoPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleCriar()}
+              />
+              <select
+                value={novoRole}
+                onChange={(e) => setNovoRole(e.target.value as Role)}
+                className="form-input-base"
+              >
+                {ROLES.map(r => <option key={r} value={r}>{roleLabels[r]}</option>)}
+              </select>
+              <Button
+                onClick={handleCriar}
+                loading={criando}
+                fullWidth
+              >
+                <UserPlus size={14} /> Criar
+              </Button>
+            </div>
+
+            {erroCriacao && (
+              <p className="text-sm text-danger">{erroCriacao}</p>
+            )}
+          </div>
+        </Card>
+      </PageSection>
+
+      {/* Lista de usuários */}
+      <PageSection
+        title="Equipe"
+        subtitle={`${carregando ? '...' : usuarios.length} membro(s)`}
+      >
+        <Card variant="bordered" padding="none">
+          {carregando ? (
+            <div className="flex flex-col gap-2 p-5">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-12 bg-bg-hover rounded-lg animate-pulse" />
+              ))}
+            </div>
+          ) : usuarios.length === 0 ? (
+            <EmptyState title="Nenhum usuário" description="Crie o primeiro usuário da equipe." />
+          ) : (
+            <div className="divide-y divide-border-light">
+              {usuarios.map(usuario => (
+                <div
+                  key={usuario.id}
+                  className="flex items-center justify-between px-5 py-3 hover:bg-bg-hover transition group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <UserAvatar name={usuario.nome_exibicao} size="sm" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-text-primary truncate">
+                        {usuario.nome_exibicao}
+                      </p>
+                      <p className="text-xs text-text-muted font-mono">{usuario.username}</p>
+                    </div>
+                    <Badge variant={roleBadgeVariant[usuario.role]}>
+                      {roleLabels[usuario.role]}
+                    </Badge>
+                  </div>
+
+                  <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
+                    <button
+                      onClick={() => setModal({
+                        usuario,
+                        password: '',
+                        role: usuario.role,
+                        loading: false,
+                        erro: '',
+                      })}
+                      className="p-1.5 rounded-lg text-text-muted hover:text-primary hover:bg-bg-hover transition"
+                      aria-label={`Editar ${usuario.nome_exibicao}`}
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    <button
+                      onClick={() => setExcluirUsuarioObj(usuario)}
+                      disabled={usuario.username === meuUsername}
+                      className="p-1.5 rounded-lg text-text-muted hover:text-danger hover:bg-danger-light transition disabled:opacity-30 disabled:cursor-not-allowed"
+                      aria-label={`Excluir ${usuario.nome_exibicao}`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </PageSection>
+    </PageContainer>
   )
 }
