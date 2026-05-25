@@ -8,6 +8,7 @@ import EmptyState from '../../components/ui/EmptyState'
 import ErrorBanner from '../../components/ui/ErrorBanner'
 import Card from '../../components/ui/Card'
 import SectionHeader from '../../components/ui/SectionHeader'
+import DataTable from '../../components/ui/DataTable'
 import KpiCard from '../../components/bi/KpiCard'
 import { fetchTrocas, exportarExcelBI } from '../../api/bi'
 import { baixarCSVdeArray } from '../../utils/csv'
@@ -122,30 +123,17 @@ export default function Trocas() {
             {dados.por_produto.length === 0 ? (
               <p className="text-sm text-text-muted">Nenhuma troca no período.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm table-fixed">
-                  <thead>
-                    <tr className="border-b border-border text-left">
-                      <th className="pb-2 text-xs text-text-muted font-medium w-28">Código</th>
-                      <th className="pb-2 text-xs text-text-muted font-medium w-full">Produto</th>
-                      <th className="pb-2 text-xs text-text-muted font-medium text-right w-28">Valor</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                      {dados.por_produto.map((item, i) => (
-                        <tr
-                          key={i}
-                          onClick={() => navigate(`/bi/sku?codigo=${item.codigo}`)}
-                          className="border-b border-border last:border-0 hover:bg-bg-hover cursor-pointer"
-                        >
-                          <td className="py-2 text-text-muted font-mono truncate" title={item.codigo}>{item.codigo}</td>
-                          <td className="py-2 text-text-primary truncate" title={item.produto}>{item.produto}</td>
-                          <td className="py-2 text-right font-semibold text-text-primary">{formatCurrency(item.receita)}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                data={dados.por_produto}
+                columns={[
+                  { key: 'codigo', label: 'Código', mono: true, render: (item) => <span className="truncate block font-mono text-text-muted" title={item.codigo}>{item.codigo}</span> },
+                  { key: 'produto', label: 'Produto', render: (item) => <span className="truncate block" title={item.produto}>{item.produto}</span> },
+                  { key: 'receita', label: 'Valor', align: 'right', mono: true, render: (item) => <span className="font-semibold">{formatCurrency(item.receita)}</span> },
+                ]}
+                rowKey={(item) => item.codigo}
+                onRowClick={(item) => navigate(`/bi/sku?codigo=${item.codigo}`)}
+                density="sm"
+              />
             )}
           </Card>
         </>

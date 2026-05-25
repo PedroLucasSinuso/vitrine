@@ -315,7 +315,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   TABLE PRESETS
+   TABLE PRESETS — Premium (Stripe/Retool estilo)
 ════════════════════════════════════════════════════════════════════════════ */
 
 .table-base {
@@ -325,41 +325,87 @@ input:focus, select:focus, textarea:focus, button:focus-visible {
   font-size: var(--text-sm);
 }
 
+/* ── Header ── */
 .table-header-cell {
-  padding: 0.625rem 0.75rem;
-  font-size: var(--text-sm);
-  font-weight: var(--font-weight-medium);
+  padding: 0.75rem 1rem;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-muted);
   text-align: left;
   white-space: nowrap;
   border-bottom: 1px solid var(--color-border);
   user-select: none;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .table-header-cell-sortable {
   composes: table-header-cell;
   cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
 }
 .table-header-cell-sortable:hover {
   color: var(--color-text-primary);
 }
 
+/* ── Cell ── */
 .table-cell {
-  padding: 0.625rem 0.75rem;
+  padding: 0.75rem 1rem;
   font-size: var(--text-sm);
   color: var(--color-text-primary);
   white-space: nowrap;
   border-bottom: 1px solid var(--color-border-light);
+  transition: background-color var(--duration-fast) var(--ease-out);
 }
 
+/* Density variants */
+.table-density-sm .table-cell {
+  padding: 0.5rem 1rem;
+}
+.table-density-sm .table-header-cell {
+  padding: 0.5rem 1rem;
+}
+.table-density-lg .table-cell {
+  padding: 1rem 1.25rem;
+}
+.table-density-lg .table-header-cell {
+  padding: 0.875rem 1.25rem;
+}
+
+/* ── Row ── */
 .table-row {
   transition: background-color var(--duration-fast) var(--ease-out);
+  cursor: default;
 }
 .table-row:last-child .table-cell {
   border-bottom: none;
 }
 .table-row:hover {
   background-color: var(--color-bg-hover);
+}
+.table-row-clickable {
+  cursor: pointer;
+}
+.table-row-clickable:hover {
+  background-color: var(--color-bg-hover);
+}
+
+/* ── Sticky header wrapper ── */
+.table-sticky-wrapper {
+  max-height: 480px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+.table-sticky-wrapper thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.table-sticky-wrapper thead tr {
+  background: var(--color-bg-card);
+}
+.table-sticky-wrapper thead th {
+  border-bottom: 2px solid var(--color-border);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

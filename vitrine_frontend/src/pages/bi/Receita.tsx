@@ -9,6 +9,8 @@ import EmptyState from '../../components/ui/EmptyState'
 import ErrorBanner from '../../components/ui/ErrorBanner'
 import Card from '../../components/ui/Card'
 import SectionHeader from '../../components/ui/SectionHeader'
+import DataTable from '../../components/ui/DataTable'
+import type { Column } from '../../components/ui/DataTable'
 import { fetchReceita, fetchQuantidade, exportarExcelBI } from '../../api/bi'
 import { baixarCSVdeArray } from '../../utils/csv'
 import type { ItemDimensaoDTO, PeriodoBi, Dimensao, Metrica } from '../../types'
@@ -125,6 +127,29 @@ export default function Receita() {
     valor: item.valor,
   }))
 
+  function buildReceitaColumns(): Column<ItemDimensaoDTO>[] {
+    const cols: Column<ItemDimensaoDTO>[] = [
+      { key: 'grupo', label: 'Grupo', render: (item) => <span className="truncate block" title={item.grupo}>{item.grupo}</span> },
+    ]
+    if (dimensao !== 'grupo') {
+      cols.push({
+        key: 'familia', label: 'Família',
+        render: (item) => <span className="truncate block text-text-muted" title={item.familia ?? ''}>{item.familia ?? '\u2014'}</span>,
+      })
+    }
+    if (dimensao === 'produto') {
+      cols.push({
+        key: 'produto', label: 'Produto',
+        render: (item) => <span className="truncate block" title={item.produto ?? ''}>{item.produto ?? '\u2014'}</span>,
+      })
+    }
+    cols.push({
+      key: 'valor', label: isReceita ? 'Receita' : 'Quantidade', align: 'right', mono: true,
+      render: (item) => <span className="font-semibold">{isReceita ? formatCurrency(item.valor) : item.valor.toLocaleString('pt-BR')}</span>,
+    })
+    return cols
+  }
+
   return (
     <BiPageLayout titulo="Receita por Dimensão" breadcrumb={[{ label: 'BI', path: '/bi' }, { label: 'Receita' }]}>
       <Card variant="bordered">
@@ -231,36 +256,14 @@ export default function Receita() {
             <SectionHeader>
               Todos os resultados <span className="text-text-muted font-normal">({dadosFiltrados.length})</span>
             </SectionHeader>
-            <div className="overflow-x-auto max-h-96 overflow-y-auto border border-slate-200 dark:border-slate-700/50 rounded-lg">
-              <table className="w-full text-sm table-fixed">
-                <thead>
-                  <tr className="border-b dark:border-slate-700 text-left sticky top-0 bg-white dark:bg-slate-800 z-10">
-                    <th className="pb-2 text-xs text-text-muted font-medium w-full">Grupo</th>
-                    {dimensao !== 'grupo' && <th className="pb-2 text-xs text-text-muted font-medium w-full">Família</th>}
-                    {dimensao === 'produto' && <th className="pb-2 text-xs text-text-muted font-medium w-full">Produto</th>}
-                    <th className="pb-2 text-xs text-text-muted font-medium text-right w-28">
-                      {isReceita ? 'Receita' : 'Quantidade'}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dadosFiltrados.map((item, i) => (
-                    <tr
-                      key={i}
-                      onClick={() => item.codigo && navigate(`/bi/sku?codigo=${item.codigo}`)}
-                      className={`border-b border-border last:border-0 hover:bg-bg-hover ${item.codigo ? 'cursor-pointer' : ''}`}
-                    >
-                      <td className="py-2 text-text-primary truncate" title={item.grupo}>{item.grupo}</td>
-                      {dimensao !== 'grupo' && <td className="py-2 text-text-muted truncate" title={item.familia ?? ''}>{item.familia ?? '\u2014'}</td>}
-                      {dimensao === 'produto' && <td className="py-2 text-text-primary truncate" title={item.produto ?? ''}>{item.produto ?? '\u2014'}</td>}
-                      <td className="py-2 text-right font-semibold text-text-primary">
-                        {isReceita ? formatCurrency(item.valor) : item.valor.toLocaleString('pt-BR')}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              data={dadosFiltrados}
+              columns={buildReceitaColumns()}
+              rowKey={(item) => `${item.grupo}-${item.familia ?? ''}-${item.produto ?? ''}`}
+              onRowClick={(item) => item.codigo && navigate(`/bi/sku?codigo=${item.codigo}`)}
+              density="sm"
+              stickyHeader
+            />
           </Card>
         </>
       )}

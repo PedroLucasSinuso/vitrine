@@ -9,6 +9,7 @@ import EmptyState from '../../components/ui/EmptyState'
 import ErrorBanner from '../../components/ui/ErrorBanner'
 import Card from '../../components/ui/Card'
 import SectionHeader from '../../components/ui/SectionHeader'
+import DataTable from '../../components/ui/DataTable'
 import KpiCard from '../../components/bi/KpiCard'
 import { fetchSku, exportarExcelBI } from '../../api/bi'
 import { buscarProdutosPorNome } from '../../api/produtos'
@@ -300,26 +301,16 @@ export default function Sku() {
 
           <Card variant="bordered">
             <SectionHeader icon={Crown}>Top dias de venda</SectionHeader>
-            <div className="overflow-x-auto max-h-64 overflow-y-auto">
-              <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="pb-2 text-xs text-text-muted font-medium">#</th>
-                  <th className="pb-2 text-xs text-text-muted font-medium">Data</th>
-                  <th className="pb-2 text-xs text-text-muted font-medium text-right">Receita</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dados.ranking_dias.map((item, i) => (
-                  <tr key={i} className="border-b border-border last:border-0 hover:bg-bg-hover">
-                    <td className="py-2 text-text-muted">{i + 1}</td>
-                    <td className="py-2 text-text-primary">{formatDateWithWeekday(item.data)}</td>
-                    <td className="py-2 text-right font-semibold text-text-primary">{formatCurrency(item.valor)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
+            <DataTable
+              data={dados.ranking_dias}
+              columns={[
+                { key: 'data', label: 'Data', render: (item) => formatDateWithWeekday(item.data) },
+                { key: 'valor', label: 'Receita', align: 'right', mono: true, render: (item) => <span className="font-semibold">{formatCurrency(item.valor)}</span> },
+              ]}
+              rowKey={(item) => item.data}
+              density="sm"
+              rowNumbers
+            />
           </Card>
         </>
       )}
