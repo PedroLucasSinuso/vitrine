@@ -102,3 +102,26 @@ export interface PeriodoBi {
   data_inicio: string
   data_fim: string
 }
+
+export interface ProdutoTabelaResponse {
+  codigo_chamada: string
+  nome: string
+  grupo: string
+  familia: string
+  preco_venda: number
+  preco_custo: number
+  markup: number
+  margem: number
+  estoque: number
+}
+
+export interface TabelaProdutosResponse {
+  items: ProdutoTabelaResponse[]
+  total: number
+  limit: number
+  offset: number
+  filtros_disponiveis: {
+    grupos: string[]
+    familias: string[]
+  }
+}

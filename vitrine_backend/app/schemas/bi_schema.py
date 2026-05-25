@@ -83,3 +83,29 @@ class SkuDTO(BaseModel):
     ranking_dias: list[PontoDiarioDTO]
     distribuicao_hora: list[PontoHoraDTO]
     distribuicao_dia_semana: list[PontoDiaSemanaDTO]
+
+
+class ProdutoTabelaResponse(BaseModel):
+    codigo_chamada: str
+    nome: str
+    grupo: str
+    familia: str
+    preco_venda: float
+    preco_custo: float
+    markup: float
+    margem: float
+    estoque: float
+    model_config = {"from_attributes": True}
+
+
+class FiltrosDisponiveis(BaseModel):
+    grupos: list[str]
+    familias: list[str]
+
+
+class TabelaProdutosResponse(BaseModel):
+    items: list[ProdutoTabelaResponse]
+    total: int
+    limit: int
+    offset: int
+    filtros_disponiveis: FiltrosDisponiveis

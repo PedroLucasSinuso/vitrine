@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, TrendingUp, BarChart3, PieChart, RefreshCw, Percent, Clock, Search } from 'lucide-react'
+import { LayoutDashboard, TrendingUp, BarChart3, PieChart, RefreshCw, Percent, Clock, Search, DollarSign } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 interface RailTab {
@@ -17,6 +17,7 @@ const RAIL_TABS: RailTab[] = [
   { label: 'Perdas e Consumo', icon: Percent, path: '/bi/perdas-consumo' },
   { label: 'Temporal', icon: Clock, path: '/bi/temporal' },
   { label: 'SKU', icon: Search, path: '/bi/sku' },
+  { label: 'Preços', icon: DollarSign, path: '/bi/tabela-precos' },
 ]
 
 export default function BiSideRail() {

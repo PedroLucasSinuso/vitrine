@@ -7,4 +7,5 @@ export type {
   ItemMovimentoDTO, TrocasDTO, MovimentoDTO, PontoDiarioDTO,
   PontoHoraDTO, PontoDiaSemanaDTO, SkuDTO, PeriodoBi,
   Dimensao, Metrica, CurvaAbc,
+  ProdutoTabelaResponse, TabelaProdutosResponse,
 } from './bi'

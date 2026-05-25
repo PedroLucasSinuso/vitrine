@@ -3,6 +3,7 @@ import type {
   KpisDTO, KpisComparativoDTO, ItemDimensaoDTO, ItemCurvaAbcDTO, ItemRankingDTO,
   TrocasDTO, MovimentoDTO, PontoDiarioDTO, PontoHoraDTO,
   PontoDiaSemanaDTO, SkuDTO, Dimensao, Metrica, PeriodoBi,
+  TabelaProdutosResponse,
 } from '../types'
 
 const MAX_BI_DAYS = 180
@@ -91,6 +92,19 @@ export async function fetchTemporalDiaSemana(periodo: PeriodoBi, metrica: Metric
 
 export async function fetchSku(periodo: PeriodoBi, codigo: string): Promise<SkuDTO> {
   const r = await api.get('/bi/sku', { params: params(periodo, { codigo }) })
+  return r.data
+}
+
+export async function fetchTabelaProdutos(params: {
+  grupo?: string
+  familia?: string
+  search?: string
+  sort_by?: string
+  sort_order?: string
+  limit?: number
+  offset?: number
+}): Promise<TabelaProdutosResponse> {
+  const r = await api.get('/bi/tabela-produtos', { params })
   return r.data
 }
 

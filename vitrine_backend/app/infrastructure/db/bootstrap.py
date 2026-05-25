@@ -14,6 +14,7 @@ import app.domain.models.whatsapp_contato
 import app.domain.models.email_contato
 import app.domain.models.sync_job
 import app.domain.models.token_blacklist
+import app.domain.models.historico_preco  # noqa — registra o model no Base.metadata
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,17 @@ def _run_migrations():
             conn.execute(text("DELETE FROM token_blacklist WHERE expires_at < datetime('now', '-30 days')"))
             conn.commit()
             logger.info("Migration: token_blacklist limpa (entradas >30 dias)")
+    except Exception:
+        pass
+
+    # Migration: índice composto para historico_precos
+    try:
+        with sqlite_engine.connect() as conn:
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS idx_hp_codigo_data "
+                "ON historico_precos(codigo_chamada, data_coleta)"
+            ))
+            conn.commit()
     except Exception:
         pass
 

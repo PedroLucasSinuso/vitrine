@@ -3,7 +3,7 @@ from io import BytesIO
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from app.limiter import limiter
-from app.api.deps import get_db, require_supervisor, get_transaction_source
+from app.api.deps import get_db, require_supervisor, get_transaction_source, get_produto_repository
 from app.domain.models.usuario import Usuario
 from app.core.interfaces.source import TransactionSource
 from sqlalchemy.orm import Session
@@ -28,6 +28,9 @@ from app.schemas.bi_schema import (
     PontoHoraDTO,
     PontoDiaSemanaDTO,
     SkuDTO,
+    ProdutoTabelaResponse,
+    FiltrosDisponiveis,
+    TabelaProdutosResponse,
 )
 import logging
 
@@ -403,4 +406,47 @@ def exportar_excel(
             "Content-Disposition": f'attachment; filename="{nome_arquivo}"',
             "Content-Length": str(len(conteudo)),
         },
+    )
+
+
+# ── Tabela de Preços ──────────────────────────────────────────────────────────
+
+@router.get("/tabela-produtos", response_model=TabelaProdutosResponse)
+@limiter.limit("20/minute")
+def tabela_produtos(
+    request: Request,
+    grupo: str | None = Query(None),
+    familia: str | None = Query(None),
+    search: str | None = Query(None, description="Busca por nome ou código"),
+    sort_by: str = Query("nome", description="Coluna para ordenar"),
+    sort_order: str = Query("asc", pattern="^(asc|desc)$"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    repo=Depends(get_produto_repository),
+    _usuario: Usuario = Depends(require_supervisor),
+):
+    """Retorna tabela de produtos com markup e margem para precificação."""
+    items, total = repo.listar_tabela(grupo, familia, search, sort_by, sort_order, limit, offset)
+
+    result = []
+    for p in items:
+        markup = (p.preco_venda - p.preco_custo) / p.preco_custo if p.preco_custo else 0.0
+        margem = (p.preco_venda - p.preco_custo) / p.preco_venda if p.preco_venda else 0.0
+        result.append(ProdutoTabelaResponse(
+            codigo_chamada=p.codigo_chamada,
+            nome=p.nome,
+            grupo=p.grupo or "",
+            familia=p.familia or "",
+            preco_venda=p.preco_venda,
+            preco_custo=p.preco_custo,
+            markup=round(markup * 100, 2),   # percentual
+            margem=round(margem * 100, 2),   # percentual
+            estoque=p.estoque,
+        ))
+
+    grupos, familias = repo.obter_grupos_e_familias()
+
+    return TabelaProdutosResponse(
+        items=result, total=total, limit=limit, offset=offset,
+        filtros_disponiveis=FiltrosDisponiveis(grupos=list(grupos), familias=list(familias)),
     )

@@ -61,6 +61,23 @@ class SyncService:
                 with temporizador("SyncService insert", logger):
                     self.db.add_all(produtos_orm)
 
+            # ── Gravar histórico de preços ──────────────────────────────────────
+            with temporizador("SyncService historico_precos", logger):
+                from app.infrastructure.repositories.produto_repository import ProdutoRepository
+                from app.domain.models.sync_job import SyncJob
+                repo = ProdutoRepository(self.db)
+                ultimo_job = self.db.query(SyncJob).order_by(SyncJob.id.desc()).first()
+                job_id = ultimo_job.id if ultimo_job else None
+
+                for p in products:
+                    repo.inserir_historico_preco(
+                        codigo=p.internal_code,
+                        preco_custo=float(p.cost_price),
+                        preco_venda=float(p.sale_price),
+                        sync_job_id=job_id,
+                    )
+                self.db.flush()
+
             produtos_count = len(produtos_orm)
             codigos_count = sum(len(p.barcodes) for p in products)
 
