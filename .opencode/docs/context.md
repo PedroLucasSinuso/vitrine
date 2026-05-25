@@ -1,8 +1,8 @@
 # Current Context
 
-> Audit stage: **Completa. 5 sprints finalizados + hotfix scheduler. 168 testes passando.**
-> Data da auditoria: **2026-05-22**
-> Status: **Sprints 1-4 concluídos. Sprint 5 (BI Dashboard + Temas) concluído. Hotfix scheduler/email aplicado.**
+> Audit stage: **Completa. 5 sprints + Lote 5 (Tabela de Preços). 169 testes passando.**
+> Data da auditoria: **2026-05-25**
+> Status: **Sprints 1-4 concluídos. Sprint 5 (BI Dashboard + Temas) concluído. Lote 5 (Tabela de Preços) concluído. Hotfix scheduler/email aplicado.**
 
 ---
 
@@ -130,6 +130,18 @@
 74. **Teste real** — Enviado para `gloriamarket21@gmail.com` + `pedrolucassinuso@gmail.com`. Ambos chegaram com conteúdo completo. ✅
 75. **3 commits** — `6231b3e` (scheduler bugs) + `be6f80e` (MIME fix). 168/168 testes, 0 regressões.
 
+### Lote 5 — Tabela de Preços (2026-05-25)
+
+82. **Feature: Tabela de Preços** — Nova página standalone `/produtos` com listagem completa de produtos, markup e margem.
+83. **Modelo `HistoricoPreco`** — Snapshot de preços por sync para preservar histórico de precificação.
+84. **ETL Sync atualizado** — Grava `HistoricoPreco` para cada produto durante a sincronização.
+85. **Rota `GET /bi/tabela-produtos`** — Lista paginada/filtrável com markup e margem calculados (percentuais × 100).
+86. **Filtro por `ativo`** — Coluna `ativo` adicionada ao modelo `Produto`. Sync mapeia `Product.is_active`. Repository filtra apenas produtos ativos. Adapter lê `detalhe.stdetalheativo` do ERP (corrigido — antes hardcodava `True`). Sync seguinte popula valores reais.
+87. **Hook `useTabelaProdutos`** — Busca com debounce, filtros, ordenação, paginação.
+88. **Página standalone (não-BI)** — Rota `/produtos` com layout próprio (sem `BiPageLayout`/`BiSubNav`). Nav mobile: "Produtos" substitui "Inventário". Sidebar desktop ganha item "Produtos".
+89. **Teste `test_tabela_produtos_shape`** — 169/169 testes passando.
+90. **Relatório completo:** commit `10df8e9` (1ª versão BI) + `28462df` (refatoração standalone + filtro ativo).
+
 ### Auditoria Debug (2026-05-25) — 23 Novas Issues Identificadas
 
 76. **Auditoria exaustiva por agente `debug-investigator`** — leitura de ~40 arquivos, busca de bugs não documentados.
@@ -206,8 +218,8 @@
 
 - **Backend:** ~15 módulos de primeira linha, ~70 arquivos (estimado).
 - **Frontend:** ~11 módulos de primeira linha, ~40+ componentes/páginas.
-- **Testes:** 168 testes passando (pytest) — 11 sprints + hotfix validados.
-- **Issues resolvidos:** 30+ em 11 sprints + hotfix.
+- **Testes:** 169 testes passando (pytest) — 11 sprints + hotfix + Lote 5 validados.
+- **Issues resolvidos:** 30+ em 11 sprints + hotfix + Lote 5.
 - **Lint:** 0 erros, 0 warnings.
 - **TypeScript:** 0 erros de compilação.
 - **Issues abertos (2026-05-21 — Revisão Adversarial):** P1-P3 (performance), M1-M12 (médios), m1-m4 (menores) — ainda pendentes.
