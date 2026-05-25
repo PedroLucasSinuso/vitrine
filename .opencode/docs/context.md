@@ -1,8 +1,8 @@
 # Current Context
 
-> Audit stage: **Completa. 5 sprints + Lote 5 (Tabela de Preços). 169 testes passando.**
+> Audit stage: **Completa. UX Refactor + UI Fixes. 169 testes passando.**
 > Data da auditoria: **2026-05-25**
-> Status: **Sprints 1-4 concluídos. Sprint 5 (BI Dashboard + Temas) concluído. Lote 5 (Tabela de Preços) concluído. Hotfix scheduler/email aplicado.**
+> Status: **Sprints 1-4 concluídos. Sprint 5 (BI Dashboard + Temas) concluído. Lote 5 (Tabela de Preços) concluído. Hotfix scheduler/email aplicado. UX Refactor + UI Fixes concluído.**
 
 ---
 
@@ -151,6 +151,39 @@
 80. **Todas as 23 issues corrigidas** em 6 sprints (Sprints 6-11) no commit `cdb135c` — 16 arquivos alterados, 0 regressões.
 81. **Testes:** 168/168 passando. **TypeScript:** 0 erros. **Lint:** 0 erros, 0 warnings.
 
+### UX Refactor + UI Fixes (2026-05-25) — 6 Commits
+
+91. **Padronização de layout "Busca"** — `items-center px-4 py-4 overflow-x-auto` aplicado a **Etiquetas**, **Inventário**, **Produtos**, **Configurações**, **Usuarios**, **Admin**. Todas as páginas standalone agora são centralizadas horizontalmente e rolam corretamente em telas estreitas.
+
+92. **Prepend (novo item ao topo) + Highlight animado** — Etiquetas e Inventário:
+    - Item recém-adicionado vai para o **topo** da lista (`[{...item}, ...prev].slice(0, 100)`).
+    - Item re-escanado em Inventário: **move ao topo + incrementa quantidade** + destaca com `highlightedCode` state + `animate-highlight-pulse` (1.5s, fade via CSS keyframe).
+    - `@keyframes highlight-pulse` adicionado em `index.css`.
+
+93. **Configurações/Geral — revisão completa de layout:**
+    - Espaçamento entre blocos: `gap-12`+`divide-y` substituído por **`mb-10`** (40px) + **`border-t border-border/20 pt-6`** nos wrappers Endereço e Metas — separação visual clara com linha horizontal.
+    - Inputs constritos: containers `ml-9` ganharam `max-w-md` (Endereço) ou removeram `max-w-md` com constrição específica (Metas: `max-w-[160px]` via `className`).
+    - `CompactInput` corrigido: `className` passado é **mesclado** com o base em vez de sobrescrever (`...inputProps` spread vinha depois do `className` explícito).
+    - Branding content: `items-start` adicionado para upload de logo não ficar deslocado à direita.
+    - Whitespace removido acima da tab bar: `py-4` → `pb-4 pt-0`.
+
+94. **Configurações — gap values aumentados:**
+    - Geral: `gap-6` → `gap-10`.
+    - ERP, WhatsApp, E-mail: `gap-5` → `gap-8`.
+    - Grid Complemento+Bairro: `1fr_1fr` → `1fr_auto` (consistência visual).
+
+95. **Usuarios + Admin centralizados** — Adicionados `items-center overflow-x-auto`. Input de senha em Usuarios mudou de `sm:flex-1` (esticava) para `sm:w-auto sm:min-w-[200px]` (tamanho natural).
+
+96. **Produtos — tabela mais larga** — `max-w-4xl` → `max-w-6xl` para mostrar todas as 9 colunas (Código, Produto, Grupo, Família, Custo, Venda, Markup, Margem, Estoque) no desktop sem scroll horizontal.
+
+97. **Commits:**
+    - `84b4a97` — UX refactor: prepend, highlight, layout padrão Busca
+    - `3680d23` — UI fixes: centralização, inputs, espaçamento
+    - `89b36a5` — Espaçamento visível + Meta input constrito
+    - `ef41cb3` — Meta input: 160px
+    - `4c3894b` — Separadores explícitos entre blocos no Geral
+    - `89b36a5..4c3894b` — 5 ajustes iterativos baseados em feedback
+
 ## Descobertas Principais
 
 ### O que está saudável ✅
@@ -219,9 +252,10 @@
 - **Backend:** ~15 módulos de primeira linha, ~70 arquivos (estimado).
 - **Frontend:** ~11 módulos de primeira linha, ~40+ componentes/páginas.
 - **Testes:** 169 testes passando (pytest) — 11 sprints + hotfix + Lote 5 validados.
-- **Issues resolvidos:** 30+ em 11 sprints + hotfix + Lote 5.
+- **Issues resolvidos:** 35+ em 11 sprints + hotfix + Lote 5 + UX refactor.
 - **Lint:** 0 erros, 0 warnings.
 - **TypeScript:** 0 erros de compilação.
+- **UX audit:** 6 páginas ajustadas (Etiquetas, Inventário, Produtos, Configurações, Usuarios, Admin).
 - **Issues abertos (2026-05-21 — Revisão Adversarial):** P1-P3 (performance), M1-M12 (médios), m1-m4 (menores) — ainda pendentes.
 - **Issues abertos (2026-05-25 — Auditoria Debug):** Nenhum — todos os 23 corrigidos em 6 sprints.
 - **Regressões corrigidas:** 2 fixes (M1+M2 `job_id: string` e Bônus `logar_erro_interno`) aplicados novamente em `cdb135c`.
@@ -239,7 +273,7 @@
 | **Auth/Token** | ✅ Resolvido (Sprint 2) | JWT com revogação, blacklist + token_version, secret exclusivo .env |
 | **Bugs Críticos** | ✅ **Resolvido** | C1, C2, C3 corrigidos no Sprint 1 (com 2 resíduos médios não bloqueantes) |
 | **Manutenção** | ✅ Resolvido (Sprint 4) | M1-M12: migrations, thread-safe, dead code, Observacao, Excel, configStore |
-| **Frontend UX** | 🟡 Não auditado | Loading/error/empty states, acessibilidade, responsividade |
+| **Frontend UX** | ✅ **Refatorado (2026-05-25)** | Layout padronizado Busca em 6 páginas, prepend, highlight, inputs constritos, espaçamento entre blocos, tabela larga |
 | **Testes** | 🟡 Parcial | 168 testes, algumas lacunas de cobertura |
 | **Deploy** | 🟡 Não auditado | Pipeline CI/CD, estratégia de rollback, health checks |
 
@@ -247,7 +281,7 @@
 
 ## Próximos Passos
 
-### ✅ All Sprints (1-11 + Hotfix) — Concluídos
+### ✅ All Sprints (1-11 + Hotfix + UX Refactor) — Concluídos
 
 **Sprint 1 (Bugs Críticos):** C1, C2, C3 — require_sessao_ativa, Fernet doc, stale closure.  
 **Sprint 2 (Segurança):** S1-S5 + G1-G6 — JWT revogação, rate limits, frontend logout, role invalidation.  
@@ -260,7 +294,8 @@
 **Sprint 8 (Consistência):** B5, B6, B15 — GET bloqueado, EAN stock, pausaEscaneio.  
 **Sprint 9 (Frontend):** B13, B18, B19, B9 — 401 reload, polling leak, erros engolidos, dead code.  
 **Sprint 10 (Segurança):** B10, B12, B17 — ProtectedRoute, logout fail, type fix.  
-**Sprint 11 (Housekeeping):** B2, B20, B21, B23, B25 — email, modelo Claude, log, gaps de teste.
+**Sprint 11 (Housekeeping):** B2, B20, B21, B23, B25 — email, modelo Claude, log, gaps de teste.  
+**UX Refactor (2026-05-25):** Layout Busca em 6 páginas, prepend+highlight, Config espaçamento+inputs, Usuarios/Admin centralizados, Produtos max-w-6xl.
 
 ### Resíduos
 
