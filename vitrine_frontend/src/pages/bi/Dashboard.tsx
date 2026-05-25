@@ -19,12 +19,12 @@ import { fetchKpis, fetchKpisComparativo, fetchRanking, fetchDiario, fetchTempor
 import { baixarCSVdeArray } from '../../utils/csv'
 import { getConfigsCache } from '../../stores/configStore'
 import type { KpisDTO, KpisComparativoDTO, ItemRankingDTO, PontoDiarioDTO, PontoHoraDTO, PeriodoBi } from '../../types'
-import { formatCurrency } from '../../utils/formatters'
+import { formatCurrency, formatDateWithWeekday } from '../../utils/formatters'
 import { useBiCache } from '../../stores/biCache'
 import { useToast } from '../../hooks/useToast'
 import { useCountUp } from '../../hooks/useCountUp'
 import { CHART_THEME, formatChartCurrency, formatChartNumber } from '../../config/chartTheme'
-import { Clock, TrendingUp, ArrowRight, RefreshCw, BarChart3, Clock4 } from 'lucide-react'
+import { Clock, TrendingUp, ArrowRight, RefreshCw, BarChart3, Clock4, CalendarDays } from 'lucide-react'
 
 const PRESETS_DASHBOARD: Preset[] = [
   { label: 'Hoje', kind: 'days', days: 0 },
@@ -63,6 +63,73 @@ function formatDateTick(value: string): string {
   return format(d, 'dd/MM')
 }
 
+// ── Resumo do Dia — último dia completo do período ────────────────
+interface ResumoDiaProps {
+  receita: PontoDiarioDTO[]
+  tickets: PontoDiarioDTO[]
+  ticketMedio: PontoDiarioDTO[]
+}
+
+function ResumoDia({ receita, tickets, ticketMedio }: ResumoDiaProps) {
+  // Última data com dados de receita
+  const sorted = [...receita].sort((a, b) => b.data.localeCompare(a.data))
+  const ultimo = sorted[0]
+  if (!ultimo) return null
+
+  const valorReceita = ultimo.valor
+  const valorTickets = tickets.find((t) => t.data === ultimo.data)?.valor ?? 0
+  const valorTicketMedio = ticketMedio.find((t) => t.data === ultimo.data)?.valor ?? 0
+  const totalDias = sorted.length
+  const temComparacao = totalDias > 1
+
+  function media(arr: PontoDiarioDTO[]): number {
+    if (arr.length === 0) return 0
+    return arr.reduce((s, d) => s + d.valor, 0) / arr.length
+  }
+
+  const mediaReceita = media(sorted)
+  const mediaTickets = media(tickets)
+  const mediaTicketMedio = media(ticketMedio)
+
+  function VariacaoBadge({ atual, media: med }: { atual: number; media: number }) {
+    if (!temComparacao || med === 0) return null
+    const diff = ((atual / med) - 1) * 100
+    const isPositive = diff >= 0
+    return (
+      <span className={`text-xs font-semibold flex items-center gap-0.5 ${isPositive ? 'text-success' : 'text-danger'}`}>
+        {isPositive ? '▲' : '▼'} {Math.abs(diff).toFixed(1)}%
+        <span className="text-text-muted font-normal">vs média</span>
+      </span>
+    )
+  }
+
+  return (
+    <Card variant="bordered" padding="sm">
+      <div className="flex items-center gap-2 mb-3">
+        <CalendarDays size={14} className="text-primary" />
+        <span className="text-xs font-semibold text-text-primary tracking-wide">{formatDateWithWeekday(ultimo.data)}</span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <p className="text-[11px] font-mono font-bold uppercase tracking-widest text-text-muted">Vendas</p>
+          <p className="text-xl font-bold text-text-primary tabular-nums mt-0.5">{formatCurrency(valorReceita)}</p>
+          <VariacaoBadge atual={valorReceita} media={mediaReceita} />
+        </div>
+        <div>
+          <p className="text-[11px] font-mono font-bold uppercase tracking-widest text-text-muted">Tickets</p>
+          <p className="text-xl font-bold text-text-primary tabular-nums mt-0.5">{Math.round(valorTickets).toLocaleString('pt-BR')}</p>
+          <VariacaoBadge atual={valorTickets} media={mediaTickets} />
+        </div>
+        <div>
+          <p className="text-[11px] font-mono font-bold uppercase tracking-widest text-text-muted">Ticket Médio</p>
+          <p className="text-xl font-bold text-text-primary tabular-nums mt-0.5">{formatCurrency(valorTicketMedio)}</p>
+          <VariacaoBadge atual={valorTicketMedio} media={mediaTicketMedio} />
+        </div>
+      </div>
+    </Card>
+  )
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const [periodo, setPeriodo] = useState<PeriodoBi>(periodoInicial)
@@ -80,6 +147,7 @@ export default function Dashboard() {
   const [loadingMeta, setLoadingMeta] = useState(true)
 
   // ── Gráficos de tendência ──
+  const [diarioReceita, setDiarioReceita] = useState<PontoDiarioDTO[]>([])
   const [diarioTicketMedio, setDiarioTicketMedio] = useState<PontoDiarioDTO[]>([])
   const [diarioTickets, setDiarioTickets] = useState<PontoDiarioDTO[]>([])
   const [loadingDiario, setLoadingDiario] = useState(false)
@@ -150,6 +218,7 @@ export default function Dashboard() {
   // ── Carregar dados diários para os gráficos ──
   const buscarDiario = useCallback(async (p: PeriodoBi) => {
     if (p.data_inicio === p.data_fim) {
+      setDiarioReceita([])
       setDiarioTicketMedio([])
       setDiarioTickets([])
       setDadosHora([])
@@ -158,11 +227,13 @@ export default function Dashboard() {
     setLoadingDiario(true)
     setLoadingHora(true)
     try {
-      const [tm, qt, hora] = await Promise.all([
+      const [rc, tm, qt, hora] = await Promise.all([
+        fetchDiario(p, 'receita_produto'),
         fetchDiario(p, 'ticket_medio'),
         fetchDiario(p, 'qtd_tickets'),
         fetchTemporalHora(p, 'receita_produto'),
       ])
+      setDiarioReceita(rc)
       setDiarioTicketMedio(tm)
       setDiarioTickets(qt)
       setDadosHora(hora)
@@ -426,6 +497,32 @@ export default function Dashboard() {
       {/* ── Empty state ── */}
       {!kpisAtivos && !loading && !erro && (
         <EmptyState title="Selecione um período" description="Escolha um período para analisar os dados." />
+      )}
+
+      {/* ============================================================ */}
+      {/* RESUMO DO DIA — Último dia completo do período               */}
+      {/* ============================================================ */}
+      {kpisAtivos && diarioReceita.length > 0 && (
+        <ResumoDia
+          receita={diarioReceita}
+          tickets={diarioTickets}
+          ticketMedio={diarioTicketMedio}
+        />
+      )}
+
+      {/* ── Resumo do Dia skeleton ── */}
+      {kpisAtivos && loadingDiario && diarioReceita.length === 0 && (
+        <Card variant="bordered" padding="sm">
+          <div className="grid grid-cols-3 gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex flex-col gap-2">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-6 w-24" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            ))}
+          </div>
+        </Card>
       )}
 
       {/* ============================================================ */}
