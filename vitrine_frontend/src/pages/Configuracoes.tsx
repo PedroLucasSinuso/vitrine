@@ -99,7 +99,7 @@ const TEST_WARNING = 'Testa a configuração salva no servidor, não as alteraç
 
 /* ── Reusable compact input ── */
 function CompactInput({
-  label, icon: Icon, ...inputProps
+  label, icon: Icon, className, ...inputProps
 }: { label: string; icon?: React.ElementType } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div className="flex flex-col gap-1">
@@ -108,7 +108,7 @@ function CompactInput({
         {label}
       </label>
       <input
-        className="w-full border border-border-input bg-bg-input text-text-primary rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary transition placeholder:text-text-muted"
+        className={`w-full border border-border-input bg-bg-input text-text-primary rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary transition placeholder:text-text-muted${className ? ` ${className}` : ''}`}
         {...inputProps}
       />
     </div>
@@ -282,7 +282,7 @@ export default function Configuracoes() {
           {/* ── GERAL ── */}
           {/* ════════════════════════════════════════════ */}
           {activeTab === 'geral' && (
-            <div className="p-5 flex flex-col gap-10">
+            <div className="p-5 flex flex-col gap-12 divide-y divide-border/15">
 
               {/* Branding section */}
               <div>
@@ -404,7 +404,7 @@ export default function Configuracoes() {
               {/* Metas section */}
               <div>
                 <SectionHeader icon={Target} title="Metas" description="Metas de faturamento para projeção no dashboard" />
-                <div className="ml-9 flex flex-col gap-3 max-w-md">
+                <div className="ml-9 flex flex-col gap-3">
                   <CompactInput
                     label="Meta de Faturamento Mensal (R$)"
                     icon={DollarSign}
@@ -412,6 +412,7 @@ export default function Configuracoes() {
                     value={form.meta_faturamento_mensal ?? ''}
                     onChange={(e) => updateField('meta_faturamento_mensal', e.target.value)}
                     placeholder="100000"
+                    className="max-w-[260px]"
                   />
                   <p className="text-[11px] text-text-muted ml-1">
                     Usada para calcular o percentual atingido e a projeção de receita no Dashboard
