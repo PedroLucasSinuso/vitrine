@@ -43,7 +43,7 @@ class AlterdataProductSource(ProductSource):
                 stock=float(row["estoque"]),
                 group=str(row["grupo"]),
                 family=str(row["familia"]),
-                is_active=True,
+                is_active=bool(row.get("ativo", True)),
             )
             for row in produtos_raw
         ]
