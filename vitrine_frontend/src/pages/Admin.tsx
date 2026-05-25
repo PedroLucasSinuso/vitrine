@@ -31,6 +31,7 @@ export default function Admin() {
   const [erro, setErro] = useState('')
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const mountedRef = useRef(true)
 
   async function carregarHistorico() {
     try {
@@ -63,7 +64,15 @@ export default function Admin() {
     try {
       const { job_id } = await triggerSync()
 
+      // Se o componente foi desmontado enquanto triggerSync() rodava, não criar o intervalo
+      if (!mountedRef.current) return
+
       pollingRef.current = setInterval(async () => {
+        if (!mountedRef.current) {
+          clearInterval(pollingRef.current!)
+          pollingRef.current = null
+          return
+        }
         abortControllerRef.current = new AbortController()
         try {
           const status: SyncJob = await getSyncStatus(job_id, abortControllerRef.current.signal)
@@ -87,7 +96,13 @@ export default function Admin() {
     }
   }
 
-  useEffect(() => () => pararPolling(), [])
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      pararPolling()
+    }
+  }, [])
 
   return (
     <div className="flex flex-col px-4 py-4">

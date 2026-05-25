@@ -176,18 +176,35 @@ def _get_estoque_db(
 ) -> dict[str, float]:
     """
     Busca o estoque atual dos produtos no SQLite.
-    Usa WHERE IN para buscar apenas os códigos necessários.
+    Primeiro busca por codigo_chamada (código interno ERP),
+    depois tenta por ProdutoCodigo.codigo (EAN / código de barras)
+    para os códigos não encontrados.
     Retorna mapa codigo_chamada → estoque.
     Produtos não encontrados ficam ausentes do mapa.
     """
     if not codigos:
         return {}
     try:
+        # Passo 1: busca direta por codigo_chamada
         rows = db.execute(
             select(Produto.codigo_chamada, Produto.estoque)
             .where(Produto.codigo_chamada.in_(codigos))
         ).all()
-        return {r.codigo_chamada: float(r.estoque) for r in rows}
+        resultado = {r.codigo_chamada: float(r.estoque) for r in rows}
+
+        # Passo 2: para códigos não encontrados, tenta por ProdutoCodigo (EAN)
+        from app.domain.models.produto import ProdutoCodigo
+        faltantes = [c for c in codigos if c not in resultado]
+        if faltantes:
+            ean_rows = db.execute(
+                select(Produto.codigo_chamada, Produto.estoque)
+                .join(ProdutoCodigo, Produto.codigo_chamada == ProdutoCodigo.codigo_chamada)
+                .where(ProdutoCodigo.codigo.in_(faltantes))
+            ).all()
+            for r in ean_rows:
+                resultado[r.codigo_chamada] = float(r.estoque)
+
+        return resultado
     except Exception:
         logger.exception("Falha ao buscar estoque para delta — exportando sem delta")
         return {}
@@ -338,7 +355,10 @@ def listar_itens(
 ):
 
     sessao = get_session_or_404(sessao_id, db)
-    require_sessao_ativa(sessao)
+
+    # Sessões encerradas: operador não pode listar itens (apenas supervisor/admin)
+    if sessao.status != "ativa" and usuario.role not in ("supervisor", "admin"):
+        raise HTTPException(status_code=403, detail="Sessão encerrada. Apenas supervisor ou admin.")
 
     if consolidado and usuario.role in ("supervisor", "admin"):
         rows = db.execute(

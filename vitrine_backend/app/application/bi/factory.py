@@ -74,7 +74,7 @@ def _debug_items(items_before: list[TransactionItem], data_limite: date, hora_at
     soma_total = sum(float(i.line_total) for i in items_before if isinstance(i.line_total, (int, float, Decimal)))
     soma_filtrada = sum(float(i.line_total) for i in filtrados if isinstance(i.line_total, (int, float, Decimal)))
 
-    logger.info(
+    logger.debug(
         "BI debug | %s hora_atual=%s data_limite=%s "
         "items=%s filtrados=%s "
         "soma_total=%.2f soma_filtrada=%.2f "
@@ -90,7 +90,7 @@ def _debug_items(items_before: list[TransactionItem], data_limite: date, hora_at
     com_time = sum(1 for i in itens_na_data if i.time is not None)
     sem_time = sum(1 for i in itens_na_data if i.time is None)
     soma_data = sum(float(i.line_total) for i in itens_na_data if isinstance(i.line_total, (int, float, Decimal)))
-    logger.info(
+    logger.debug(
         "BI debug | %s data_limite=%s itens_na_data=%s "
         "com_time=%s sem_time=%s soma_total=%.2f",
         label, data_limite, len(itens_na_data), com_time, sem_time, soma_data,
@@ -99,7 +99,7 @@ def _debug_items(items_before: list[TransactionItem], data_limite: date, hora_at
     # Distribuição de horas na data limite
     if itens_na_data:
         horas = Counter(i.time.hour for i in itens_na_data if i.time is not None)
-        logger.info("BI debug | %s horas na data_limite=%s", label, dict(sorted(horas.items())))
+        logger.debug("BI debug | %s horas na data_limite=%s", label, dict(sorted(horas.items())))
 
 
 def criar_dominio_comparativo(

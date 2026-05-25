@@ -16,7 +16,7 @@ from app.schemas.sync_schema import (
 from app.domain.models.sync_job import SyncJob
 from app.domain.models.usuario import Usuario
 from app.application.sync_service import SyncService, SyncResult
-from app.core.error_handler import sanitizar_erro
+from app.core.error_handler import sanitizar_erro, logar_erro_interno
 from app.application.scheduler_manager import listar_jobs
 
 logger = logging.getLogger(__name__)

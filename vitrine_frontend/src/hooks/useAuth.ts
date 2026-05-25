@@ -82,12 +82,20 @@ export function useAuth() {
   }, [])
 
   const logout = useCallback(async () => {
+    let revoked = false
     try {
-      await api.post('/auth/logout')
+      await api.post('/auth/logout', {}, { timeout: 5000 })
+      revoked = true
     } catch (err) {
       console.warn('[Auth] Falha ao revogar token no servidor. Token removido apenas localmente.', err)
     }
     localStorage.removeItem('token')
+    if (!revoked) {
+      console.warn(
+        '[Auth] Token ainda pode ser válido por até 7 dias. ' +
+        'Para revogá-lo manualmente, use "Logout em todos os dispositivos" no painel admin.'
+      )
+    }
   }, [])
 
   const checkAuth = useCallback(() => {

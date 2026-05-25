@@ -60,6 +60,7 @@ def _cid_nome_arquivo(path: Path) -> tuple[str, str]:
 
 def _carregar_imagens() -> list[tuple[str, bytes, str]]:
     """Carrega as imagens estáticas e retorna [(cid, bytes, mimetype), ...]."""
+    STATIC_DIR.mkdir(parents=True, exist_ok=True)
     imagens = []
     logo_paths = sorted(STATIC_DIR.glob("logo.*"), key=lambda p: p.stat().st_mtime, reverse=True)
     if logo_paths:

@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import Login from './pages/Login'
 import Busca from './pages/Busca'
 import Admin from './pages/Admin'
@@ -39,6 +39,18 @@ function HomeRouter() {
   return <Busca />
 }
 
+/** Escuta o evento auth:unauthorized disparado pelo interceptor 401
+ *  e redireciona via React Router (sem full page reload). */
+function AuthListener() {
+  const navigate = useNavigate()
+  React.useEffect(() => {
+    const handler = () => navigate('/login', { replace: true })
+    window.addEventListener('auth:unauthorized', handler)
+    return () => window.removeEventListener('auth:unauthorized', handler)
+  }, [navigate])
+  return null
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -46,12 +58,13 @@ function App() {
       <BiCacheProvider>
         <ToastProvider>
           <ErrorBoundary>
+            <AuthListener />
             <React.Suspense fallback={<div className="flex items-center justify-center min-h-[60vh] text-gray-400 text-lg">Carregando...</div>}>
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route element={<AppLayout />}>
-                <Route path="/" element={<ProtectedRoute><HomeRouter /></ProtectedRoute>} />
-                <Route path="/busca" element={<ProtectedRoute><Busca /></ProtectedRoute>} />
+                <Route path="/" element={<ProtectedRoute allowedRoles={['admin', 'supervisor', 'operador']}><HomeRouter /></ProtectedRoute>} />
+                <Route path="/busca" element={<ProtectedRoute allowedRoles={['admin', 'supervisor', 'operador']}><Busca /></ProtectedRoute>} />
                 <Route path="/home" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><Home /></ProtectedRoute>} />
                 <Route path="/home/operador" element={<ProtectedRoute allowedRoles={['operador']}><OperadorHome /></ProtectedRoute>} />
                 <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><Admin /></ProtectedRoute>} />

@@ -80,8 +80,9 @@ export default function Inventario() {
     try {
       const items = await getConsolidadoGeral()
       setConsolidadoItems(items)
-    } catch { /* ignore */ }
-    finally { setConsolidadoLoading(false) }
+    } catch (err) {
+      console.error('Erro ao carregar consolidado:', err)
+    } finally { setConsolidadoLoading(false) }
   }, [isSupervisor])
 
   useEffect(() => {
@@ -91,6 +92,9 @@ export default function Inventario() {
   }, [sessaoAtiva, isSupervisor, fetchConsolidado])
 
   useEffect(() => {
+    // Reset pausaEscaneio ao montar para evitar bloqueio de scans se
+    // o modal "não cadastrado" estava aberto quando o componente desmontou
+    pausaEscaneio.current = false
     getSessoesInventario()
       .then(setSessoes)
       .catch(() => setErro('Erro ao carregar sessões'))
@@ -329,13 +333,15 @@ export default function Inventario() {
 
   function ajustarQuantidade(codigo: string, delta: number) {
     if (!sessaoAtiva) return
-    setItens(prev => prev
-      .map(i => i.codigo === codigo ? { ...i, quantidade: Math.max(0, i.quantidade + delta) } : i)
-      .filter(i => i.quantidade > 0)
-    )
-    const item = itens.find(i => i.codigo === codigo)
-    if (item) {
-      const novaQtd = Math.max(0, item.quantidade + delta)
+    let novaQtd = 0
+    setItens(prev => {
+      const item = prev.find(i => i.codigo === codigo)
+      novaQtd = Math.max(0, (item?.quantidade ?? 0) + delta)
+      return prev
+        .map(i => i.codigo === codigo ? { ...i, quantidade: novaQtd } : i)
+        .filter(i => i.quantidade > 0)
+    })
+    if (novaQtd > 0 || delta < 0) {
       atualizarItemInventario(sessaoAtiva.id, codigo, novaQtd).catch(() => {})
       fetchConsolidado()
     }

@@ -49,14 +49,17 @@ class SyncService:
             products = self.source.get_all_products()
             logger.info("SyncService source retornou %s produtos", len(products))
 
-            with temporizador("SyncService delete antigos", logger):
-                self.db.execute(delete(ProdutoCodigo))
-                self.db.execute(delete(Produto))
+            # Transação explícita: DELETE + INSERT são atômicos.
+            # Se add_all falhar, o rollback desfaz o DELETE.
+            with self.db.begin():
+                with temporizador("SyncService delete antigos", logger):
+                    self.db.execute(delete(ProdutoCodigo))
+                    self.db.execute(delete(Produto))
 
-            produtos_orm = [self._to_orm(p) for p in products]
+                produtos_orm = [self._to_orm(p) for p in products]
 
-            with temporizador("SyncService insert", logger):
-                self.db.add_all(produtos_orm)
+                with temporizador("SyncService insert", logger):
+                    self.db.add_all(produtos_orm)
 
             produtos_count = len(produtos_orm)
             codigos_count = sum(len(p.barcodes) for p in products)
@@ -103,6 +106,7 @@ class SyncService:
 def run_sync_scheduled():
     """Função para ser chamada pelo scheduler (sem argumentos).
     Cria seu próprio engine e sessão, executa o sync e invalida cache.
+    O engine é disposto ao final para evitar vazamento de conexões PostgreSQL.
     """
     from app.infrastructure.db.bootstrap import init_db
     from app.infrastructure.db.session import SqliteSession
@@ -112,8 +116,10 @@ def run_sync_scheduled():
 
     init_db()
     session = SqliteSession()
+    engine = None
     try:
-        source = AlterdataProductSource(get_alterdata_engine(session))
+        engine = get_alterdata_engine(session)
+        source = AlterdataProductSource(engine)
         result = SyncService(source, session).sync()
         invalidar_cache_transacoes()
         logger.info("Sync agendado concluido | produtos=%s codigos=%s",
@@ -122,3 +128,5 @@ def run_sync_scheduled():
         logger.error("Sync agendado falhou: %s", sanitizar_erro(e))
     finally:
         session.close()
+        if engine is not None:
+            engine.dispose()
