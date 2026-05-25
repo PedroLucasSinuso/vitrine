@@ -78,18 +78,31 @@ interface ResumoDiaProps {
   comparar: boolean
 }
 
-/** Encontra a data com o mesmo dia da semana no ano anterior */
-function findSameWeekdayLastYear(data: string): string {
-  const date = new Date(data + 'T00:00:00')
-  const targetWeekday = getDay(date) // 0=Dom, 1=Seg...
+/**
+ * Encontra o valor no ano anterior para o mesmo dia da semana.
+ * Varre os dados anteriores procurando a data que casa com o weekday alvo,
+ * com tolerância de ±2 dias para garantir cobertura mesmo em feriados/ausências.
+ */
+function findValorAnterior(dataAtual: string, dadosAnteriores: PontoDiarioDTO[]): number | null {
+  if (dadosAnteriores.length === 0) return null
+
+  const date = new Date(dataAtual + 'T00:00:00')
+  const targetWeekday = getDay(date)
   const lastYear = subYears(date, 1)
   let lastYearWeekday = getDay(lastYear)
   let diff = targetWeekday - lastYearWeekday
-  // Ajusta para ±3 no máximo (encontra o mesmo weekday mais próximo)
   if (diff > 3) diff -= 7
   if (diff < -3) diff += 7
-  const match = addDays(lastYear, diff)
-  return format(match, 'yyyy-MM-dd')
+
+  // Tenta exata + tolerância de ±2 dias
+  for (let tol = 0; tol <= 2; tol++) {
+    for (const sign of tol === 0 ? [0] : [-1, 1]) {
+      const candidate = format(addDays(lastYear, diff + tol * sign), 'yyyy-MM-dd')
+      const found = dadosAnteriores.find((d) => d.data === candidate)
+      if (found) return found.valor
+    }
+  }
+  return null
 }
 
 function ResumoDia({ receita, tickets, ticketMedio, anterior, comparar: compAtivo }: ResumoDiaProps) {
@@ -101,55 +114,67 @@ function ResumoDia({ receita, tickets, ticketMedio, anterior, comparar: compAtiv
   const valorTickets = tickets.find((t) => t.data === ultimo.data)?.valor ?? 0
   const valorTicketMedio = ticketMedio.find((t) => t.data === ultimo.data)?.valor ?? 0
 
-  // Busca valor do mesmo weekday no ano anterior
-  const dataAnterior = findSameWeekdayLastYear(ultimo.data)
+  // Busca valor do mesmo weekday no ano anterior (com tolerância)
   const ant = anterior && compAtivo && anterior.receita.length > 0 ? anterior : null
-  const antReceita = ant?.receita.find((d) => d.data === dataAnterior)?.valor ?? null
-  const antTickets = ant?.tickets.find((d) => d.data === dataAnterior)?.valor ?? null
-  const antTicketMedio = ant?.ticketMedio.find((d) => d.data === dataAnterior)?.valor ?? null
+  const antReceita = ant ? findValorAnterior(ultimo.data, ant.receita) : null
+  const antTickets = ant ? findValorAnterior(ultimo.data, ant.tickets) : null
+  const antTicketMedio = ant ? findValorAnterior(ultimo.data, ant.ticketMedio) : null
 
-  function VariacaoBadge({ atual, anterior: antVal }: { atual: number; anterior: number | null }) {
-    if (antVal === null || antVal === 0) return null
+  function BadgeVariacao({ atual, anterior: antVal }: { atual: number; anterior: number | null }) {
+    if (antVal === null || antVal === 0) return <span className="block h-[18px]" /> // placeholder de altura
     const diff = ((atual / antVal) - 1) * 100
     const isPositive = diff >= 0
     return (
-      <span className={`text-xs font-semibold flex items-center gap-0.5 ${isPositive ? 'text-success' : 'text-danger'}`}>
-        {isPositive ? '▲' : '▼'} {Math.abs(diff).toFixed(1)}%
-        <span className="text-text-muted font-normal">vs ano anterior</span>
+      <span className={`text-xs font-semibold inline-flex items-center gap-1 ${isPositive ? 'text-success' : 'text-danger'}`}>
+        <span className="text-sm leading-none">{isPositive ? '▲' : '▼'}</span>
+        {Math.abs(diff).toFixed(1)}%
+        <span className="text-text-muted font-normal text-[11px]">vs ano anterior</span>
       </span>
+    )
+  }
+
+  function LinhaAnterior({ label }: { label: string }) {
+    return (
+      <p className="text-[11px] text-text-muted leading-tight h-[16px]">
+        {label}
+      </p>
     )
   }
 
   return (
     <Card variant="bordered" padding="sm">
-      <div className="flex items-center gap-2 mb-3">
-        <CalendarDays size={14} className="text-primary" />
-        <span className="text-xs font-semibold text-text-primary tracking-wide">{formatDateWithWeekday(ultimo.data)}</span>
+      {/* Header */}
+      <div className="flex items-center gap-2 pb-3 border-b border-border mb-3">
+        <div className="p-1.5 rounded-lg bg-primary-light text-primary shrink-0">
+          <CalendarDays size={14} />
+        </div>
+        <span className="text-xs font-semibold text-text-primary">{formatDateWithWeekday(ultimo.data)}</span>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div>
+
+      {/* Grid 3 colunas */}
+      <div className="grid grid-cols-3 gap-6">
+        {/* Vendas */}
+        <div className="flex flex-col gap-1">
           <p className="text-[11px] font-mono font-bold uppercase tracking-widest text-text-muted">Vendas</p>
-          <p className="text-xl font-bold text-text-primary tabular-nums mt-0.5">{formatCurrency(valorReceita)}</p>
-          <VariacaoBadge atual={valorReceita} anterior={antReceita} />
-          {antReceita != null && (
-            <p className="text-[10px] text-text-muted mt-0.5">Ano passado: {formatCurrency(antReceita)}</p>
-          )}
+          <p className="text-lg font-bold text-text-primary tabular-nums">{formatCurrency(valorReceita)}</p>
+          <BadgeVariacao atual={valorReceita} anterior={antReceita} />
+          <LinhaAnterior label={antReceita != null ? `Ano passado: ${formatCurrency(antReceita)}` : ''} />
         </div>
-        <div>
+
+        {/* Tickets */}
+        <div className="flex flex-col gap-1">
           <p className="text-[11px] font-mono font-bold uppercase tracking-widest text-text-muted">Tickets</p>
-          <p className="text-xl font-bold text-text-primary tabular-nums mt-0.5">{Math.round(valorTickets).toLocaleString('pt-BR')}</p>
-          <VariacaoBadge atual={valorTickets} anterior={antTickets} />
-          {antTickets != null && (
-            <p className="text-[10px] text-text-muted mt-0.5">Ano passado: {Math.round(antTickets).toLocaleString('pt-BR')}</p>
-          )}
+          <p className="text-lg font-bold text-text-primary tabular-nums">{Math.round(valorTickets).toLocaleString('pt-BR')}</p>
+          <BadgeVariacao atual={valorTickets} anterior={antTickets} />
+          <LinhaAnterior label={antTickets != null ? `Ano passado: ${Math.round(antTickets).toLocaleString('pt-BR')}` : ''} />
         </div>
-        <div>
+
+        {/* Ticket Médio */}
+        <div className="flex flex-col gap-1">
           <p className="text-[11px] font-mono font-bold uppercase tracking-widest text-text-muted">Ticket Médio</p>
-          <p className="text-xl font-bold text-text-primary tabular-nums mt-0.5">{formatCurrency(valorTicketMedio)}</p>
-          <VariacaoBadge atual={valorTicketMedio} anterior={antTicketMedio} />
-          {antTicketMedio != null && (
-            <p className="text-[10px] text-text-muted mt-0.5">Ano passado: {formatCurrency(antTicketMedio)}</p>
-          )}
+          <p className="text-lg font-bold text-text-primary tabular-nums">{formatCurrency(valorTicketMedio)}</p>
+          <BadgeVariacao atual={valorTicketMedio} anterior={antTicketMedio} />
+          <LinhaAnterior label={antTicketMedio != null ? `Ano passado: ${formatCurrency(antTicketMedio)}` : ''} />
         </div>
       </div>
     </Card>
@@ -269,11 +294,13 @@ export default function Dashboard() {
         fetchTemporalHora(p, 'receita_produto'),
       ]
 
-      // Se comparar ativo, busca dados do ano anterior (mesmo período)
+      // Se comparar ativo, busca dados do ano anterior (mesmo período ±4 dias)
+      // O padding de ±4 garante que o mesmo weekday seja capturado mesmo
+      // quando o ajuste de findSameWeekdayLastYear (±3) cair fora do range
       if (comparar) {
         const pAnt: PeriodoBi = {
-          data_inicio: format(subYears(new Date(p.data_inicio + 'T00:00:00'), 1), 'yyyy-MM-dd'),
-          data_fim: format(subYears(new Date(p.data_fim + 'T00:00:00'), 1), 'yyyy-MM-dd'),
+          data_inicio: format(addDays(subYears(new Date(p.data_inicio + 'T00:00:00'), 1), -4), 'yyyy-MM-dd'),
+          data_fim: format(addDays(subYears(new Date(p.data_fim + 'T00:00:00'), 1), 4), 'yyyy-MM-dd'),
         }
         promises.push(
           fetchDiario(pAnt, 'receita_produto'),
