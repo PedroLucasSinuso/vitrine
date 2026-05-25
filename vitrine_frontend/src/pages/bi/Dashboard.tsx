@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { format, formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
 import PeriodoForm, { type Preset } from '../../components/bi/PeriodoForm'
 import BiPageLayout from '../../components/bi/BiPageLayout'
@@ -15,16 +15,16 @@ import ErrorBanner from '../../components/ui/ErrorBanner'
 import Card from '../../components/ui/Card'
 import SectionHeader from '../../components/ui/SectionHeader'
 import Skeleton from '../../components/ui/Skeleton'
-import { fetchKpis, fetchKpisComparativo, fetchRanking, fetchDiario, exportarExcelBI } from '../../api/bi'
+import { fetchKpis, fetchKpisComparativo, fetchRanking, fetchDiario, fetchTemporalHora, exportarExcelBI } from '../../api/bi'
 import { baixarCSVdeArray } from '../../utils/csv'
 import { getConfigsCache } from '../../stores/configStore'
-import type { KpisDTO, KpisComparativoDTO, ItemRankingDTO, PontoDiarioDTO, PeriodoBi } from '../../types'
+import type { KpisDTO, KpisComparativoDTO, ItemRankingDTO, PontoDiarioDTO, PontoHoraDTO, PeriodoBi } from '../../types'
 import { formatCurrency } from '../../utils/formatters'
 import { useBiCache } from '../../stores/biCache'
 import { useToast } from '../../hooks/useToast'
 import { useCountUp } from '../../hooks/useCountUp'
 import { CHART_THEME, formatChartCurrency, formatChartNumber } from '../../config/chartTheme'
-import { Clock, TrendingUp, ArrowRight, RefreshCw, BarChart3 } from 'lucide-react'
+import { Clock, TrendingUp, ArrowRight, RefreshCw, BarChart3, Clock4 } from 'lucide-react'
 
 const PRESETS_DASHBOARD: Preset[] = [
   { label: 'Hoje', kind: 'days', days: 0 },
@@ -34,9 +34,13 @@ const PRESETS_DASHBOARD: Preset[] = [
   { label: 'Mês passado', kind: 'last_month' },
 ]
 
+// Default period: current month
 function periodoInicial(): PeriodoBi {
-  const hoje = format(new Date(), 'yyyy-MM-dd')
-  return { data_inicio: hoje, data_fim: hoje }
+  const hoje = new Date()
+  return {
+    data_inicio: format(hoje, 'yyyy-MM-01'),
+    data_fim: format(hoje, 'yyyy-MM-dd'),
+  }
 }
 
 function periodoMesAtual(): PeriodoBi {
@@ -80,6 +84,10 @@ export default function Dashboard() {
   const [diarioTickets, setDiarioTickets] = useState<PontoDiarioDTO[]>([])
   const [loadingDiario, setLoadingDiario] = useState(false)
 
+  // ── Gráfico de receita por hora ──
+  const [dadosHora, setDadosHora] = useState<PontoHoraDTO[]>([])
+  const [loadingHora, setLoadingHora] = useState(false)
+
   // Determina qual fonte de dados usar (comparativo ou simples)
   const kpisAtivos = kpisComp ?? kpis
   const temComparativo = !!kpisComp
@@ -115,10 +123,9 @@ export default function Dashboard() {
   }, [kpisAtivos, temComparativo])
 
   const animFatLiq = useCountUp(getKpi('faturamento_liquido'), 600, !!kpisAtivos)
-  const animTrocas = useCountUp(getKpi('total_trocas'), 600, !!kpisAtivos)
+  const animItensTicket = useCountUp(getKpi('itens_por_ticket'), 600, !!kpisAtivos)
   const animTicketMedio = useCountUp(getKpi('ticket_medio'), 600, !!kpisAtivos)
   const animTickets = useCountUp(getKpi('qtd_tickets'), 600, !!kpisAtivos)
-  const animItensTicket = useCountUp(getKpi('itens_por_ticket'), 600, !!kpisAtivos)
 
   const cache = useBiCache()
   const cacheKey = `dashboard_${comparar}`
@@ -145,20 +152,25 @@ export default function Dashboard() {
     if (p.data_inicio === p.data_fim) {
       setDiarioTicketMedio([])
       setDiarioTickets([])
+      setDadosHora([])
       return
     }
     setLoadingDiario(true)
+    setLoadingHora(true)
     try {
-      const [tm, qt] = await Promise.all([
+      const [tm, qt, hora] = await Promise.all([
         fetchDiario(p, 'ticket_medio'),
         fetchDiario(p, 'qtd_tickets'),
+        fetchTemporalHora(p, 'receita_produto'),
       ])
       setDiarioTicketMedio(tm)
       setDiarioTickets(qt)
+      setDadosHora(hora)
     } catch {
       // silencioso
     } finally {
       setLoadingDiario(false)
+      setLoadingHora(false)
     }
   }, [])
 
@@ -235,6 +247,13 @@ export default function Dashboard() {
 
   // ── Estado vazio para gráficos ──
   const temGraficos = diarioTicketMedio.length > 1 || diarioTickets.length > 1
+  const temDadosHora = dadosHora.length > 0
+
+  // Detecta se o preset "Este mês" está ativo
+  const presetEsteMesAtivo = (() => {
+    const mesAtual = periodoMesAtual()
+    return periodo.data_inicio === mesAtual.data_inicio && periodo.data_fim === mesAtual.data_fim
+  })()
 
   return (
     <BiPageLayout titulo="Dashboard" breadcrumb={[{ label: 'BI' }, { label: 'Dashboard' }]}>
@@ -252,6 +271,12 @@ export default function Dashboard() {
               loading={loading}
               presets={PRESETS_DASHBOARD}
             />
+            {presetEsteMesAtivo && (
+              <span className="inline-flex items-center gap-1 mt-2 text-[11px] font-medium text-text-muted bg-bg-hover px-2 py-0.5 rounded-full">
+                <Clock size={10} />
+                Padrão — dados do mês vigente
+              </span>
+            )}
           </div>
 
           {/* Right: controls + status */}
@@ -300,75 +325,101 @@ export default function Dashboard() {
       {erro && <ErrorBanner message={erro} />}
 
       {/* ============================================================ */}
-      {/* MAIN CONTENT — KPI Hero + Secondary KPIs                     */}
+      {/* HERO (2/3) + TOP PRODUTOS (1/3)                              */}
       {/* ============================================================ */}
       {kpisAtivos && (
-        <>
-          {/* ── HERO: Faturamento Bruto (com meta + projeção inline) ── */}
-          <HeroKpiCard
-            label="Faturamento Bruto"
-            valor={formatCurrency(animFatBruto)}
-            pulseKey={pulseKey}
-            variacao={temComparativo ? variacaoInfo(getVariacao('faturamento_bruto')) : null}
-            valorAnterior={getAnterior('faturamento_bruto') != null ? formatCurrency(getAnterior('faturamento_bruto')!) : undefined}
-            meta={!loadingMeta && pctMeta != null ? {
-              pct: pctMeta,
-              atual: receitaMesAtual ?? 0,
-              meta: metaMensal ?? 0,
-            } : null}
-            projecao={!loadingMeta && projecao != null ? {
-              valor: projecao,
-              vsMetaPct: projecaoVsMeta,
-              diasCorridos,
-              diasTotal: ultimoDiaMes,
-              mediaDiaria: receitaMesAtual != null && diasCorridos > 0 ? receitaMesAtual / diasCorridos : 0,
-            } : null}
-          />
-
-          {/* ── Secondary KPIs (4 cards) ── */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <KpiCard
-              label="Faturamento Líquido"
-              valor={formatCurrency(animFatLiq)}
-              delay={80}
-              variacao={temComparativo ? variacaoInfo(getVariacao('faturamento_liquido')) : null}
-              valorAnterior={getAnterior('faturamento_liquido') != null ? formatCurrency(getAnterior('faturamento_liquido')!) : undefined}
-            />
-            <KpiCard
-              label="Total de Trocas"
-              valor={formatCurrency(animTrocas)}
-              delay={160}
-              variacao={temComparativo ? variacaoInfo(getVariacao('total_trocas')) : null}
-              invertVariation
-              valorAnterior={getAnterior('total_trocas') != null ? formatCurrency(getAnterior('total_trocas')!) : undefined}
-            />
-            <KpiCard
-              label="Tickets"
-              valor={Math.round(animTickets).toLocaleString('pt-BR')}
-              delay={240}
-              variacao={temComparativo ? variacaoInfo(getVariacao('qtd_tickets')) : null}
-              valorAnterior={getAnterior('qtd_tickets') != null ? Math.round(getAnterior('qtd_tickets')!).toLocaleString('pt-BR') : undefined}
-            />
-            <KpiCard
-              label="Ticket Médio"
-              valor={formatCurrency(animTicketMedio)}
-              delay={320}
-              variacao={temComparativo ? variacaoInfo(getVariacao('ticket_medio')) : null}
-              valorAnterior={getAnterior('ticket_medio') != null ? formatCurrency(getAnterior('ticket_medio')!) : undefined}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {/* ── Hero KPI (2/3) ── */}
+          <div className="lg:col-span-2">
+            <HeroKpiCard
+              label="Faturamento Bruto"
+              valor={formatCurrency(animFatBruto)}
+              pulseKey={pulseKey}
+              variacao={temComparativo ? variacaoInfo(getVariacao('faturamento_bruto')) : null}
+              valorAnterior={getAnterior('faturamento_bruto') != null ? formatCurrency(getAnterior('faturamento_bruto')!) : undefined}
+              meta={!loadingMeta && pctMeta != null ? {
+                pct: pctMeta,
+                atual: receitaMesAtual ?? 0,
+                meta: metaMensal ?? 0,
+              } : null}
+              projecao={!loadingMeta && projecao != null ? {
+                valor: projecao,
+                vsMetaPct: projecaoVsMeta,
+                diasCorridos,
+                diasTotal: ultimoDiaMes,
+                mediaDiaria: receitaMesAtual != null && diasCorridos > 0 ? receitaMesAtual / diasCorridos : 0,
+              } : null}
             />
           </div>
-        </>
+
+          {/* ── Top Produtos (1/3) ── */}
+          <div className="flex flex-col">
+            {topProdutos.length > 0 ? (
+              <Card variant="bordered" padding="sm" className="flex-1">
+                <SectionHeader
+                  icon={BarChart3}
+                  action={
+                    <button
+                      onClick={() => navigate('/bi/ranking')}
+                      className="text-xs text-primary hover:text-primary-hover font-medium flex items-center gap-1 transition whitespace-nowrap"
+                    >
+                      Ver completo <ArrowRight size={12} />
+                    </button>
+                  }
+                >
+                  Top Produtos
+                </SectionHeader>
+                <div className="flex flex-col gap-0.5 mt-2">
+                  {topProdutos.map((item, i) => (
+                    <div
+                      key={item.codigo}
+                      onClick={() => navigate(`/bi/sku?codigo=${item.codigo}`)}
+                      className="group flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-bg-hover cursor-pointer transition"
+                    >
+                      <span className={`
+                        text-xs font-bold w-5 h-5 shrink-0 flex items-center justify-center rounded-full
+                        ${i === 0 ? 'bg-primary/15 text-primary' : i === 1 ? 'bg-chart-2/15 text-chart-2' : i === 2 ? 'bg-chart-3/15 text-chart-3' : 'bg-bg-hover text-text-muted'}
+                      `}>
+                        {i + 1}
+                      </span>
+                      <span className="flex-1 text-sm text-text-primary truncate min-w-0" title={item.produto}>
+                        {item.produto}
+                      </span>
+                      <span className="text-xs font-semibold text-text-primary shrink-0 tabular-nums">
+                        {formatCurrency(item.valor)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            ) : loading ? (
+              <Card variant="bordered" padding="sm" className="flex-1">
+                <Skeleton className="h-5 w-36 mb-3" />
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 px-2 py-1.5">
+                    <Skeleton className="h-4 w-5 rounded-full" />
+                    <Skeleton className="h-4 flex-1" />
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                ))}
+              </Card>
+            ) : (
+              <Card variant="bordered" padding="sm" className="flex-1">
+                <SectionHeader icon={BarChart3}>Top Produtos</SectionHeader>
+                <p className="text-xs text-text-muted mt-2">Carregue um período para ver o ranking.</p>
+              </Card>
+            )}
+          </div>
+        </div>
       )}
 
-      {/* ── Loading skeleton ── */}
+      {/* ── Loading skeleton for hero + ranking ── */}
       {loading && !kpisAtivos && !erro && (
-        <div className="flex flex-col gap-4">
-          <Skeleton variant="kpi" className="h-40" />
-          <div className="grid grid-cols-4 gap-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} variant="kpi" />
-            ))}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="lg:col-span-2">
+            <Skeleton variant="kpi" className="h-48" />
           </div>
+          <Skeleton variant="kpi" className="h-48" />
         </div>
       )}
 
@@ -378,11 +429,57 @@ export default function Dashboard() {
       )}
 
       {/* ============================================================ */}
-      {/* CHARTS + RANKING — Side-by-side on desktop                    */}
+      {/* SECONDARY KPIs (4 cards)                                      */}
+      {/* Fat. Líquido | Itens/Ticket | Tickets | Ticket Médio          */}
       {/* ============================================================ */}
-      {(temGraficos || loadingDiario || topProdutos.length > 0) && (
+      {kpisAtivos && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <KpiCard
+            label="Faturamento Líquido"
+            valor={formatCurrency(animFatLiq)}
+            delay={80}
+            variacao={temComparativo ? variacaoInfo(getVariacao('faturamento_liquido')) : null}
+            valorAnterior={getAnterior('faturamento_liquido') != null ? formatCurrency(getAnterior('faturamento_liquido')!) : undefined}
+          />
+          <KpiCard
+            label="Itens por Ticket"
+            valor={animItensTicket.toFixed(2)}
+            delay={160}
+            variacao={temComparativo ? variacaoInfo(getVariacao('itens_por_ticket')) : null}
+            valorAnterior={getAnterior('itens_por_ticket') != null ? getAnterior('itens_por_ticket')!.toFixed(2) : undefined}
+          />
+          <KpiCard
+            label="Tickets"
+            valor={Math.round(animTickets).toLocaleString('pt-BR')}
+            delay={240}
+            variacao={temComparativo ? variacaoInfo(getVariacao('qtd_tickets')) : null}
+            valorAnterior={getAnterior('qtd_tickets') != null ? Math.round(getAnterior('qtd_tickets')!).toLocaleString('pt-BR') : undefined}
+          />
+          <KpiCard
+            label="Ticket Médio"
+            valor={formatCurrency(animTicketMedio)}
+            delay={320}
+            variacao={temComparativo ? variacaoInfo(getVariacao('ticket_medio')) : null}
+            valorAnterior={getAnterior('ticket_medio') != null ? formatCurrency(getAnterior('ticket_medio')!) : undefined}
+          />
+        </div>
+      )}
+
+      {/* ── KPI loading skeleton ── */}
+      {loading && !kpisAtivos && !erro && (
+        <div className="grid grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} variant="kpi" />
+          ))}
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* CHARTS (2/3) + RECEITA POR HORA (1/3)                        */}
+      {/* ============================================================ */}
+      {(temGraficos || loadingDiario || temDadosHora || loadingHora) && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* ── Charts (2/3 width) ── */}
+          {/* ── Tendências (2/3 width) ── */}
           <div className="lg:col-span-2">
             {temGraficos ? (
               <Card variant="bordered" padding="md">
@@ -461,96 +558,38 @@ export default function Dashboard() {
             ) : null}
           </div>
 
-          {/* ── Ranking + Itens por Ticket (1/3 width) ── */}
-          <div className="flex flex-col gap-3">
-            {topProdutos.length > 0 && (
-              <Card variant="bordered" padding="sm">
-                <SectionHeader
-                  icon={BarChart3}
-                  action={
-                    <button
-                      onClick={() => navigate('/bi/ranking')}
-                      className="text-xs text-primary hover:text-primary-hover font-medium flex items-center gap-1 transition whitespace-nowrap"
+          {/* ── Receita por Hora (1/3 width) ── */}
+          <div className="flex flex-col">
+            {temDadosHora ? (
+              <Card variant="bordered" padding="md" className="flex-1">
+                <SectionHeader icon={Clock4}>Receita por Hora</SectionHeader>
+                <div className="mt-3">
+                  <ResponsiveContainer width="100%" height={420}>
+                    <BarChart
+                      data={dadosHora}
+                      layout="vertical"
+                      margin={{ top: 2, right: 8, left: 28, bottom: 2 }}
+                      barCategoryGap={2}
                     >
-                      Ver completo <ArrowRight size={12} />
-                    </button>
-                  }
-                >
-                  Top Produtos
-                </SectionHeader>
-                <div className="flex flex-col gap-0.5 mt-2">
-                  {topProdutos.map((item, i) => (
-                    <div
-                      key={item.codigo}
-                      onClick={() => navigate(`/bi/sku?codigo=${item.codigo}`)}
-                      className="group flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-bg-hover cursor-pointer transition"
-                    >
-                      <span className={`
-                        text-xs font-bold w-5 h-5 shrink-0 flex items-center justify-center rounded-full
-                        ${i === 0 ? 'bg-primary/15 text-primary' : i === 1 ? 'bg-chart-2/15 text-chart-2' : i === 2 ? 'bg-chart-3/15 text-chart-3' : 'bg-bg-hover text-text-muted'}
-                      `}>
-                        {i + 1}
-                      </span>
-                      <span className="flex-1 text-sm text-text-primary truncate min-w-0" title={item.produto}>
-                        {item.produto}
-                      </span>
-                      <span className="text-xs font-semibold text-text-primary shrink-0 tabular-nums">
-                        {formatCurrency(item.valor)}
-                      </span>
-                    </div>
-                  ))}
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--color-border)" />
+                      <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`} axisLine={false} tickLine={false} />
+                      <YAxis dataKey="hora" type="category" tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} width={28} />
+                      <Tooltip
+                        cursor={{ fill: 'rgba(100,100,100,0.06)' }}
+                        contentStyle={CHART_THEME.tooltip.contentStyle}
+                        formatter={((v: number) => formatCurrency(v)) as never}
+                      />
+                      <Bar dataKey="valor" fill="var(--color-primary)" radius={[0, 4, 4, 0]} maxBarSize={14} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </Card>
-            )}
-
-            {/* ── Itens por Ticket (micro stat card) ── */}
-            {kpisAtivos && (
-              <Card variant="bordered" padding="sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[11px] font-mono font-bold uppercase tracking-widest text-text-muted">
-                      Itens / Ticket
-                    </p>
-                    <p className="text-lg font-bold text-text-primary tabular-nums mt-1">
-                      {animItensTicket.toFixed(2)}
-                    </p>
-                  </div>
-                  {temComparativo && getVariacao('itens_por_ticket') != null && (
-                    <span className={`
-                      text-xs font-semibold flex items-center gap-1 px-2 py-1 rounded-full
-                      ${(() => {
-                        const v = getVariacao('itens_por_ticket')!
-                        return v >= 0 ? 'bg-success-light text-success' : 'bg-danger-light text-danger'
-                      })()}
-                    `}>
-                      {(() => {
-                        const v = getVariacao('itens_por_ticket')!
-                        return v >= 0 ? '▲' : '▼'
-                      })()} {Math.abs(getVariacao('itens_por_ticket')!).toFixed(1)}%
-                    </span>
-                  )}
-                </div>
-                {temComparativo && getAnterior('itens_por_ticket') != null && (
-                  <p className="text-[11px] text-text-muted mt-1.5">
-                    Ano passado: <span className="font-medium text-text-secondary">{getAnterior('itens_por_ticket')!.toFixed(2)}</span>
-                  </p>
-                )}
+            ) : loadingHora ? (
+              <Card variant="bordered" padding="md" className="flex-1">
+                <Skeleton className="h-5 w-36 mb-4" />
+                <Skeleton className="h-[380px] rounded-lg" />
               </Card>
-            )}
-
-            {/* ── Ranking skeleton ── */}
-            {loading && topProdutos.length === 0 && (
-              <Card variant="bordered" padding="sm">
-                <Skeleton className="h-5 w-36 mb-3" />
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex items-center gap-3 px-2 py-1.5">
-                    <Skeleton className="h-4 w-5 rounded-full" />
-                    <Skeleton className="h-4 flex-1" />
-                    <Skeleton className="h-4 w-16" />
-                  </div>
-                ))}
-              </Card>
-            )}
+            ) : null}
           </div>
         </div>
       )}
