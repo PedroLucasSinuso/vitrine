@@ -296,48 +296,40 @@ export default function Dashboard() {
     setLoadingDiario(true)
     setLoadingHora(true)
     try {
-      // Sempre busca dados atuais
-      const promises: Promise<unknown>[] = [
+      // 1. Dados ATUAIS são críticos — fetch obrigatório
+      const [rc, tm, qt, hora] = await Promise.all([
         fetchDiario(p, 'receita_produto'),
         fetchDiario(p, 'ticket_medio'),
         fetchDiario(p, 'qtd_tickets'),
         fetchTemporalHora(p, 'receita_produto'),
-      ]
-
-      // Se comparar ativo, busca dados do ano anterior (mesmo período ±4 dias)
-      // O padding de ±4 garante que o mesmo weekday seja capturado mesmo
-      // quando o ajuste de findSameWeekdayLastYear (±3) cair fora do range
-      if (comparar) {
-        const pAnt: PeriodoBi = {
-          data_inicio: format(addDays(subYears(new Date(p.data_inicio + 'T00:00:00'), 1), -4), 'yyyy-MM-dd'),
-          data_fim: format(addDays(subYears(new Date(p.data_fim + 'T00:00:00'), 1), 4), 'yyyy-MM-dd'),
-        }
-        promises.push(
-          fetchDiario(pAnt, 'receita_produto'),
-          fetchDiario(pAnt, 'ticket_medio'),
-          fetchDiario(pAnt, 'qtd_tickets'),
-        )
-      }
-
-      const results = await Promise.all(promises)
-
-      const [rc, tm, qt, hora] = results.slice(0, 4) as [PontoDiarioDTO[], PontoDiarioDTO[], PontoDiarioDTO[], PontoHoraDTO[]]
+      ])
       setDiarioReceita(rc)
       setDiarioTicketMedio(tm)
       setDiarioTickets(qt)
       setDadosHora(hora)
 
-      if (comparar && results.length > 4) {
-        setDiarioAnterior({
-          receita: results[4] as PontoDiarioDTO[],
-          tickets: results[5] as PontoDiarioDTO[],
-          ticketMedio: results[6] as PontoDiarioDTO[],
-        })
+      // 2. Dados do ANO ANTERIOR são best-effort (fetch separado)
+      //    Se falharem, o Resumo do Dia simplesmente não mostra badges
+      if (comparar) {
+        const pAnt: PeriodoBi = {
+          data_inicio: format(addDays(subYears(new Date(p.data_inicio + 'T00:00:00'), 1), -4), 'yyyy-MM-dd'),
+          data_fim: format(addDays(subYears(new Date(p.data_fim + 'T00:00:00'), 1), 4), 'yyyy-MM-dd'),
+        }
+        try {
+          const [antRc, antTm, antQt] = await Promise.all([
+            fetchDiario(pAnt, 'receita_produto'),
+            fetchDiario(pAnt, 'ticket_medio'),
+            fetchDiario(pAnt, 'qtd_tickets'),
+          ])
+          setDiarioAnterior({ receita: antRc, tickets: antTm, ticketMedio: antQt })
+        } catch {
+          setDiarioAnterior({ receita: [], tickets: [], ticketMedio: [] })
+        }
       } else {
         setDiarioAnterior({ receita: [], tickets: [], ticketMedio: [] })
       }
     } catch {
-      // silencioso
+      // silencioso — dados atuais falharam
     } finally {
       setLoadingDiario(false)
       setLoadingHora(false)
