@@ -87,6 +87,7 @@ export default function Inventario() {
 
   useEffect(() => {
     if (sessaoAtiva && isSupervisor) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchConsolidado()
     }
   }, [sessaoAtiva, isSupervisor, fetchConsolidado])

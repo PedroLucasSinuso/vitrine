@@ -136,8 +136,8 @@
 77. **23 issues identificadas:** 5 🔴 críticos, 6 🟡 high, 7 🟡 medium, 5 🟢 low.
 78. **2 regressões confirmadas:** M1+M2 (`job_id: string`) e Bônus (`logar_erro_interno`) constam como corrigidos mas **código atual ainda tem os bugs**.
 79. **Documentos criados:** `docs/debug-audit-2026-05-25.md` (relatório completo) + `docs/action-plan-2026-05-25.md` (plano de ação).
-80. **`known-issues.md` e `context.md` atualizados** — issues adicionados na seção de abertos.
-81. **Próximos passos:** 6 sprints (Sprints 6-11) para resolver as 23 issues (~11h de trabalho).
+80. **Todas as 23 issues corrigidas** em 6 sprints (Sprints 6-11) no commit `cdb135c` — 16 arquivos alterados, 0 regressões.
+81. **Testes:** 168/168 passando. **TypeScript:** 0 erros. **Lint:** 0 erros, 0 warnings.
 
 ## Descobertas Principais
 
@@ -182,7 +182,7 @@
 
 | Issue | Arquivos | Tipo | Lote |
 |---|---|---|---|
-| ~~M1+M2: `job_id` number → string~~ | **⚠️ REGRESSÃO (B16)** — código atual ainda tem `number` | `admin.ts` | 🔴 Bug | 1 |
+| ~~M1+M2: `job_id` number → string~~ | **REGRESSÃO (B16) corrigida** em `cdb135c` | `admin.ts` | 🔴 Bug | 1 |
 | M3: `CacheStatus` sem tipo | `types/admin.ts`, `admin.ts` | 🟡 Tipagem | 1 |
 | N1+A1: `getRole()` localStorage → JWT | `auth.ts`, `produtos.ts` | 🟡 UX/Security | 1 |
 | A4: Botão encerrar sem restrição | `Inventario.tsx` | 🟡 UX | 1 |
@@ -194,7 +194,7 @@
 | N9: `cacheInfo` tipo inseguro | `Configuracoes.tsx` | 🟢 Typing | 1 |
 | A2: Sync sem lock | `admin.py` | 🟡 Concorrência | 2 |
 | N6: Paginação sem metadata | `produto.py` (6 files) | 🟡 API | 2 |
-| ~~Bônus: `logar_erro_interno` sem import~~ | **⚠️ REGRESSÃO (B24)** — código atual ainda chama sem import | `admin.py` | 🐛 Bug latente | 2 |
+| ~~Bônus: `logar_erro_interno` sem import~~ | **REGRESSÃO (B24) corrigida** em `cdb135c` | `admin.py` | 🐛 Bug latente | 2 |
 | observacao em ItemInventario | 4 files | 🟡 Feature | 3 |
 | Cooldown + pausa escaneio | 2 files | 🟡 Bug | 3 |
 | StoppedRef no LeitorCodigo | `LeitorCodigo.tsx` | 🟡 Bug | 3 |
@@ -206,12 +206,14 @@
 
 - **Backend:** ~15 módulos de primeira linha, ~70 arquivos (estimado).
 - **Frontend:** ~11 módulos de primeira linha, ~40+ componentes/páginas.
-- **Testes:** 168 testes passando (pytest) — 5 sprints + hotfix validados.
-- **Issues resolvidos:** 30+ em 5 sprints + hotfix.
-- **Issues abertos (2026-05-21):** 0 críticos, 0 segurança, 0 performance.
-- **Issues abertos (2026-05-25):** 5 🔴 críticos, 6 🟡 high, 7 🟡 medium, 5 🟢 low — 23 no total (ver `docs/debug-audit-2026-05-25.md`).
-- **Regressões confirmadas:** 2 fixes documentados como corrigidos (M1+M2 `job_id: string` e Bônus `logar_erro_interno`) **não foram aplicados no código atual** — ver B16/B24.
-- **Resíduos pós-revisão Sprint 1:** 2 médios (GET bloqueado indevidamente + segundo async gap) — não bloqueantes.
+- **Testes:** 168 testes passando (pytest) — 11 sprints + hotfix validados.
+- **Issues resolvidos:** 30+ em 11 sprints + hotfix.
+- **Lint:** 0 erros, 0 warnings.
+- **TypeScript:** 0 erros de compilação.
+- **Issues abertos (2026-05-21 — Revisão Adversarial):** P1-P3 (performance), M1-M12 (médios), m1-m4 (menores) — ainda pendentes.
+- **Issues abertos (2026-05-25 — Auditoria Debug):** Nenhum — todos os 23 corrigidos em 6 sprints.
+- **Regressões corrigidas:** 2 fixes (M1+M2 `job_id: string` e Bônus `logar_erro_interno`) aplicados novamente em `cdb135c`.
+- **Resíduos pós-revisão Sprint 1:** 1 médio (segundo async gap em handleCodigo, linhas 283 e 303) — não bloqueante.
 - **Tipo de app:** Sistema interno de vitrine/PDV para loja física com BI, inventário, sincronização ERP (Alterdata).
 
 ---
@@ -233,42 +235,25 @@
 
 ## Próximos Passos
 
-### ✅ All Sprints (1-5 + Hotfix) — Concluídos
+### ✅ All Sprints (1-11 + Hotfix) — Concluídos
 
 **Sprint 1 (Bugs Críticos):** C1, C2, C3 — require_sessao_ativa, Fernet doc, stale closure.  
 **Sprint 2 (Segurança):** S1-S5 + G1-G6 — JWT revogação, rate limits, frontend logout, role invalidation.  
 **Sprint 3 (Performance):** P1-P3 — Dashboard, lazy loading BI, limite 180 dias, ErrorBoundary.  
 **Sprint 4 (Médios):** M1-M12 + #1 #2 #5 #7 — migrations, thread-safe, dead code, Excel, configStore, 9 novos testes.  
 **Sprint 5 (BI Dashboard + Temas):** MetaCard, ProjecaoCard, trend charts, mini ranking, chartTheme, CSS variables, AppHeader refatorado, tema Flagship.  
-**Hotfix Scheduler/Email:** 2 bugs (session out of `with` + criar_dominio signature) + 1 MIME fix (email vazio).
+**Hotfix Scheduler/Email:** 2 bugs (session out of `with` + criar_dominio signature) + 1 MIME fix (email vazio).  
+**Sprint 6 (Hotfix — Auditoria Debug):** B1, B16, B24 — regressões + crash.  
+**Sprint 7 (Dados):** B3, B4, B8 — stale closure, engine leak, atomicidade ETL.  
+**Sprint 8 (Consistência):** B5, B6, B15 — GET bloqueado, EAN stock, pausaEscaneio.  
+**Sprint 9 (Frontend):** B13, B18, B19, B9 — 401 reload, polling leak, erros engolidos, dead code.  
+**Sprint 10 (Segurança):** B10, B12, B17 — ProtectedRoute, logout fail, type fix.  
+**Sprint 11 (Housekeeping):** B2, B20, B21, B23, B25 — email, modelo Claude, log, gaps de teste.
 
-### Auditoria Debug 2026-05-25 — 23 Novas Issues
+### Resíduos
 
-> **Relatório completo:** `docs/debug-audit-2026-05-25.md`
-> **Plano de ação:** `docs/action-plan-2026-05-25.md`
-> **6 sprints planejados** (~11h de trabalho)
-
-**5 🔴 Críticos:** WhatsApp test crash (B1), stale closure em ajustarQuantidade (B3), vazamento engine PostgreSQL (B4), sessão encerrada inconsistente (B5), **2 regressões de fixes documentados** (B16/B24).
-**6 🟡 High:** EAN não consultado no estoque (B6), atomicidade ETL (B8), polling leak (B18), erros engolidos (B19), ProtectedRoute frágil (B10), logout sem revogação real (B12).
-**7 🟡 Medium:** 401 reload total (B13), pausaEscaneio não resetado (B15), job_id number/string mismatch (B17), gaps de teste (B25), email sem logo (B2).
-**5 🟢 Low:** continuo prop morto (B9), modelo Claude 2024 (B20), log INFO em debug (B21), PK redundante (B23).
-
-### Plano de Ação (Sprints 6-11)
-
-| Sprint | Foco | Issues | Esforço |
-|---|---|---|---|
-| **Sprint 6 — Hotfix** | Regressões + Crash | B1, B16, B24 | ~30 min |
-| **Sprint 7 — Dados** | Data Loss / Corrupção | B3, B4, B8 | ~3h |
-| **Sprint 8 — Consistência** | Lógica de Negócio | B5, B6, B15 | ~3h |
-| **Sprint 9 — Frontend** | UX / State / Leaks | B13, B18, B19, B9 | ~2h |
-| **Sprint 10 — Segurança** | Defense-in-depth | B10, B12, B17 | ~1h |
-| **Sprint 11 — Housekeeping** | Tech Debt + Testes | B2, B20, B21, B23, B25 | ~2h |
-
-### Resíduos (Opcional) — Agora Incorporados nos Sprints
-
-1. ~~Remover `require_sessao_ativa()` do GET → **B5 (Sprint 8)**~~
-2. ~~Adicionar guard de stale closure → **B3 (Sprint 7, separado do C3)**~~
-3. Limpar `localStorage.removeItem('role')` em `client.ts` (dead code desde Sprint 4) — ainda pendente
+1. Limpar `localStorage.removeItem('role')` em `client.ts` (dead code desde Sprint 4) — **✅ REMOVIDO** na correção B13 (commit `cdb135c`)
+2. Segundo async gap em `handleCodigo` (`await adicionarItemInventario()` linhas 283 e 303) — ainda presente, não bloqueante
 
 ### Backlog (Médio/Longo Prazo)
 

@@ -26,6 +26,7 @@ export default function Modal({ open, onClose, title, children, variant = 'defau
   // Handle mount/unmount + animation based on open prop
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMounted(true)
       const t = requestAnimationFrame(() => setShow(true))
       return () => cancelAnimationFrame(t)
