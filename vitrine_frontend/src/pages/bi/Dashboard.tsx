@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { format, formatDistanceToNow } from 'date-fns'
+import { format, formatDistanceToNow, subYears, getDay, addDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -64,14 +64,35 @@ function formatDateTick(value: string): string {
 }
 
 // ── Resumo do Dia — último dia completo do período ────────────────
-interface ResumoDiaProps {
+interface DiarioAnteriorData {
   receita: PontoDiarioDTO[]
   tickets: PontoDiarioDTO[]
   ticketMedio: PontoDiarioDTO[]
 }
 
-function ResumoDia({ receita, tickets, ticketMedio }: ResumoDiaProps) {
-  // Última data com dados de receita
+interface ResumoDiaProps {
+  receita: PontoDiarioDTO[]
+  tickets: PontoDiarioDTO[]
+  ticketMedio: PontoDiarioDTO[]
+  anterior?: DiarioAnteriorData | null
+  comparar: boolean
+}
+
+/** Encontra a data com o mesmo dia da semana no ano anterior */
+function findSameWeekdayLastYear(data: string): string {
+  const date = new Date(data + 'T00:00:00')
+  const targetWeekday = getDay(date) // 0=Dom, 1=Seg...
+  const lastYear = subYears(date, 1)
+  let lastYearWeekday = getDay(lastYear)
+  let diff = targetWeekday - lastYearWeekday
+  // Ajusta para ±3 no máximo (encontra o mesmo weekday mais próximo)
+  if (diff > 3) diff -= 7
+  if (diff < -3) diff += 7
+  const match = addDays(lastYear, diff)
+  return format(match, 'yyyy-MM-dd')
+}
+
+function ResumoDia({ receita, tickets, ticketMedio, anterior, comparar: compAtivo }: ResumoDiaProps) {
   const sorted = [...receita].sort((a, b) => b.data.localeCompare(a.data))
   const ultimo = sorted[0]
   if (!ultimo) return null
@@ -79,26 +100,22 @@ function ResumoDia({ receita, tickets, ticketMedio }: ResumoDiaProps) {
   const valorReceita = ultimo.valor
   const valorTickets = tickets.find((t) => t.data === ultimo.data)?.valor ?? 0
   const valorTicketMedio = ticketMedio.find((t) => t.data === ultimo.data)?.valor ?? 0
-  const totalDias = sorted.length
-  const temComparacao = totalDias > 1
 
-  function media(arr: PontoDiarioDTO[]): number {
-    if (arr.length === 0) return 0
-    return arr.reduce((s, d) => s + d.valor, 0) / arr.length
-  }
+  // Busca valor do mesmo weekday no ano anterior
+  const dataAnterior = findSameWeekdayLastYear(ultimo.data)
+  const ant = anterior && compAtivo && anterior.receita.length > 0 ? anterior : null
+  const antReceita = ant?.receita.find((d) => d.data === dataAnterior)?.valor ?? null
+  const antTickets = ant?.tickets.find((d) => d.data === dataAnterior)?.valor ?? null
+  const antTicketMedio = ant?.ticketMedio.find((d) => d.data === dataAnterior)?.valor ?? null
 
-  const mediaReceita = media(sorted)
-  const mediaTickets = media(tickets)
-  const mediaTicketMedio = media(ticketMedio)
-
-  function VariacaoBadge({ atual, media: med }: { atual: number; media: number }) {
-    if (!temComparacao || med === 0) return null
-    const diff = ((atual / med) - 1) * 100
+  function VariacaoBadge({ atual, anterior: antVal }: { atual: number; anterior: number | null }) {
+    if (antVal === null || antVal === 0) return null
+    const diff = ((atual / antVal) - 1) * 100
     const isPositive = diff >= 0
     return (
       <span className={`text-xs font-semibold flex items-center gap-0.5 ${isPositive ? 'text-success' : 'text-danger'}`}>
         {isPositive ? '▲' : '▼'} {Math.abs(diff).toFixed(1)}%
-        <span className="text-text-muted font-normal">vs média</span>
+        <span className="text-text-muted font-normal">vs ano anterior</span>
       </span>
     )
   }
@@ -113,17 +130,26 @@ function ResumoDia({ receita, tickets, ticketMedio }: ResumoDiaProps) {
         <div>
           <p className="text-[11px] font-mono font-bold uppercase tracking-widest text-text-muted">Vendas</p>
           <p className="text-xl font-bold text-text-primary tabular-nums mt-0.5">{formatCurrency(valorReceita)}</p>
-          <VariacaoBadge atual={valorReceita} media={mediaReceita} />
+          <VariacaoBadge atual={valorReceita} anterior={antReceita} />
+          {antReceita != null && (
+            <p className="text-[10px] text-text-muted mt-0.5">Ano passado: {formatCurrency(antReceita)}</p>
+          )}
         </div>
         <div>
           <p className="text-[11px] font-mono font-bold uppercase tracking-widest text-text-muted">Tickets</p>
           <p className="text-xl font-bold text-text-primary tabular-nums mt-0.5">{Math.round(valorTickets).toLocaleString('pt-BR')}</p>
-          <VariacaoBadge atual={valorTickets} media={mediaTickets} />
+          <VariacaoBadge atual={valorTickets} anterior={antTickets} />
+          {antTickets != null && (
+            <p className="text-[10px] text-text-muted mt-0.5">Ano passado: {Math.round(antTickets).toLocaleString('pt-BR')}</p>
+          )}
         </div>
         <div>
           <p className="text-[11px] font-mono font-bold uppercase tracking-widest text-text-muted">Ticket Médio</p>
           <p className="text-xl font-bold text-text-primary tabular-nums mt-0.5">{formatCurrency(valorTicketMedio)}</p>
-          <VariacaoBadge atual={valorTicketMedio} media={mediaTicketMedio} />
+          <VariacaoBadge atual={valorTicketMedio} anterior={antTicketMedio} />
+          {antTicketMedio != null && (
+            <p className="text-[10px] text-text-muted mt-0.5">Ano passado: {formatCurrency(antTicketMedio)}</p>
+          )}
         </div>
       </div>
     </Card>
@@ -155,6 +181,13 @@ export default function Dashboard() {
   // ── Gráfico de receita por hora ──
   const [dadosHora, setDadosHora] = useState<PontoHoraDTO[]>([])
   const [loadingHora, setLoadingHora] = useState(false)
+
+  // ── Dados diários do ano anterior (para comparação same-weekday) ──
+  const [diarioAnterior, setDiarioAnterior] = useState<{
+    receita: PontoDiarioDTO[]
+    tickets: PontoDiarioDTO[]
+    ticketMedio: PontoDiarioDTO[]
+  }>({ receita: [], tickets: [], ticketMedio: [] })
 
   // Determina qual fonte de dados usar (comparativo ou simples)
   const kpisAtivos = kpisComp ?? kpis
@@ -222,28 +255,57 @@ export default function Dashboard() {
       setDiarioTicketMedio([])
       setDiarioTickets([])
       setDadosHora([])
+      setDiarioAnterior({ receita: [], tickets: [], ticketMedio: [] })
       return
     }
     setLoadingDiario(true)
     setLoadingHora(true)
     try {
-      const [rc, tm, qt, hora] = await Promise.all([
+      // Sempre busca dados atuais
+      const promises: Promise<unknown>[] = [
         fetchDiario(p, 'receita_produto'),
         fetchDiario(p, 'ticket_medio'),
         fetchDiario(p, 'qtd_tickets'),
         fetchTemporalHora(p, 'receita_produto'),
-      ])
+      ]
+
+      // Se comparar ativo, busca dados do ano anterior (mesmo período)
+      if (comparar) {
+        const pAnt: PeriodoBi = {
+          data_inicio: format(subYears(new Date(p.data_inicio + 'T00:00:00'), 1), 'yyyy-MM-dd'),
+          data_fim: format(subYears(new Date(p.data_fim + 'T00:00:00'), 1), 'yyyy-MM-dd'),
+        }
+        promises.push(
+          fetchDiario(pAnt, 'receita_produto'),
+          fetchDiario(pAnt, 'ticket_medio'),
+          fetchDiario(pAnt, 'qtd_tickets'),
+        )
+      }
+
+      const results = await Promise.all(promises)
+
+      const [rc, tm, qt, hora] = results.slice(0, 4) as [PontoDiarioDTO[], PontoDiarioDTO[], PontoDiarioDTO[], PontoHoraDTO[]]
       setDiarioReceita(rc)
       setDiarioTicketMedio(tm)
       setDiarioTickets(qt)
       setDadosHora(hora)
+
+      if (comparar && results.length > 4) {
+        setDiarioAnterior({
+          receita: results[4] as PontoDiarioDTO[],
+          tickets: results[5] as PontoDiarioDTO[],
+          ticketMedio: results[6] as PontoDiarioDTO[],
+        })
+      } else {
+        setDiarioAnterior({ receita: [], tickets: [], ticketMedio: [] })
+      }
     } catch {
       // silencioso
     } finally {
       setLoadingDiario(false)
       setLoadingHora(false)
     }
-  }, [])
+  }, [comparar])
 
   const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false) => {
     const p = periodoOverride ?? periodo
@@ -507,6 +569,8 @@ export default function Dashboard() {
           receita={diarioReceita}
           tickets={diarioTickets}
           ticketMedio={diarioTicketMedio}
+          anterior={diarioAnterior}
+          comparar={comparar}
         />
       )}
 
