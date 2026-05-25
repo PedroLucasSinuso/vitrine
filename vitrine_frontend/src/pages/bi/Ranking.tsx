@@ -96,7 +96,7 @@ export default function Ranking() {
             <div className="flex flex-col gap-1">
               <label className="text-xs text-text-muted">Métrica</label>
               <select
-                className="border border-border-input bg-bg-input text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="form-input-base"
                 value={metrica}
                 onChange={(e) => { const val = e.target.value as Metrica; setMetrica(val); syncParams(val, top) }}
               >
@@ -107,7 +107,7 @@ export default function Ranking() {
             <div className="flex flex-col gap-1">
               <label className="text-xs text-text-muted">Top</label>
               <select
-                className="border border-border-input bg-bg-input text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="form-input-base"
                 value={top}
                 onChange={(e) => { const val = Number(e.target.value); setTop(val); syncParams(metrica, val) }}
               >

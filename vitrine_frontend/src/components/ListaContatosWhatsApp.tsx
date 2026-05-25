@@ -88,13 +88,13 @@ export default function ListaContatosWhatsApp() {
       {contatos.map((contato) => (
         <div key={contato.id} className="flex flex-col sm:grid sm:grid-cols-[1fr_1.5fr_auto] gap-2 items-center">
           <input
-            className="w-full border border-border-input bg-bg-input text-text-primary rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent transition"
+            className="form-input-base"
             value={contato.nome}
             onChange={(e) => handleUpdate(contato.id, 'nome', e.target.value)}
             placeholder="Nome do contato"
           />
           <input
-            className="w-full border border-border-input bg-bg-input text-text-primary rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent transition font-mono"
+            className="form-input-base font-mono"
             value={contato.numero}
             onChange={(e) => handleUpdate(contato.id, 'numero', e.target.value)}
             placeholder="5522999999999"

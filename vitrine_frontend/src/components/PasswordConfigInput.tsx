@@ -23,7 +23,7 @@ export default function PasswordConfigInput({ label, value, onChange, placeholde
       <div className="flex flex-col gap-1.5">
         <label className="text-xs font-medium text-text-muted">{label}</label>
         <div className="flex items-center gap-2">
-          <div className="flex-1 flex items-center gap-2 border border-border bg-bg-input rounded-lg px-3 py-2">
+          <div className="flex-1 flex items-center gap-2 form-input-base cursor-default">
             <span className="text-sm text-text-muted font-mono flex-1 truncate">
               {isConfigured ? MASKED_DISPLAY : (value || '—')}
             </span>
@@ -51,7 +51,7 @@ export default function PasswordConfigInput({ label, value, onChange, placeholde
         <div className="relative flex-1">
           <input
             type={showValue ? 'text' : 'password'}
-            className="w-full border border-primary/50 dark:border-primary/30 bg-bg-input text-text-primary rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent transition"
+            className="form-input-base pr-8"
             value={value === SENTINEL ? '' : value}
             onChange={(e) => {
               const v = e.target.value

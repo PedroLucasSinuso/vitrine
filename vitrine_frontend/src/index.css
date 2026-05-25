@@ -418,9 +418,10 @@ input:focus, select:focus, textarea:focus, button:focus-visible {
   background: var(--color-bg-input);
   color: var(--color-text-primary);
   border-radius: var(--radius-lg);
-  padding: 0.5rem 0.75rem;
-  font-size: var(--text-md);
+  padding: 0.625rem 0.75rem;
+  font-size: var(--text-sm);
   font-family: var(--font-body);
+  line-height: 1.5;
   transition: border-color var(--duration-fast) var(--ease-out),
               box-shadow var(--duration-fast) var(--ease-out);
 }
@@ -429,8 +430,8 @@ input:focus, select:focus, textarea:focus, button:focus-visible {
 }
 .form-input-base:focus {
   outline: none;
-  border-color: var(--color-border-focus);
-  box-shadow: 0 0 0 2px var(--color-border-focus);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 .form-input-base:disabled {
   opacity: 0.5;
@@ -440,15 +441,33 @@ input:focus, select:focus, textarea:focus, button:focus-visible {
 .form-label {
   display: block;
   font-size: var(--text-xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-muted);
-  margin-bottom: 0.25rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  margin-bottom: 0.375rem;
+  letter-spacing: 0.01em;
 }
 
 .form-error {
   font-size: var(--text-2xs);
   color: var(--color-danger);
-  margin-top: 0.25rem;
+  margin-top: 0.375rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* ── Select premium ── */
+select.form-input-base {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.625rem center;
+  padding-right: 2rem;
+  cursor: pointer;
+}
+select.form-input-base:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

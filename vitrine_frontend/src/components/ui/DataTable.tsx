@@ -165,7 +165,7 @@ export default function DataTable<T>({
             <select
               value={pageSize}
               onChange={(e) => { onPageSizeChange(Number(e.target.value)); onPageChange?.(0) }}
-              className="ml-2 border border-border-input bg-bg-input text-text-primary rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="ml-2 form-input-base !w-auto px-2 py-1.5 text-xs"
               aria-label="Itens por página"
             >
               {pageSizeOptions.map(s => (

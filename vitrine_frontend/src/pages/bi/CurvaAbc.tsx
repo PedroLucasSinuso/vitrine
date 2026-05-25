@@ -149,7 +149,7 @@ export default function CurvaAbc() {
           <div className="flex flex-col gap-1">
             <label className="text-xs text-text-muted">Dimensão</label>
             <select
-              className="border border-border bg-bg-hover text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-40"
+              className="form-input-base w-40"
               value={dimensao}
               onChange={(e) => { const val = e.target.value as Dimensao; setDimensao(val); syncParams(val) }}
             >

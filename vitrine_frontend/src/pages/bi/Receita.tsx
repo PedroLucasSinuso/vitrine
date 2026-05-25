@@ -159,7 +159,7 @@ export default function Receita() {
             <div className="flex flex-col gap-1">
               <label className="text-xs text-text-muted">Dimensão</label>
               <select
-                className="border border-border-input bg-bg-input text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="form-input-base"
                 value={dimensao}
                 onChange={(e) => { const val = e.target.value as Dimensao; setDimensao(val); syncParams(val, metrica) }}
               >
@@ -171,7 +171,7 @@ export default function Receita() {
             <div className="flex flex-col gap-1">
               <label className="text-xs text-text-muted">Métrica</label>
               <select
-                className="border border-border-input bg-bg-input text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="form-input-base"
                 value={metrica}
                 onChange={(e) => { const val = e.target.value as Metrica; setMetrica(val); syncParams(dimensao, val) }}
               >
@@ -184,9 +184,9 @@ export default function Receita() {
             <div className="flex gap-4 flex-wrap">
               <div className="flex flex-col gap-1">
                 <label className="text-xs text-text-muted">Grupo</label>
-                <select
-                  className="border border-border-input bg-bg-input text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  value={filtroGrupo}
+              <select
+                className="form-input-base"
+                value={filtroGrupo}
                   onChange={(e) => { setFiltroGrupo(e.target.value); setFiltroFamilia('') }}
                 >
                   <option value="">Todos</option>
@@ -197,7 +197,7 @@ export default function Receita() {
                 <div className="flex flex-col gap-1">
                   <label className="text-xs text-text-muted">Família</label>
                   <select
-                    className="border border-border-input bg-bg-input text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="form-input-base"
                     value={filtroFamilia}
                     onChange={(e) => setFiltroFamilia(e.target.value)}
                   >

@@ -100,15 +100,20 @@ export default function Sku() {
     }
   }, [periodo, cache])
 
-  // React to URL ?codigo= changes — enables navigation between SKUs
+  // Auto-search on mount if codigo present in URL — enables direct /bi/sku?codigo=XXX
+  // Also reacts to URL param changes for navigation between SKUs
+  // ?force=1 bypasses cache (used from header search bar)
   useEffect(() => {
     const codigoParam = searchParams.get('codigo')
+    const forceParam = searchParams.get('force') === '1'
     if (codigoParam && codigoParam !== codigoRef.current) {
       setCodigo(codigoParam)
-      buscar(codigoParam)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only react to URL param changes
-  }, [searchParams.get('codigo')])
+    if (codigoParam) {
+      buscar(codigoParam, undefined, forceParam)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get('codigo'), searchParams.get('force')])
 
   function handleBuscar(periodoOverride?: PeriodoBi) {
     const valor = codigoRef.current.trim()
@@ -123,9 +128,9 @@ export default function Sku() {
           <PeriodoForm value={periodo} onChange={setPeriodo} onBuscar={handleBuscar} loading={loading} presets={PRESETS_SKU} />
           <div>
             <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
               <input
-                className="w-full border border-border-input bg-bg-input text-text-primary rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="form-input-base !pl-9"
                 placeholder="Buscar produto por nome..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -158,7 +163,7 @@ export default function Sku() {
           </div>
           <div className="flex gap-2">
             <input
-              className="flex-1 border border-border-input bg-bg-input text-text-primary rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="form-input-base flex-1"
               placeholder="Código do produto (EAN ou PLU)"
               value={codigo}
               onChange={(e) => setCodigo(e.target.value)}

@@ -104,12 +104,12 @@ function CompactInput({
 }: { label: string; icon?: React.ElementType } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[11px] font-medium text-text-muted flex items-center gap-1">
+      <label className="form-label flex items-center gap-1">
         {Icon && <Icon size={11} className="text-text-muted" />}
         {label}
       </label>
       <input
-        className={`w-full border border-border-input bg-bg-input text-text-primary rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary transition placeholder:text-text-muted${className ? ` ${className}` : ''}`}
+        className={`form-input-base${className ? ` ${className}` : ''}`}
         {...inputProps}
       />
     </div>
@@ -121,12 +121,12 @@ function CompactSelect({
 }: { label: string; icon?: React.ElementType; children: React.ReactNode } & React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[11px] font-medium text-text-muted flex items-center gap-1">
+      <label className="form-label flex items-center gap-1">
         {Icon && <Icon size={11} className="text-text-muted" />}
         {label}
       </label>
       <select
-        className="w-full border border-border-input bg-bg-input text-text-primary rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary transition"
+        className="form-input-base"
         {...selectProps}
       >
         {children}

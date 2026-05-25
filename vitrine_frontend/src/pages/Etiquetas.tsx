@@ -84,7 +84,7 @@ export default function Etiquetas() {
             <input
               ref={inputRef}
               aria-label="Código do produto"
-              className="flex-1 border border-border-input bg-bg-input text-text-primary rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-border-focus placeholder:text-text-muted"
+              className="form-input-base flex-1 rounded-xl"
               placeholder="Digite ou bipe o código"
               onKeyDown={handleKeyDown}
               autoFocus

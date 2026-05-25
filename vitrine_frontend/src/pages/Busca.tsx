@@ -118,7 +118,7 @@ export default function Busca() {
       >
         <p className="text-xs text-text-muted mb-3">Código: {codigoNaoEncontrado}</p>
         <textarea
-          className="w-full border border-border-input bg-bg-input text-text-primary rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-border-focus resize-none"
+          className="form-input-base resize-none"
           placeholder="Observação (ex: Coca Cola lata 250ml)"
           rows={3}
           value={observacao}
@@ -131,7 +131,7 @@ export default function Busca() {
       <div className="w-full max-w-md flex gap-2 mb-6">
         <input
           aria-label="Código EAN ou PLU"
-          className="flex-1 border border-border-input bg-bg-input text-text-primary rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-border-focus placeholder:text-text-muted"
+          className="form-input-base flex-1 rounded-xl"
           placeholder="Digite o código EAN ou PLU"
           value={codigo}
           onChange={(e) => setCodigo(e.target.value)}
@@ -155,7 +155,7 @@ export default function Busca() {
         <div className="relative">
           <input
             aria-label="Buscar produto por nome"
-            className="w-full border border-border-input bg-bg-input text-text-primary rounded-xl px-4 py-2.5 pr-10 focus:outline-none focus:ring-2 focus:ring-border-focus placeholder:text-text-muted"
+            className="form-input-base rounded-xl pr-10"
             placeholder="Buscar produto por nome..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -247,7 +247,7 @@ export default function Busca() {
 
         {(role === 'supervisor' || role === 'admin') && (
           <Link
-            to={`/bi/sku?codigo=${produto.codigo_chamada ?? ''}`}
+            to={`/bi/sku?codigo=${produto.codigo_chamada ?? ''}&force=1`}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-hover transition-colors mt-4 w-full max-w-md"
           >
             <BarChart3 size={16} />

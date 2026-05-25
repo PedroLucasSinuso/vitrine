@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useTheme } from '../../themes/useTheme'
 import { getConfigsCache } from '../../stores/configStore'
+import { buscarProdutosPorNome } from '../../api/produtos'
+import type { ProdutoBasico } from '../../types'
 import { Sun, Moon, LogOut, Search, ChevronRight } from 'lucide-react'
 import NotificationCenter from '../NotificationCenter'
 
@@ -12,6 +14,11 @@ import NotificationCenter from '../NotificationCenter'
  * Funciona como barra de topo para o conteúdo principal.
  * Em desktop a sidebar é a navegação principal, então o header
  * é minimal: breadcrumb (mobile), busca, ações do usuário.
+ *
+ * A busca de produtos implementa fuzzy search com dropdown:
+ * - 300ms debounce em digitação com >= 2 caracteres
+ * - Navegação via teclado (↑↓ + Enter) + mouse
+ * - Enter sem seleção = navega com query literal
  */
 export default function AppHeader() {
   const navigate = useNavigate()
@@ -21,6 +28,12 @@ export default function AppHeader() {
   const [marketName, setMarketName] = useState('')
   const [marketLogo, setMarketLogo] = useState('')
   const [query, setQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<ProdutoBasico[]>([])
+  const [showResults, setShowResults] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(-1)
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const searchContainerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     getConfigsCache().then((c) => {
@@ -35,9 +48,81 @@ export default function AppHeader() {
   // Gera breadcrumb a partir da pathname
   const pathParts = location.pathname.split('/').filter(Boolean)
 
+  // === Fuzzy search: debounced API call ===
+  useEffect(() => {
+    if (searchTimer.current) clearTimeout(searchTimer.current)
+    const q = query.trim()
+    if (q.length < 2) {
+      setSearchResults([])
+      setShowResults(false)
+      setActiveIndex(-1)
+      return
+    }
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const data = await buscarProdutosPorNome(q)
+        setSearchResults(data)
+        setShowResults(data.length > 0)
+        setActiveIndex(-1)
+      } catch {
+        setSearchResults([])
+        setShowResults(false)
+      }
+    }, 300)
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current) }
+  }, [query])
+
+  // === Click outside to close dropdown ===
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowResults(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  // === Navegar para o SKU de um produto ===
+  const navigateToSku = useCallback((codigo: string) => {
+    setQuery('')
+    setSearchResults([])
+    setShowResults(false)
+    setActiveIndex(-1)
+    navigate(`/bi/sku?codigo=${encodeURIComponent(codigo)}&force=1`)
+  }, [navigate])
+
+  // === Keyboard navigation ===
   function handleSearchKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter' && query.trim()) {
-      navigate(`/busca?q=${encodeURIComponent(query.trim())}`)
+    const q = query.trim()
+    if (!q) return
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActiveIndex((prev) => Math.min(prev + 1, searchResults.length - 1))
+      return
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActiveIndex((prev) => Math.max(prev - 1, 0))
+      return
+    }
+    if (e.key === 'Escape') {
+      setShowResults(false)
+      inputRef.current?.blur()
+      return
+    }
+    if (e.key === 'Enter') {
+      // If there's an active selected item, use it
+      if (activeIndex >= 0 && activeIndex < searchResults.length) {
+        navigateToSku(searchResults[activeIndex].codigo_chamada)
+      } else {
+        // Fallback: navigate with raw query (treat as codigo)
+        setQuery('')
+        setSearchResults([])
+        setShowResults(false)
+        navigate(`/bi/sku?codigo=${encodeURIComponent(q)}&force=1`)
+      }
     }
   }
 
@@ -100,16 +185,47 @@ export default function AppHeader() {
         {/* Right: Search + Actions */}
         <div className="flex items-center gap-1.5 shrink-0">
           {/* Search */}
-          <div className="relative hidden sm:block">
+          <div className="relative hidden sm:block" ref={searchContainerRef}>
             <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
             <input
+              ref={inputRef}
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value)
+                if (e.target.value.trim().length >= 2) {
+                  // Show loading state — debounce handles results
+                }
+              }}
               onKeyDown={handleSearchKeyDown}
+              onFocus={() => {
+                if (searchResults.length > 0) setShowResults(true)
+              }}
               placeholder="Buscar produto..."
-              className="w-40 lg:w-56 pl-8 pr-2.5 py-1.5 text-xs rounded-lg bg-bg-input border border-border-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary/40 transition"
+              className="form-input-base w-40 lg:w-56 !pl-8 text-xs rounded-lg"
               aria-label="Buscar produto"
+              autoComplete="off"
+              spellCheck={false}
             />
+
+            {/* Dropdown de resultados */}
+            {showResults && searchResults.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-bg-card rounded-lg shadow-lg border border-border overflow-hidden z-40 max-h-72 overflow-y-auto">
+                {searchResults.map((p, i) => (
+                  <button
+                    key={p.codigo_chamada}
+                    onClick={() => navigateToSku(p.codigo_chamada)}
+                    onMouseEnter={() => setActiveIndex(i)}
+                    className={`
+                      w-full text-left px-3 py-2 transition text-sm flex items-center justify-between gap-2
+                      ${i === activeIndex ? 'bg-bg-hover' : 'hover:bg-bg-hover'}
+                    `}
+                  >
+                    <span className="font-medium text-text-primary truncate">{p.nome}</span>
+                    <span className="text-text-muted text-xs font-mono shrink-0">{p.codigo_chamada}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <span className="w-px h-4 bg-border shrink-0 mx-0.5" />

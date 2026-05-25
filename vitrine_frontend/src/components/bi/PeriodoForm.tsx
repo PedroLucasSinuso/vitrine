@@ -95,7 +95,7 @@ export default function PeriodoForm({ value, onChange, onBuscar, loading, preset
           <label className="text-xs text-text-muted">De</label>
           <input
             type="date"
-            className="border border-border-input bg-bg-input text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="form-input-base"
             value={value.data_inicio}
             onChange={(e) => onChange({ ...value, data_inicio: e.target.value })}
           />
@@ -104,7 +104,7 @@ export default function PeriodoForm({ value, onChange, onBuscar, loading, preset
           <label className="text-xs text-text-muted">Até</label>
           <input
             type="date"
-            className="border border-border-input bg-bg-input text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="form-input-base"
             value={value.data_fim}
             onChange={(e) => onChange({ ...value, data_fim: e.target.value })}
           />

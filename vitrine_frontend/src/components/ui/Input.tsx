@@ -28,7 +28,7 @@ const Input = forwardRef<HTMLInputElement, Props>(
 
           <input
             ref={ref}
-            className={`form-input-base ${icon ? 'pl-9' : ''} ${error ? '!border-danger !ring-danger/30' : ''} ${className}`}
+            className={`form-input-base ${icon ? '!pl-9' : ''} ${error ? '!border-danger !ring-danger/30' : ''} ${className}`}
             {...props}
           />
 

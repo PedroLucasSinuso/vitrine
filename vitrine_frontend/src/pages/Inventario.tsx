@@ -468,7 +468,7 @@ export default function Inventario() {
                   <input
                     ref={conviteRef}
                     placeholder="Código da sessão"
-                    className="flex-1 border border-border-input bg-bg-input text-text-primary rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary uppercase"
+                    className="form-input-base flex-1 rounded-xl uppercase"
                     onKeyDown={(e) => e.key === 'Enter' && handleEntrarSessao()}
                   />
                   <Button onClick={handleEntrarSessao}>
@@ -512,7 +512,7 @@ export default function Inventario() {
               onChange={(e) => setNovaSessaoNome(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCriarSessao()}
               placeholder="Nome da sessão"
-              className="w-full border border-border-input bg-bg-input text-text-primary rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="form-input-base"
             />
           </Modal>
 
@@ -560,7 +560,7 @@ export default function Inventario() {
             <input
               ref={inputRef}
               aria-label="Código do produto"
-              className="flex-1 border border-border-input bg-bg-input text-text-primary rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+              className="form-input-base flex-1"
               placeholder="Digite ou bipe o código"
               onKeyDown={handleKeyDown}
               autoFocus
@@ -650,7 +650,7 @@ export default function Inventario() {
                         if (e.key === 'Enter') definirQuantidade(item.codigo, (e.target as HTMLInputElement).value)
                       }}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-14 text-center text-sm font-semibold text-text-primary bg-transparent border border-border-input rounded-lg px-1 py-1 focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-14 text-center text-sm font-semibold text-text-primary bg-transparent form-input-base px-1 py-1"
                     />
                     <button
                       onClick={(e) => { e.stopPropagation(); ajustarQuantidade(item.codigo, 1) }}
@@ -744,7 +744,7 @@ export default function Inventario() {
               onChange={(e) => setNaoCadastradoObs(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleAdicionarNaoCadastrado() }}
               placeholder="Ex: EAN estava no rótulo do produto"
-              className="w-full border border-border-input bg-bg-input text-text-primary rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="form-input-base"
             />
           </div>
         </Modal>
@@ -786,7 +786,7 @@ export default function Inventario() {
                       setEditSheetItem(null)
                     }
                   }}
-                  className="w-20 text-center text-xl font-bold text-text-primary bg-transparent border border-border-input rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-20 text-center text-xl font-bold text-text-primary bg-transparent form-input-base"
                   autoFocus
                 />
                 <button
