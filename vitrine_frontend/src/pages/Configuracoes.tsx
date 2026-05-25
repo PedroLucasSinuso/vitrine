@@ -412,7 +412,7 @@ export default function Configuracoes() {
                     value={form.meta_faturamento_mensal ?? ''}
                     onChange={(e) => updateField('meta_faturamento_mensal', e.target.value)}
                     placeholder="100000"
-                    className="max-w-[260px]"
+                    className="max-w-[160px]"
                   />
                   <p className="text-[11px] text-text-muted ml-1">
                     Usada para calcular o percentual atingido e a projeção de receita no Dashboard
