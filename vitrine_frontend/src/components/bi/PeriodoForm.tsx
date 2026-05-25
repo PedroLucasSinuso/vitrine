@@ -81,7 +81,7 @@ export default function PeriodoForm({ value, onChange, onBuscar, loading, preset
                 className={`text-xs px-2.5 py-1 rounded-full transition ${
                   ativo
                     ? 'bg-primary text-white shadow-sm'
-                    : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-primary-lighter hover:text-primary dark:hover:text-primary'
+                    : 'bg-bg-hover text-text-secondary hover:bg-primary-lighter hover:text-primary'
                 }`}
               >
                 {p.label}
@@ -92,19 +92,19 @@ export default function PeriodoForm({ value, onChange, onBuscar, loading, preset
       )}
       <div className="flex flex-wrap gap-2 items-end">
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-slate-500 dark:text-slate-400">De</label>
+          <label className="text-xs text-text-muted">De</label>
           <input
             type="date"
-            className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="border border-border-input bg-bg-input text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             value={value.data_inicio}
             onChange={(e) => onChange({ ...value, data_inicio: e.target.value })}
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-slate-500 dark:text-slate-400">Até</label>
+          <label className="text-xs text-text-muted">Até</label>
           <input
             type="date"
-            className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="border border-border-input bg-bg-input text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             value={value.data_fim}
             onChange={(e) => onChange({ ...value, data_fim: e.target.value })}
           />
@@ -120,7 +120,7 @@ export default function PeriodoForm({ value, onChange, onBuscar, loading, preset
         )}
       </div>
       {periodoInvalido && (
-        <p className="text-xs text-red-500 dark:text-red-400">
+        <p className="text-xs text-danger">
           {dataFimMenor
             ? "Data final não pode ser anterior à data inicial."
             : `Período máximo permitido é ${MAX_BI_DAYS} dias. Selecione um intervalo menor.`}

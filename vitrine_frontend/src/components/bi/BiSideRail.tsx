@@ -39,14 +39,14 @@ export default function BiSideRail() {
               className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 ${
                 ativo
                   ? 'bg-primary text-white shadow-sm'
-                  : 'text-slate-400 dark:text-slate-500 hover:bg-white dark:hover:bg-slate-800 hover:text-primary hover:shadow-sm'
+                  : 'text-text-muted hover:bg-bg-card hover:text-primary hover:shadow-sm'
               }`}
               aria-current={ativo ? 'page' : undefined}
             >
               <Icon size={18} />
             </Link>
             {/* Hover tooltip */}
-            <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-slate-900 dark:bg-slate-700 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap pointer-events-none z-50 shadow-sm">
+            <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-bg-card text-text-primary text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap pointer-events-none z-50 shadow-sm">
               {label}
             </span>
           </div>

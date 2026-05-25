@@ -130,6 +130,15 @@
 74. **Teste real** — Enviado para `gloriamarket21@gmail.com` + `pedrolucassinuso@gmail.com`. Ambos chegaram com conteúdo completo. ✅
 75. **3 commits** — `6231b3e` (scheduler bugs) + `be6f80e` (MIME fix). 168/168 testes, 0 regressões.
 
+### Auditoria Debug (2026-05-25) — 23 Novas Issues Identificadas
+
+76. **Auditoria exaustiva por agente `debug-investigator`** — leitura de ~40 arquivos, busca de bugs não documentados.
+77. **23 issues identificadas:** 5 🔴 críticos, 6 🟡 high, 7 🟡 medium, 5 🟢 low.
+78. **2 regressões confirmadas:** M1+M2 (`job_id: string`) e Bônus (`logar_erro_interno`) constam como corrigidos mas **código atual ainda tem os bugs**.
+79. **Documentos criados:** `docs/debug-audit-2026-05-25.md` (relatório completo) + `docs/action-plan-2026-05-25.md` (plano de ação).
+80. **`known-issues.md` e `context.md` atualizados** — issues adicionados na seção de abertos.
+81. **Próximos passos:** 6 sprints (Sprints 6-11) para resolver as 23 issues (~11h de trabalho).
+
 ## Descobertas Principais
 
 ### O que está saudável ✅
@@ -151,11 +160,15 @@
 ### O que requer atenção 🔴🟡
 
 | Prioridade | Hotspot | Arquivo | Status |
-|---|---|---|---|
+|---|---|---|---|---|
 | 🔴 P1 | Domain models acoplados ao SQLAlchemy ORM | `domain/models/*.py` | Pendente (longo prazo) |
 | 🔴 P1 | Caches globais em memória do processo | `deps.py`, `config_service.py`, `transaction_source.py` | Pendente (multi-worker) |
 | 🟡 P2 | Config management com 4+ fontes de verdade | `config_service.py`, `configStore.ts` | Parcial |
 | 🟡 P2 | ETL full-reload sem transação atômica | `sync_service.py` | Mitigado (rollback + fetch-before-delete) |
+| 🔴 **NOVO** | **Regressão: M1+M2 e Bônus não foram aplicados** | `admin.ts`, `admin.py` | **Sprint 6 (Hotfix)** |
+| 🔴 **NOVO** | **Stale closure em ajustarQuantidade** | `Inventario.tsx:330-341` | **Sprint 7** |
+| 🔴 **NOVO** | **Vazamento engine PostgreSQL no ETL** | `sync_service.py:103-124` | **Sprint 7** |
+| 🔴 **NOVO** | **Sessão encerrada: GET bloqueado mas Excel não** | `inventario.py:341,488` | **Sprint 8** |
 | 🟢 P3 | config_service.py ~430 linhas (SRP) | `config_service.py` | Pendente |
 
 ### Notas Pós-Revisão (Sprint 1 — Resíduos)
@@ -169,7 +182,7 @@
 
 | Issue | Arquivos | Tipo | Lote |
 |---|---|---|---|
-| M1+M2: `job_id` number → string | `admin.ts` | 🔴 Bug | 1 |
+| ~~M1+M2: `job_id` number → string~~ | **⚠️ REGRESSÃO (B16)** — código atual ainda tem `number` | `admin.ts` | 🔴 Bug | 1 |
 | M3: `CacheStatus` sem tipo | `types/admin.ts`, `admin.ts` | 🟡 Tipagem | 1 |
 | N1+A1: `getRole()` localStorage → JWT | `auth.ts`, `produtos.ts` | 🟡 UX/Security | 1 |
 | A4: Botão encerrar sem restrição | `Inventario.tsx` | 🟡 UX | 1 |
@@ -181,11 +194,11 @@
 | N9: `cacheInfo` tipo inseguro | `Configuracoes.tsx` | 🟢 Typing | 1 |
 | A2: Sync sem lock | `admin.py` | 🟡 Concorrência | 2 |
 | N6: Paginação sem metadata | `produto.py` (6 files) | 🟡 API | 2 |
-| Bônus: `logar_erro_interno` sem import | `admin.py` | 🐛 Bug latente | 2 |
+| ~~Bônus: `logar_erro_interno` sem import~~ | **⚠️ REGRESSÃO (B24)** — código atual ainda chama sem import | `admin.py` | 🐛 Bug latente | 2 |
 | observacao em ItemInventario | 4 files | 🟡 Feature | 3 |
 | Cooldown + pausa escaneio | 2 files | 🟡 Bug | 3 |
 | StoppedRef no LeitorCodigo | `LeitorCodigo.tsx` | 🟡 Bug | 3 |
-| **C1: Validação de sessão ativa** | `inventario.py` | 🔴 Bug | Sprint 1 |
+| **C1: Validação de sessão ativa** | `inventario.py` (mas B5 reclassifica como 🔴 — GET bloqueado em sessão encerrada) | 🔴 Bug | Sprint 1 |
 | **C3: Stale closure sessaoAtiva** | `Inventario.tsx` | 🔴 Bug | Sprint 1 |
 | **C2: Documentação rotação Fernet** | `bootstrap.py`, `README.md` | 🟡 Documentação | Sprint 1 |
 
@@ -195,7 +208,9 @@
 - **Frontend:** ~11 módulos de primeira linha, ~40+ componentes/páginas.
 - **Testes:** 168 testes passando (pytest) — 5 sprints + hotfix validados.
 - **Issues resolvidos:** 30+ em 5 sprints + hotfix.
-- **Issues abertos:** 0 críticos, 0 segurança, 0 performance.
+- **Issues abertos (2026-05-21):** 0 críticos, 0 segurança, 0 performance.
+- **Issues abertos (2026-05-25):** 5 🔴 críticos, 6 🟡 high, 7 🟡 medium, 5 🟢 low — 23 no total (ver `docs/debug-audit-2026-05-25.md`).
+- **Regressões confirmadas:** 2 fixes documentados como corrigidos (M1+M2 `job_id: string` e Bônus `logar_erro_interno`) **não foram aplicados no código atual** — ver B16/B24.
 - **Resíduos pós-revisão Sprint 1:** 2 médios (GET bloqueado indevidamente + segundo async gap) — não bloqueantes.
 - **Tipo de app:** Sistema interno de vitrine/PDV para loja física com BI, inventário, sincronização ERP (Alterdata).
 
@@ -227,16 +242,38 @@
 **Sprint 5 (BI Dashboard + Temas):** MetaCard, ProjecaoCard, trend charts, mini ranking, chartTheme, CSS variables, AppHeader refatorado, tema Flagship.  
 **Hotfix Scheduler/Email:** 2 bugs (session out of `with` + criar_dominio signature) + 1 MIME fix (email vazio).
 
-### Resíduos (Opcional)
+### Auditoria Debug 2026-05-25 — 23 Novas Issues
 
-1. Remover `require_sessao_ativa()` do `GET /sessoes/{id}/itens` — manter apenas em POST/PATCH/DELETE.
-2. Adicionar guard de stale closure nos `await adicionarItemInventario()` das linhas 283 e 303.
-3. Limpar `localStorage.removeItem('role')` em `client.ts` (dead code desde Sprint 4).
+> **Relatório completo:** `docs/debug-audit-2026-05-25.md`
+> **Plano de ação:** `docs/action-plan-2026-05-25.md`
+> **6 sprints planejados** (~11h de trabalho)
+
+**5 🔴 Críticos:** WhatsApp test crash (B1), stale closure em ajustarQuantidade (B3), vazamento engine PostgreSQL (B4), sessão encerrada inconsistente (B5), **2 regressões de fixes documentados** (B16/B24).
+**6 🟡 High:** EAN não consultado no estoque (B6), atomicidade ETL (B8), polling leak (B18), erros engolidos (B19), ProtectedRoute frágil (B10), logout sem revogação real (B12).
+**7 🟡 Medium:** 401 reload total (B13), pausaEscaneio não resetado (B15), job_id number/string mismatch (B17), gaps de teste (B25), email sem logo (B2).
+**5 🟢 Low:** continuo prop morto (B9), modelo Claude 2024 (B20), log INFO em debug (B21), PK redundante (B23).
+
+### Plano de Ação (Sprints 6-11)
+
+| Sprint | Foco | Issues | Esforço |
+|---|---|---|---|
+| **Sprint 6 — Hotfix** | Regressões + Crash | B1, B16, B24 | ~30 min |
+| **Sprint 7 — Dados** | Data Loss / Corrupção | B3, B4, B8 | ~3h |
+| **Sprint 8 — Consistência** | Lógica de Negócio | B5, B6, B15 | ~3h |
+| **Sprint 9 — Frontend** | UX / State / Leaks | B13, B18, B19, B9 | ~2h |
+| **Sprint 10 — Segurança** | Defense-in-depth | B10, B12, B17 | ~1h |
+| **Sprint 11 — Housekeeping** | Tech Debt + Testes | B2, B20, B21, B23, B25 | ~2h |
+
+### Resíduos (Opcional) — Agora Incorporados nos Sprints
+
+1. ~~Remover `require_sessao_ativa()` do GET → **B5 (Sprint 8)**~~
+2. ~~Adicionar guard de stale closure → **B3 (Sprint 7, separado do C3)**~~
+3. Limpar `localStorage.removeItem('role')` em `client.ts` (dead code desde Sprint 4) — ainda pendente
 
 ### Backlog (Médio/Longo Prazo)
 
 21. Reduzir JWT expiry para 8h + refresh token.
-22. Tornar `_ADAPTER_CACHE` thread-safe com `threading.Lock`.
+22. Tornar `_ADAPTER_CACHE` thread-safe com `threading.Lock` (já corrigido M2, mas verificar abrangência).
 23. Stream real no Excel export.
 24. Desacoplar domain models do ORM.
 25. Cache compartilhado (Redis) se houver multi-worker.
@@ -246,10 +283,12 @@
 ## Documentos Relacionados
 
 | Documento | Conteúdo |
-|---|---|
+|---|---|---|
 | `architecture.md` | Análise completa: layers, coupling, state, scalability, hotspots |
 | `decisions.md` | ADRs com tradeoffs documentados (ADR-001 a 015) |
 | `context.md` (este) | Status atual, riscos, próximos passos |
-| `known-issues.md` | Histórico de correções + issues abertos da revisão adversarial |
+| `known-issues.md` | Histórico de correções + issues abertos |
+| `debug-audit-2026-05-25.md` | **NOVO** — Relatório completo da auditoria debug (23 issues) |
+| `action-plan-2026-05-25.md` | **NOVO** — Plano de ação para resolução em 6 sprints |
 | `api-contracts.md` | Contratos formais da API |
 | `TUTORIAL_INVENTARIO.md` | Guia de uso do módulo de inventário (usuários finais) |

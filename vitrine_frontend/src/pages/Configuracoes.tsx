@@ -290,11 +290,11 @@ export default function Configuracoes() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 ml-9">
                   {/* Logo preview — larger and prominent */}
                   <div className="relative group">
-                    <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center overflow-hidden">
+                    <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-border bg-bg-hover/50 flex items-center justify-center overflow-hidden">
                       {logoPreview ? (
                         <img src={logoPreview} alt="Logo" className="w-full h-full object-contain rounded-2xl" />
                       ) : (
-                        <ImageIcon size={28} className="text-slate-300 dark:text-slate-600" />
+                        <ImageIcon size={28} className="text-text-muted" />
                       )}
                     </div>
                     <button
@@ -319,12 +319,12 @@ export default function Configuracoes() {
                   {/* Store name */}
                   <div className="flex-1 w-full">
                     <input
-                      className="w-full text-lg font-bold text-slate-800 dark:text-slate-100 border-b-2 border-slate-200 dark:border-slate-600 bg-transparent px-1 py-1.5 focus:outline-none focus:border-primary transition placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                      className="w-full text-lg font-bold text-text-primary border-b-2 border-border-input bg-transparent px-1 py-1.5 focus:outline-none focus:border-primary transition placeholder:text-slate-300 dark:placeholder:text-slate-600"
                       value={form.nome_estabelecimento ?? ''}
                       onChange={(e) => updateField('nome_estabelecimento', e.target.value)}
                       placeholder="Nome da sua loja"
                     />
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 ml-1">
+                    <p className="text-[11px] text-text-muted mt-1 ml-1">
                       Exibido no cabeçalho e nos relatórios
                     </p>
                 </div>
@@ -413,7 +413,7 @@ export default function Configuracoes() {
                     onChange={(e) => updateField('meta_faturamento_mensal', e.target.value)}
                     placeholder="100000"
                   />
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500 ml-1">
+                  <p className="text-[11px] text-text-muted ml-1">
                     Usada para calcular o percentual atingido e a projeção de receita no Dashboard
                   </p>
                 </div>
@@ -434,7 +434,7 @@ export default function Configuracoes() {
                   <SectionHeader icon={Database} title="Conexão ERP" description="Credenciais do banco de dados PostgreSQL" />
                   <button
                     onClick={() => setErpRevealed((p) => !p)}
-                    className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700/50 shrink-0"
+                    className="inline-flex items-center gap-1.5 text-[11px] font-medium text-text-muted hover:text-primary dark:hover:text-primary transition px-2 py-1 rounded-md hover:bg-bg-hover/50 shrink-0"
                   >
                     {erpRevealed ? <EyeOff size={12} /> : <Eye size={12} />}
                     {erpRevealed ? 'Ocultar' : 'Mostrar'}
@@ -490,7 +490,7 @@ export default function Configuracoes() {
                 )}
 
                 {!erpRevealed && (
-                  <div className="ml-9 text-[11px] text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-700/30 rounded-lg px-3 py-2 flex items-center gap-1.5">
+                  <div className="ml-9 text-[11px] text-text-muted bg-bg-hover/30 rounded-lg px-3 py-2 flex items-center gap-1.5">
                     <Lock size={11} />
                     Dados de conexão ocultos — clique em "Mostrar" para editar
                   </div>
@@ -498,7 +498,7 @@ export default function Configuracoes() {
               </div>
 
               {/* Sync settings — always visible */}
-              <div className="border-t border-slate-100 dark:border-slate-700/50 pt-4">
+              <div className="border-t border-border/50 pt-4">
                 <SectionHeader icon={Clock} title="Agendamento" description="Intervalos de sincronização e cache" />
                 <div className="ml-9 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <CompactSelect
@@ -558,7 +558,7 @@ export default function Configuracoes() {
               </div>
 
               {/* Weekly report */}
-              <div className="border-t border-slate-100 dark:border-slate-700/50 pt-4">
+              <div className="border-t border-border/50 pt-4">
                 <SectionHeader icon={FileText} title="Relatório semanal" description="Dia, horário e contatos para envio" />
                 <div className="ml-9 flex flex-col gap-3">
                   <div className="flex gap-3 flex-wrap">
@@ -581,7 +581,7 @@ export default function Configuracoes() {
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Contatos</label>
+                    <label className="text-[11px] font-medium text-text-muted">Contatos</label>
                     <ListaContatosWhatsApp />
                   </div>
                 </div>
@@ -646,7 +646,7 @@ export default function Configuracoes() {
               </div>
 
               {/* Weekly report */}
-              <div className="border-t border-slate-100 dark:border-slate-700/50 pt-4">
+              <div className="border-t border-border/50 pt-4">
                 <SectionHeader icon={FileText} title="Relatório semanal" description="Dia, horário e contatos para envio" />
                 <div className="ml-9 flex flex-col gap-3">
                   <div className="flex gap-3 flex-wrap">
@@ -669,7 +669,7 @@ export default function Configuracoes() {
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Contatos</label>
+                    <label className="text-[11px] font-medium text-text-muted">Contatos</label>
                     <ListaContatosEmail />
                   </div>
                 </div>
@@ -701,7 +701,7 @@ export default function Configuracoes() {
                 </div>
               </div>
 
-              <div className="border-t border-slate-100 dark:border-slate-700/50 pt-4">
+              <div className="border-t border-border/50 pt-4">
                 <SectionHeader icon={Clock} title="Relatório" description="Período de análise dos dados" />
                 <div className="ml-9">
                   <CompactInput
@@ -713,7 +713,7 @@ export default function Configuracoes() {
                     placeholder="30"
                     className="max-w-[120px]"
                   />
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Quantos dias de dados o relatório de inteligência analisa</p>
+                  <p className="text-[11px] text-text-muted mt-1">Quantos dias de dados o relatório de inteligência analisa</p>
                 </div>
               </div>
 
@@ -731,14 +731,14 @@ export default function Configuracoes() {
                 <SectionHeader icon={Activity} title="Status do sistema" description="Informações de sincronização e cache" />
                 <div className="ml-9 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Last ETL sync */}
-                  <div className="rounded-xl border border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-700/30 p-4">
+                  <div className="rounded-xl border border-border/50 bg-bg-hover/30 p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-500">
                         <Activity size={12} />
                       </div>
-                      <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Última sincronia ETL</span>
+                      <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wide">Última sincronia ETL</span>
                     </div>
-                    <p className="text-sm font-mono text-slate-700 dark:text-slate-200">
+                    <p className="text-sm font-mono text-text-primary">
                       {statusLastUpdated
                         ? new Date(statusLastUpdated).toLocaleString('pt-BR', {
                             day: '2-digit', month: '2-digit', year: 'numeric',
@@ -749,36 +749,36 @@ export default function Configuracoes() {
                   </div>
 
                   {/* Cache info — dados reais do backend */}
-                  <div className="rounded-xl border border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-700/30 p-4">
+                  <div className="rounded-xl border border-border/50 bg-bg-hover/30 p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <div className={`p-1 rounded-md ${cacheInfo?.produtos_cached ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
                         <Database size={12} />
                       </div>
-                      <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Cache</span>
+                      <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wide">Cache</span>
                     </div>
                     {cacheInfo ? (
-                      <div className="text-xs text-slate-600 dark:text-slate-300 space-y-1">
+                      <div className="text-xs text-text-secondary space-y-1">
                         <p>
-                          <span className="text-slate-400">Status: </span>
-                          <span className={cacheInfo.produtos_cached ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}>
+                          <span className="text-text-muted">Status: </span>
+                          <span className={cacheInfo.produtos_cached ? 'text-success' : 'text-amber-600 dark:text-amber-400'}>
                             {cacheInfo.produtos_cached ? 'Ativo' : 'Vazio'}
                           </span>
                         </p>
                         {cacheInfo.last_refresh && (
                           <p>
-                            <span className="text-slate-400">Última atualização: </span>
+                            <span className="text-text-muted">Última atualização: </span>
                             {new Date(cacheInfo.last_refresh).toLocaleString('pt-BR')}
                           </p>
                         )}
                         {cacheInfo.ttl_seconds != null && (
                           <p>
-                            <span className="text-slate-400">TTL: </span>
+                            <span className="text-text-muted">TTL: </span>
                             {cacheInfo.ttl_seconds}s
                           </p>
                         )}
                       </div>
                     ) : (
-                      <p className="text-xs text-slate-400">—</p>
+                      <p className="text-xs text-text-muted">—</p>
                     )}
                   </div>
                 </div>

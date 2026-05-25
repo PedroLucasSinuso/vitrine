@@ -13,7 +13,7 @@ export default function SectionHeader({ icon: Icon, children, action }: Props) {
     <div className="flex items-center justify-between mb-4">
       <div className="flex items-center gap-2">
         {Icon && <Icon size={16} className="text-primary" aria-hidden="true" />}
-        <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{children}</h2>
+        <h2 className="text-sm font-semibold text-text-primary">{children}</h2>
       </div>
       {action && (
         <button

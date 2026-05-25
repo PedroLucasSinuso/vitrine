@@ -15,8 +15,8 @@ import type { Role } from '../types'
 const ROLES: Role[] = ['operador', 'supervisor', 'admin']
 
 const roleBadgeClass: Record<Role, string> = {
-  operador: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
-  supervisor: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  operador: 'bg-bg-hover text-text-secondary',
+  supervisor: 'bg-info/10 text-info',
   admin: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
 }
 
@@ -39,7 +39,7 @@ function UserAvatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' | 
   const sizeClass = size === 'sm' ? 'w-8 h-8 text-xs' : size === 'lg' ? 'w-12 h-12 text-base' : 'w-10 h-10 text-sm'
   const colors = [
     'bg-primary/10 text-primary dark:bg-primary/20',
-    'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    'bg-info/10 text-info',
     'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
     'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   ]
@@ -147,9 +147,9 @@ export default function Usuarios() {
           }
         >
           <div className="flex flex-col gap-4">
-            <p className="text-xs text-slate-400 dark:text-slate-500">{modal.usuario.username}</p>
+            <p className="text-xs text-text-muted">{modal.usuario.username}</p>
             <div>
-              <label className="text-xs text-slate-500 dark:text-slate-400 mb-1.5 block">Nova senha (opcional)</label>
+              <label className="text-xs text-text-muted mb-1.5 block">Nova senha (opcional)</label>
               <input
                 type="password"
                 className="w-full border border-border-input bg-bg-input text-text-primary rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -159,7 +159,7 @@ export default function Usuarios() {
               />
             </div>
             <div>
-              <label className="text-xs text-slate-500 dark:text-slate-400 mb-1.5 block">Permissão</label>
+              <label className="text-xs text-text-muted mb-1.5 block">Permissão</label>
               <select
                 className="w-full border border-border-input bg-bg-input text-text-primary rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 value={modal.role}
@@ -184,8 +184,8 @@ export default function Usuarios() {
               <UserPlus size={20} className="text-primary" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">Novo usuário</h2>
-              <p className="text-xs text-slate-400 dark:text-slate-500">Adicione um novo membro à equipe</p>
+              <h2 className="text-base font-semibold text-text-primary">Novo usuário</h2>
+              <p className="text-xs text-text-muted">Adicione um novo membro à equipe</p>
             </div>
           </div>
           <div className="flex flex-col gap-4">
@@ -230,31 +230,31 @@ export default function Usuarios() {
         {/* Lista de usuários */}
         <div className="bg-bg-card rounded-xl border border-border shadow-card p-6">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-              <Users size={20} className="text-slate-500 dark:text-slate-400" />
+            <div className="w-10 h-10 rounded-xl bg-bg-hover flex items-center justify-center">
+              <Users size={20} className="text-text-muted" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">
+              <h2 className="text-base font-semibold text-text-primary">
                 Equipe
               </h2>
               {!carregando && (
-                <p className="text-xs text-slate-400 dark:text-slate-500">{usuarios.length} membro(s)</p>
+                <p className="text-xs text-text-muted">{usuarios.length} membro(s)</p>
               )}
             </div>
           </div>
 
           {erroGeral && <p className="text-red-500 text-sm mb-3">{erroGeral}</p>}
-          {carregando && <p className="text-sm text-slate-400 dark:text-slate-500">Carregando...</p>}
+          {carregando && <p className="text-sm text-text-muted">Carregando...</p>}
 
           {!carregando && (
             <div className="flex flex-col gap-2">
               {usuarios.map(usuario => (
-                <div key={usuario.id} className="flex justify-between items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition group">
+                <div key={usuario.id} className="flex justify-between items-center border border-border rounded-xl px-4 py-3 hover:bg-bg-hover transition group">
                   <div className="flex items-center gap-3 min-w-0">
                     <UserAvatar name={usuario.nome_exibicao} />
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{usuario.nome_exibicao}</p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 font-mono">{usuario.username}</p>
+                      <p className="text-sm font-semibold text-text-primary truncate">{usuario.nome_exibicao}</p>
+                      <p className="text-xs text-text-muted font-mono">{usuario.username}</p>
                     </div>
                     <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${roleBadgeClass[usuario.role]}`}>
                       {roleLabels[usuario.role]}
@@ -269,7 +269,7 @@ export default function Usuarios() {
                         loading: false,
                         erro: '',
                       })}
-                      className="text-slate-400 hover:text-primary transition p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
+                      className="text-text-muted hover:text-primary transition p-1.5 rounded-lg hover:bg-bg-hover"
                       aria-label={`Editar ${usuario.nome_exibicao}`}
                     >
                       <Edit2 size={14} />

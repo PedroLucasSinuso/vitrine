@@ -1,3 +1,4 @@
+import { FileSpreadsheet, FileDown } from 'lucide-react'
 import Button from '../ui/Button'
 
 interface Props {
@@ -11,11 +12,13 @@ export default function ExportButtons({ onExcel, onCsv, disabled }: Props) {
     <div className="flex gap-2">
       {onExcel && (
         <Button size="sm" variant="secondary" onClick={onExcel} disabled={disabled}>
+          <FileSpreadsheet size={14} />
           Excel
         </Button>
       )}
       {onCsv && (
-        <Button size="sm" variant="secondary" onClick={onCsv} disabled={disabled}>
+        <Button size="sm" variant="ghost" onClick={onCsv} disabled={disabled}>
+          <FileDown size={14} />
           CSV
         </Button>
       )}

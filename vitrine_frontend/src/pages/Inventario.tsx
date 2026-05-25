@@ -421,7 +421,7 @@ export default function Inventario() {
                       <button
                         key={s.id}
                         onClick={() => setSessaoAtiva(s)}
-                        className="flex items-center justify-between border border-border rounded-xl px-4 py-3 text-left hover:bg-primary-lighter dark:hover:bg-slate-700 transition"
+                        className="flex items-center justify-between border border-border rounded-xl px-4 py-3 text-left hover:bg-primary-lighter transition"
                       >
                         <div>
                           <p className="font-semibold text-sm text-text-primary">{s.nome}</p>
@@ -515,7 +515,7 @@ export default function Inventario() {
         {/* Info da sessão */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
-            <button onClick={handleVoltar} className="text-sm text-slate-500 hover:text-primary transition shrink-0">
+            <button onClick={handleVoltar} className="text-sm text-text-muted hover:text-primary transition shrink-0">
               ← Voltar
             </button>
             <div className="min-w-0">
@@ -546,14 +546,14 @@ export default function Inventario() {
             />
             <button
               onClick={() => setCamera(true)}
-              className="md:hidden bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-gray-600 text-slate-700 dark:text-slate-300 px-3 py-2 rounded-lg transition"
+              className="md:hidden bg-bg-hover text-text-primary px-3 py-2 rounded-lg transition"
               aria-label="Ler código de barras"
             >
               <Camera size={18} />
             </button>
           </div>
           {scanFeedback && (
-            <div className="mt-2 flex items-center gap-2 text-green-600 dark:text-green-400 text-sm font-medium animate-fade-in-up">
+            <div className="mt-2 flex items-center gap-2 text-success text-sm font-medium animate-fade-in-up">
               <Check size={16} /> {scanFeedback}
             </div>
           )}
@@ -571,10 +571,10 @@ export default function Inventario() {
                 </span>
               </h2>
               <div className="flex gap-2">
-                <button onClick={() => setConfirmarLimpar(true)} className="text-sm text-slate-400 hover:text-red-500 transition flex items-center gap-1">
+                <button onClick={() => setConfirmarLimpar(true)} className="text-sm text-text-muted hover:text-red-500 transition flex items-center gap-1">
                   <Trash2 size={14} /> Limpar
                 </button>
-                <button onClick={handleExportarTxt} className="text-sm text-slate-500 hover:text-primary transition flex items-center gap-1">
+                <button onClick={handleExportarTxt} className="text-sm text-text-muted hover:text-primary transition flex items-center gap-1">
                   <Download size={14} /> TXT
                 </button>
                 {isSupervisor && (
@@ -590,7 +590,7 @@ export default function Inventario() {
                 <div
                   key={item.codigo}
                   onClick={() => setEditSheetItem(item)}
-                  className="flex justify-between items-center border dark:border-slate-700 rounded-lg px-4 py-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition"
+                  className="flex justify-between items-center border border-border rounded-lg px-4 py-2 cursor-pointer hover:bg-bg-hover transition"
                 >
                   <div className="min-w-0 flex-1">
                     <span className="text-sm font-semibold text-text-primary">{item.codigo}</span>
@@ -611,7 +611,7 @@ export default function Inventario() {
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={(e) => { e.stopPropagation(); ajustarQuantidade(item.codigo, -1) }}
-                      className="w-7 h-7 rounded-full bg-slate-50 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 font-bold transition flex items-center justify-center"
+                      className="w-7 h-7 rounded-full bg-bg-hover text-text-secondary font-bold transition flex items-center justify-center"
                     >
                       <Minus size={14} />
                     </button>
@@ -625,11 +625,11 @@ export default function Inventario() {
                         if (e.key === 'Enter') definirQuantidade(item.codigo, (e.target as HTMLInputElement).value)
                       }}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-14 text-center text-sm font-semibold text-text-primary bg-transparent border border-slate-300 dark:border-slate-600 rounded-lg px-1 py-1 focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-14 text-center text-sm font-semibold text-text-primary bg-transparent border border-border-input rounded-lg px-1 py-1 focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                     <button
                       onClick={(e) => { e.stopPropagation(); ajustarQuantidade(item.codigo, 1) }}
-                      className="w-7 h-7 rounded-full bg-slate-50 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 font-bold transition flex items-center justify-center"
+                      className="w-7 h-7 rounded-full bg-bg-hover text-text-secondary font-bold transition flex items-center justify-center"
                     >
                       <Plus size={14} />
                     </button>
@@ -655,7 +655,7 @@ export default function Inventario() {
                 </span>
               </h2>
               {consolidadoLoading && (
-                <span className="text-xs text-slate-400 flex items-center gap-1">
+                <span className="text-xs text-text-muted flex items-center gap-1">
                   <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -672,7 +672,7 @@ export default function Inventario() {
             {consolidadoItems.length > 0 && (
               <div className="flex flex-col gap-1.5 max-h-60 overflow-y-auto">
                 {consolidadoItems.slice(0, 20).map(item => (
-                  <div key={item.codigo} className="flex justify-between items-center px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-700/50">
+                  <div key={item.codigo} className="flex justify-between items-center px-3 py-2 rounded-lg bg-bg-hover">
                     <div className="min-w-0 flex-1">
                       <span className="text-xs font-mono text-text-muted">{item.codigo}</span>
                       <span className="text-xs text-text-muted ml-2 truncate">{item.nome}</span>
@@ -707,7 +707,7 @@ export default function Inventario() {
           }
         >
           <div className="flex flex-col gap-3">
-            <p className="text-sm text-slate-600 dark:text-slate-300">
+            <p className="text-sm text-text-secondary">
               O código <strong>{naoCadastradoModal?.codigo}</strong> não está cadastrado no sistema.
             </p>
             <p className="text-xs text-text-muted">
@@ -742,7 +742,7 @@ export default function Inventario() {
               <div className="flex items-center gap-6 mt-5 justify-center">
                 <button
                   onClick={() => ajustarQuantidade(editSheetItem.codigo, -1)}
-                  className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-gray-600 text-slate-600 dark:text-slate-300 font-bold transition flex items-center justify-center"
+                  className="w-12 h-12 rounded-full bg-bg-hover text-text-secondary font-bold transition flex items-center justify-center"
                 >
                   <Minus size={22} />
                 </button>
@@ -761,12 +761,12 @@ export default function Inventario() {
                       setEditSheetItem(null)
                     }
                   }}
-                  className="w-20 text-center text-xl font-bold text-text-primary bg-transparent border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-20 text-center text-xl font-bold text-text-primary bg-transparent border border-border-input rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
                   autoFocus
                 />
                 <button
                   onClick={() => ajustarQuantidade(editSheetItem.codigo, 1)}
-                  className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-gray-600 text-slate-600 dark:text-slate-300 font-bold transition flex items-center justify-center"
+                  className="w-12 h-12 rounded-full bg-bg-hover text-text-secondary font-bold transition flex items-center justify-center"
                 >
                   <Plus size={22} />
                 </button>

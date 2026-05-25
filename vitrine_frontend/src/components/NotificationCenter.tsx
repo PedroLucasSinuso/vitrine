@@ -40,7 +40,7 @@ export default function NotificationCenter() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen((prev) => !prev)}
-        className="relative text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+        className="relative text-text-muted hover:text-text-primary transition p-1.5 rounded-lg hover:bg-bg-hover"
         aria-label="Notificações"
         aria-expanded={open}
         aria-haspopup="true"
@@ -58,23 +58,23 @@ export default function NotificationCenter() {
         <div
           role="menu"
           aria-label="Notificações"
-          className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 animate-fade-in-up z-[60]"
+          className="absolute right-0 top-full mt-2 w-80 bg-bg-card rounded-xl shadow-lg border border-border animate-fade-in-up z-[60]"
         >
-          <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
-            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">Notificações</h3>
+          <div className="px-4 py-3 border-b border-border">
+            <h3 className="text-sm font-semibold text-text-primary">Notificações</h3>
           </div>
 
           {NOTIFICACOES.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
+            <div className="px-4 py-8 text-center text-sm text-text-muted">
               <BellOff size={24} className="mx-auto mb-2 opacity-40" aria-hidden="true" />
               Nenhuma notificação
             </div>
           ) : (
-            <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700">
+            <div className="max-h-72 overflow-y-auto divide-y divide-border">
               {NOTIFICACOES.map((n) => (
                 <div key={n.id} className={`px-4 py-3 text-sm ${n.lida ? 'opacity-60' : ''}`}>
-                  <p className="text-slate-700 dark:text-slate-300">{n.mensagem}</p>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">{n.createdAt}</p>
+                  <p className="text-text-primary">{n.mensagem}</p>
+                  <p className="text-[10px] text-text-muted mt-1">{n.createdAt}</p>
                 </div>
               ))}
             </div>

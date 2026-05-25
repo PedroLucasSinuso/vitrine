@@ -124,28 +124,28 @@ export default function CmdK() {
         role="dialog"
         aria-modal="true"
         aria-label="Buscar páginas"
-        className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden animate-scale-in"
+        className="w-full max-w-lg bg-bg-card rounded-2xl shadow-2xl border border-border overflow-hidden animate-scale-in"
       >
         {/* Search input */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 dark:border-slate-700">
-          <Search size={16} className="text-slate-400 shrink-0" aria-hidden="true" />
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+          <Search size={16} className="text-text-muted shrink-0" aria-hidden="true" />
           <input
             ref={inputRef}
             aria-label="Buscar páginas"
-            className="flex-1 bg-transparent text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none"
+            className="flex-1 bg-transparent text-sm text-text-primary placeholder-text-muted focus:outline-none"
             placeholder="Buscar páginas..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
           />
-          <kbd className="hidden sm:inline-flex items-center gap-0.5 text-[10px] text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-700 px-1.5 py-0.5 rounded">
+          <kbd className="hidden sm:inline-flex items-center gap-0.5 text-[10px] text-text-muted bg-bg-hover px-1.5 py-0.5 rounded">
             <Command size={10} />K
           </kbd>
         </div>
 
         {/* Results */}
         {filtered.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
+          <div className="px-4 py-8 text-center text-sm text-text-muted">
             Nenhuma página encontrada para &ldquo;{query}&rdquo;
           </div>
         ) : (
@@ -169,12 +169,12 @@ export default function CmdK() {
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-left transition ${
                     isSelected
                       ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-light'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                      : 'text-text-secondary hover:bg-bg-hover'
                   }`}
                 >
                   <Icon size={16} className="shrink-0 opacity-60" aria-hidden="true" />
                   <span className="flex-1 truncate">{r.label}</span>
-                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono truncate max-w-24">{r.path}</span>
+                  <span className="text-[10px] text-text-muted font-mono truncate max-w-24">{r.path}</span>
                 </button>
               )
             })}
@@ -182,10 +182,10 @@ export default function CmdK() {
         )}
 
         {/* Footer hint */}
-        <div className="flex items-center gap-3 px-4 py-2 border-t border-slate-200 dark:border-slate-700 text-[10px] text-slate-400 dark:text-slate-500">
-          <span><kbd className="bg-slate-50 dark:bg-slate-700 px-1 rounded text-[10px]">↑↓</kbd> Navegar</span>
-          <span><kbd className="bg-slate-50 dark:bg-slate-700 px-1 rounded text-[10px]">↵</kbd> Abrir</span>
-          <span><kbd className="bg-slate-50 dark:bg-slate-700 px-1 rounded text-[10px]">Esc</kbd> Fechar</span>
+        <div className="flex items-center gap-3 px-4 py-2 border-t border-border text-[10px] text-text-muted">
+          <span><kbd className="bg-bg-hover px-1 rounded text-[10px]">↑↓</kbd> Navegar</span>
+          <span><kbd className="bg-bg-hover px-1 rounded text-[10px]">↵</kbd> Abrir</span>
+          <span><kbd className="bg-bg-hover px-1 rounded text-[10px]">Esc</kbd> Fechar</span>
         </div>
       </div>
     </div>
