@@ -10,6 +10,7 @@ import Home from './pages/Home'
 import NotFound from './pages/NotFound'
 import ProtectedRoute from './components/ProtectedRoute'
 import { useAuth } from './hooks/useAuth'
+import { hasRole } from './utils/auth'
 import Usuarios from './pages/Usuarios'
 import Configuracoes from './pages/Configuracoes'
 import Produtos from './pages/Produtos'
@@ -34,9 +35,9 @@ import AppLayout from './components/layout/AppLayout'
 function HomeRouter() {
   const { getRole } = useAuth()
   const role = getRole()
-  if (role === 'admin') return <Navigate to="/admin" replace />
-  if (role === 'supervisor') return <Navigate to="/home" replace />
-  if (role === 'operador') return <Navigate to="/home/operador" replace />
+  if (hasRole(role, ['admin'])) return <Navigate to="/admin" replace />
+  if (hasRole(role, ['supervisor'])) return <Navigate to="/home" replace />
+  if (hasRole(role, ['operador'])) return <Navigate to="/home/operador" replace />
   return <Busca />
 }
 

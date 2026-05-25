@@ -28,7 +28,7 @@ export interface KpisComparativoDTO {
 }
 
 export interface ItemDimensaoDTO {
-  codigo?: string
+  codigo: string
   grupo: string
   familia?: string | null
   produto?: string | null
@@ -50,6 +50,7 @@ export interface ItemRankingDTO {
   codigo: string
   produto: string
   valor: number
+  quantidade: number
 }
 
 export interface ItemMovimentoDTO {

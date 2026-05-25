@@ -28,18 +28,23 @@ export function BiCacheProvider({ children }: { children: ReactNode }) {
   const cacheRef = useRef<Map<string, CacheEntry>>(new Map())
   const insertionOrderRef = useRef<string[]>([])
 
-  const get = useCallback(<T,>(key: string, periodo: PeriodoBi): T | null => {
+  // Helper: resolve entry + limpa stale (m7 — extraído para evitar duplicação)
+  const _resolveEntry = useCallback((key: string, periodo: PeriodoBi): CacheEntry | undefined => {
     const entry = cacheRef.current.get(key)
-    if (!entry) return null
+    if (!entry) return undefined
     if (entry.periodoKey !== periodoKey(periodo)) {
       cacheRef.current.delete(key)
-      // Also clean up insertion order
       const idx = insertionOrderRef.current.indexOf(key)
       if (idx !== -1) insertionOrderRef.current.splice(idx, 1)
-      return null
+      return undefined
     }
-    return entry.data as T
+    return entry
   }, [])
+
+  const get = useCallback(<T,>(key: string, periodo: PeriodoBi): T | null => {
+    const entry = _resolveEntry(key, periodo)
+    return entry ? entry.data as T : null
+  }, [_resolveEntry])
 
   const set = useCallback((key: string, periodo: PeriodoBi, data: unknown) => {
     // Track insertion order (only if it's a new key)
@@ -66,16 +71,9 @@ export function BiCacheProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const getTimestamp = useCallback((key: string, periodo: PeriodoBi): number | null => {
-    const entry = cacheRef.current.get(key)
-    if (!entry) return null
-    if (entry.periodoKey !== periodoKey(periodo)) {
-      cacheRef.current.delete(key)
-      const idx = insertionOrderRef.current.indexOf(key)
-      if (idx !== -1) insertionOrderRef.current.splice(idx, 1)
-      return null
-    }
-    return entry.timestamp
-  }, [])
+    const entry = _resolveEntry(key, periodo)
+    return entry ? entry.timestamp : null
+  }, [_resolveEntry])
 
   return (
     <BiCacheContext.Provider value={{ get, set, invalidate, clear, getTimestamp }}>

@@ -84,10 +84,14 @@ export function useAuth() {
   const logout = useCallback(async () => {
     let revoked = false
     try {
-      await api.post('/auth/logout', {}, { timeout: 5000 })
+      await api.post('/auth/logout', {}, { timeout: 10000 })
       revoked = true
     } catch (err) {
-      console.warn('[Auth] Falha ao revogar token no servidor. Token removido apenas localmente.', err)
+      console.warn(
+        '[Auth] Não foi possível revogar o token no servidor. ' +
+        'O token expirará em até 7 dias.',
+        err
+      )
     }
     localStorage.removeItem('token')
     if (!revoked) {

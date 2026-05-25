@@ -44,6 +44,7 @@ class ItemRankingDTO(BaseModel):
     codigo: str
     produto: str
     valor: float
+    quantidade: float = 0
 
 class ItemMovimentoDTO(BaseModel):
     codigo: str

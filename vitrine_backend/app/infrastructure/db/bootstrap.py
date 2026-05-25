@@ -1,20 +1,19 @@
 ﻿import os
 import atexit
+import importlib
+import pkgutil
 import logging
 import threading
 from sqlalchemy import text
 from app.infrastructure.db.database import Base
 from app.infrastructure.db.session import sqlite_engine
-import app.domain.models.produto
-import app.domain.models.cache_status
-import app.domain.models.usuario
-import app.domain.models.configuracao
-import app.domain.models.inventario
-import app.domain.models.whatsapp_contato
-import app.domain.models.email_contato
-import app.domain.models.sync_job
-import app.domain.models.token_blacklist
-import app.domain.models.historico_preco  # noqa — registra o model no Base.metadata
+
+# Auto-scan de models: todo .py em app/domain/models/ é importado
+# para registrar no Base.metadata (M11). Isso evita esquecer de
+# adicionar imports manuais quando um novo model é criado.
+import app.domain.models as _models_pkg
+for _module_info in pkgutil.iter_modules(_models_pkg.__path__):
+    importlib.import_module(f"app.domain.models.{_module_info.name}")
 
 logger = logging.getLogger(__name__)
 

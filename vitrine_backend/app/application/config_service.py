@@ -6,6 +6,7 @@ permitindo migração transparente.
 """
 
 import logging
+import threading
 from datetime import datetime, timezone
 from urllib.parse import urlparse, unquote
 from sqlalchemy import select
@@ -32,7 +33,9 @@ if settings.erps_encryption_key:
 
 # Cache leve com TTL (segundos) — evita ler do banco a cada chamada,
 # mas sem os problemas de invalidação manual entre workers.
+# C4: thread lock protege contra race condition em _cache.clear() + _cache[]
 _cache: dict[str, tuple[str, float]] = {}
+_cache_lock: threading.Lock = threading.Lock()
 CACHE_TTL = 30
 
 CHAVES_COPIADAS_DO_ENV: set[str] = set()
@@ -249,17 +252,19 @@ def get(db: Session, chave: str, default: str = "") -> str:
 
     now = datetime.now(timezone.utc).timestamp()
 
-    # 1. Cache
-    cached = _cache.get(chave)
-    if cached is not None and (now - cached[1]) < CACHE_TTL:
-        return cached[0]
+    # 1. Cache (C4: protegido por lock)
+    with _cache_lock:
+        cached = _cache.get(chave)
+        if cached is not None and (now - cached[1]) < CACHE_TTL:
+            return cached[0]
 
     # 2. SQLite
     row = db.execute(
         select(Configuracao).where(Configuracao.chave == chave)
     ).scalar_one_or_none()
     if row is not None and row.valor:
-        _cache[chave] = (row.valor, now)
+        with _cache_lock:  # C4
+            _cache[chave] = (row.valor, now)
         return row.valor
 
     # 3. Fallback .env com seed automático
@@ -267,11 +272,70 @@ def get(db: Session, chave: str, default: str = "") -> str:
     if chave in _ENV_FALLBACK_MAP:
         seeded = _seed_from_env(db, chave)
         if seeded is not None:
-            _cache[chave] = (seeded, now)
+            with _cache_lock:  # C4
+                _cache[chave] = (seeded, now)
             return seeded
 
     # 4. Default
     return default
+
+
+def get_many(db: Session, chaves: list[str]) -> dict[str, str]:
+    """Retorna múltiplas configurações em uma única query (m3).
+
+    Popula o cache interno para todas as chaves encontradas.
+    Chaves não encontradas retornam string vazia (mesmo comportamento
+    de `get()` sem default).
+    """
+    now = datetime.now(timezone.utc).timestamp()
+    resultado: dict[str, str] = {}
+
+    # Separa chaves que só vêm do .env
+    pendentes: list[str] = []
+    for chave in chaves:
+        if chave in _CHAVES_SOMENTE_ENV:
+            env_val: str | None = getattr(settings, chave, None)
+            resultado[chave] = env_val if env_val else ""
+        else:
+            pendentes.append(chave)
+
+    if not pendentes:
+        return resultado
+
+    # Cache hit
+    with _cache_lock:
+        for chave in pendentes:
+            cached = _cache.get(chave)
+            if cached is not None and (now - cached[1]) < CACHE_TTL:
+                resultado[chave] = cached[0]
+
+    ainda_pendentes = [c for c in pendentes if c not in resultado]
+    if not ainda_pendentes:
+        return resultado
+
+    # Batch query SQLite
+    rows = db.execute(
+        select(Configuracao).where(Configuracao.chave.in_(ainda_pendentes))
+    ).scalars().all()
+    row_map = {r.chave: r.valor for r in rows}
+
+    with _cache_lock:
+        for chave in ainda_pendentes:
+            valor = row_map.get(chave, "")
+            if valor:
+                _cache[chave] = (valor, now)
+            resultado[chave] = valor
+
+    # Seed do .env para chaves não encontradas (apenas chaves do fallback map)
+    for chave in ainda_pendentes:
+        if not resultado[chave] and chave in _ENV_FALLBACK_MAP:
+            seeded = _seed_from_env(db, chave)
+            if seeded is not None:
+                with _cache_lock:
+                    _cache[chave] = (seeded, now)
+                resultado[chave] = seeded
+
+    return resultado
 
 
 # ── Função pública para obter valor descriptografado ───────────────────────────
@@ -441,20 +505,25 @@ def montar_url_postgres(db: Session) -> str:
 
     Lê erp_host, erp_port, erp_database, erp_user do ConfigService e
     descriptografa erp_password automaticamente via get_decrypted().
+    Usa get_many() (m3) para fazer uma única query em vez de 5 get() separados.
     """
-    host = get(db, "erp_host")
-    port = get(db, "erp_port", "5432")
-    database = get(db, "erp_database")
-    user = get(db, "erp_user")
-    enc_password = get(db, "erp_password")
+    _CHAVES_ERP = ["erp_host", "erp_port", "erp_database", "erp_user", "erp_password"]
+    valores = get_many(db, _CHAVES_ERP)
+
+    host = valores.get("erp_host", "")
+    port = valores.get("erp_port", "5432")
+    database = valores.get("erp_database", "")
+    user = valores.get("erp_user", "")
+    enc_password = valores.get("erp_password", "")
 
     if not all([host, database, user, enc_password]):
         return ""
 
-    password = get_decrypted(db, "erp_password")
+    password = _descriptografar(enc_password) if _cipher else enc_password
     return f"postgresql://{user}:{password}@{host}:{port}/{database}"
 
 
 def invalidar_cache() -> None:
-    """Limpa o cache interno."""
-    _cache.clear()
+    """Limpa o cache interno. (C4: protegido por lock)"""
+    with _cache_lock:
+        _cache.clear()

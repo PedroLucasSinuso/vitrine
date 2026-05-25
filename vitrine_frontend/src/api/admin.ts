@@ -156,6 +156,10 @@ function _triggerDownload(blob: Blob, filename: string): void {
 
 function _filenameFromHeaders(headers: Record<string, unknown>): string | null {
   const disposition = String(headers['content-disposition'] ?? '')
+  // Tenta filename* (RFC 5987) primeiro: filename*=UTF-8''nome.xlsx
+  const starMatch = disposition.match(/filename\*=(?:UTF-8'')?([^;\n]+)/)
+  if (starMatch) return decodeURIComponent(starMatch[1])
+  // Fallback para filename simples: filename="nome.xlsx" ou filename=nome.xlsx
   const match = disposition.match(/filename="?([^";\n]+)"?/)
   return match ? match[1] : null
 }
