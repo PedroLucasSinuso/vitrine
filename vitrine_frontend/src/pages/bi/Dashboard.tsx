@@ -77,12 +77,14 @@ interface ResumoDiaProps {
   anterior?: DiarioAnteriorData | null
   comparar: boolean
   dadosParciaisAte?: string | null
+  /** Fallback: variação geral do período (kpisComp) quando findValorAnterior não achar data */
+  variacaoPeriodo?: { fatBruto: number | null; tickets: number | null; ticketMedio: number | null } | null
 }
 
 /**
  * Encontra o valor no ano anterior para o mesmo dia da semana.
  * Varre os dados anteriores procurando a data que casa com o weekday alvo,
- * com tolerância de ±2 dias para garantir cobertura mesmo em feriados/ausências.
+ * com tolerância de ±4 dias para garantir cobertura mesmo em feriados/ausências.
  */
 function findValorAnterior(dataAtual: string, dadosAnteriores: PontoDiarioDTO[]): number | null {
   if (dadosAnteriores.length === 0) return null
@@ -95,8 +97,8 @@ function findValorAnterior(dataAtual: string, dadosAnteriores: PontoDiarioDTO[])
   if (diff > 3) diff -= 7
   if (diff < -3) diff += 7
 
-  // Tenta exata + tolerância de ±2 dias
-  for (let tol = 0; tol <= 2; tol++) {
+  // Tenta exata + tolerância de ±4 dias (cobre feriados mais longos)
+  for (let tol = 0; tol <= 4; tol++) {
     for (const sign of tol === 0 ? [0] : [-1, 1]) {
       const candidate = format(addDays(lastYear, diff + tol * sign), 'yyyy-MM-dd')
       const found = dadosAnteriores.find((d) => d.data === candidate)
@@ -106,7 +108,7 @@ function findValorAnterior(dataAtual: string, dadosAnteriores: PontoDiarioDTO[])
   return null
 }
 
-function ResumoDia({ receita, tickets, ticketMedio, anterior, comparar: compAtivo, dadosParciaisAte }: ResumoDiaProps) {
+function ResumoDia({ receita, tickets, ticketMedio, anterior, comparar: compAtivo, dadosParciaisAte, variacaoPeriodo }: ResumoDiaProps) {
   const sorted = [...receita].sort((a, b) => b.data.localeCompare(a.data))
   const ultimo = sorted[0]
   if (!ultimo) return null
@@ -115,29 +117,53 @@ function ResumoDia({ receita, tickets, ticketMedio, anterior, comparar: compAtiv
   const valorTickets = tickets.find((t) => t.data === ultimo.data)?.valor ?? 0
   const valorTicketMedio = ticketMedio.find((t) => t.data === ultimo.data)?.valor ?? 0
 
-  // Busca valor do mesmo weekday no ano anterior (com tolerância)
+  // ── Busca valor do mesmo weekday no ano anterior (com tolerância) ──
   const ant = anterior && compAtivo && anterior.receita.length > 0 ? anterior : null
-  const antReceita = ant ? findValorAnterior(ultimo.data, ant.receita) : null
-  const antTickets = ant ? findValorAnterior(ultimo.data, ant.tickets) : null
-  const antTicketMedio = ant ? findValorAnterior(ultimo.data, ant.ticketMedio) : null
+  const antReceitaDaily = ant ? findValorAnterior(ultimo.data, ant.receita) : null
+  const antTicketsDaily = ant ? findValorAnterior(ultimo.data, ant.tickets) : null
+  const antTicketMedioDaily = ant ? findValorAnterior(ultimo.data, ant.ticketMedio) : null
 
-  function BadgeVariacao({ atual, anterior: antVal }: { atual: number; anterior: number | null }) {
-    if (antVal === null || antVal === 0) return <span className="block h-[18px]" /> // placeholder de altura
-    const diff = ((atual / antVal) - 1) * 100
+  // ── Fallback: variação geral do período (kpisComp) ──
+  //    Usa a variação percentual do período *todo* quando o dado diário
+  //    do ano anterior não está disponível (ex: feriado, loja fechada)
+  const fallbackVariacao = compAtivo && variacaoPeriodo ? variacaoPeriodo : null
+
+  function BadgeVariacao({ atual, anterior: antVal, fallback }: { atual: number; anterior: number | null; fallback?: { variacao: number | null } | null }) {
+    let diff: number | null = null
+    let rotulo = 'vs ano anterior'
+
+    if (antVal !== null) {
+      // Comparação diária (same-weekday)
+      if (antVal === 0 && atual > 0) {
+        diff = 100 // se ano passado foi 0 e agora > 0, é 100%+
+      } else if (antVal > 0) {
+        diff = ((atual / antVal) - 1) * 100
+      }
+    }
+
+    // Fallback: variação geral do período (kpisComp)
+    if (diff === null && fallback?.variacao != null) {
+      diff = fallback.variacao
+      rotulo = 'vs período anterior'
+    }
+
+    if (diff === null) return <span className="block h-[18px]" />
+
     const isPositive = diff >= 0
     return (
       <span className={`text-xs font-semibold inline-flex items-center gap-1 ${isPositive ? 'text-success' : 'text-danger'}`}>
         <span className="text-sm leading-none">{isPositive ? '▲' : '▼'}</span>
         {Math.abs(diff).toFixed(1)}%
-        <span className="text-text-muted font-normal text-[11px]">vs ano anterior</span>
+        <span className="text-text-muted font-normal text-[11px]">{rotulo}</span>
       </span>
     )
   }
 
-  function LinhaAnterior({ label }: { label: string }) {
+  function LinhaAnterior({ label, valor }: { label: string; valor: number | null }) {
+    if (valor === null) return <p className="text-[11px] text-text-muted leading-tight h-[16px]" />
     return (
       <p className="text-[11px] text-text-muted leading-tight h-[16px]">
-        {label}
+        Ano passado: {label}
       </p>
     )
   }
@@ -167,24 +193,24 @@ function ResumoDia({ receita, tickets, ticketMedio, anterior, comparar: compAtiv
         <div className="flex flex-col gap-1">
           <p className="text-[11px] font-mono font-bold uppercase tracking-widest text-text-muted">Vendas</p>
           <p className="text-lg font-bold text-text-primary tabular-nums">{formatCurrency(valorReceita)}</p>
-          <BadgeVariacao atual={valorReceita} anterior={antReceita} />
-          <LinhaAnterior label={antReceita != null ? `Ano passado: ${formatCurrency(antReceita)}` : ''} />
+          <BadgeVariacao atual={valorReceita} anterior={antReceitaDaily} fallback={fallbackVariacao ? { variacao: fallbackVariacao.fatBruto } : null} />
+          <LinhaAnterior label={antReceitaDaily != null ? formatCurrency(antReceitaDaily) : ''} valor={antReceitaDaily} />
         </div>
 
         {/* Tickets */}
         <div className="flex flex-col gap-1">
           <p className="text-[11px] font-mono font-bold uppercase tracking-widest text-text-muted">Tickets</p>
           <p className="text-lg font-bold text-text-primary tabular-nums">{Math.round(valorTickets).toLocaleString('pt-BR')}</p>
-          <BadgeVariacao atual={valorTickets} anterior={antTickets} />
-          <LinhaAnterior label={antTickets != null ? `Ano passado: ${Math.round(antTickets).toLocaleString('pt-BR')}` : ''} />
+          <BadgeVariacao atual={valorTickets} anterior={antTicketsDaily} fallback={fallbackVariacao ? { variacao: fallbackVariacao.tickets } : null} />
+          <LinhaAnterior label={antTicketsDaily != null ? Math.round(antTicketsDaily).toLocaleString('pt-BR') : ''} valor={antTicketsDaily} />
         </div>
 
         {/* Ticket Médio */}
         <div className="flex flex-col gap-1">
           <p className="text-[11px] font-mono font-bold uppercase tracking-widest text-text-muted">Ticket Médio</p>
           <p className="text-lg font-bold text-text-primary tabular-nums">{formatCurrency(valorTicketMedio)}</p>
-          <BadgeVariacao atual={valorTicketMedio} anterior={antTicketMedio} />
-          <LinhaAnterior label={antTicketMedio != null ? `Ano passado: ${formatCurrency(antTicketMedio)}` : ''} />
+          <BadgeVariacao atual={valorTicketMedio} anterior={antTicketMedioDaily} fallback={fallbackVariacao ? { variacao: fallbackVariacao.ticketMedio } : null} />
+          <LinhaAnterior label={antTicketMedioDaily != null ? formatCurrency(antTicketMedioDaily) : ''} valor={antTicketMedioDaily} />
         </div>
       </div>
     </Card>
@@ -318,10 +344,10 @@ export default function Dashboard() {
         try {
           const [antRc, antTm, antQt] = await Promise.all([
             fetchDiario(pAnt, 'receita_produto'),
-            fetchDiario(pAnt, 'ticket_medio'),
-            fetchDiario(pAnt, 'qtd_tickets'),
+            fetchDiario(pAnt, 'ticket_medio'),     // antTm = ticket médio
+            fetchDiario(pAnt, 'qtd_tickets'),      // antQt = qtd tickets
           ])
-          setDiarioAnterior({ receita: antRc, tickets: antTm, ticketMedio: antQt })
+          setDiarioAnterior({ receita: antRc, tickets: antQt, ticketMedio: antTm })
         } catch {
           setDiarioAnterior({ receita: [], tickets: [], ticketMedio: [] })
         }
@@ -601,6 +627,11 @@ export default function Dashboard() {
           anterior={diarioAnterior}
           comparar={comparar}
           dadosParciaisAte={kpisComp?.dados_parciais_ate ?? null}
+          variacaoPeriodo={temComparativo ? {
+            fatBruto: getVariacao('faturamento_bruto'),
+            tickets: getVariacao('qtd_tickets'),
+            ticketMedio: getVariacao('ticket_medio'),
+          } : null}
         />
       )}
 
