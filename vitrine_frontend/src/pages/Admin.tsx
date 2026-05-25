@@ -4,6 +4,7 @@ import { triggerSync, getSyncStatus, getSyncHistory } from '../api/admin'
 import type { SyncJob, SyncHistory } from '../types'
 import { formatDate } from '../utils/formatters'
 import { RefreshCw, Clock, CheckCircle2, Loader2, Database, Hash, AlertCircle } from 'lucide-react'
+import PageContainer from '../components/layout/PageContainer'
 import Card from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -105,10 +106,10 @@ export default function Admin() {
   }, [])
 
   return (
-    <div className="flex flex-col items-center px-4 py-4 overflow-x-auto">
-      <div className="w-full max-w-2xl flex flex-col gap-5">
+    <PageContainer maxWidth="md">
+      <div className="flex flex-col gap-5">
         {/* Trigger sync */}
-        <Card variant="elevated" className="p-6">
+        <Card variant="elevated" padding="lg">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-primary-light flex items-center justify-center">
               <Database size={20} className="text-primary" />
@@ -227,9 +228,9 @@ export default function Admin() {
                 </div>
               ))}
             </div>
-          )}
-        </Card>
-      </div>
-    </div>
+            )}
+          </Card>
+        </div>
+      </PageContainer>
   )
 }

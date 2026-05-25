@@ -1,127 +1,141 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   index.css — Tailwind v4 + Design System Foundation
+   
+   1. Importa tokens.css (defaults / fallbacks)
+   2. Declara @theme para o Tailwind v4 gerar utilities
+   3. Tema escuro via .dark class ou [data-theme="flagship"]
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Tokens Foundation ── */
+@import "./themes/tokens.css";
+
+/* ── 2. Tailwind v4 ── */
 @import "tailwindcss";
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* Brand colors — fallback = vitrine (light theme) */
-  --color-primary: #059669;
-  --color-primary-hover: #047857;
-  --color-primary-light: rgba(5, 150, 105, 0.10);
-  --color-primary-lighter: rgba(5, 150, 105, 0.06);
-  --color-primary-dark: #047857;
+  /* ──────────────── Brand ──────────────── */
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-primary-light: var(--color-primary-light);
+  --color-primary-lighter: var(--color-primary-lighter);
+  --color-primary-dark: var(--color-primary-dark);
 
-  /* Accent */
-  --color-accent: #f59e0b;
-  --color-accent-hover: #d97706;
-  --color-accent-light: rgba(245, 158, 11, 0.10);
+  --color-accent: var(--color-accent);
+  --color-accent-hover: var(--color-accent-hover);
+  --color-accent-light: var(--color-accent-light);
 
-  /* Semantic palette */
-  --color-info: #3b82f6;
-  --color-success: #10b981;
-  --color-success-light: rgba(16, 185, 129, 0.10);
-  --color-warning: #f59e0b;
-  --color-warning-light: rgba(245, 158, 11, 0.10);
-  --color-danger: #ef4444;
-  --color-danger-light: rgba(239, 68, 68, 0.10);
+  /* ──────────────── Semantic ──────────────── */
+  --color-info: var(--color-info);
+  --color-info-light: var(--color-info-light);
+  --color-success: var(--color-success);
+  --color-success-light: var(--color-success-light);
+  --color-warning: var(--color-warning);
+  --color-warning-light: var(--color-warning-light);
+  --color-danger: var(--color-danger);
+  --color-danger-light: var(--color-danger-light);
 
-  /* Background tokens */
-  --color-bg-page: #f8fafc;
-  --color-bg-card: #ffffff;
-  --color-bg-card-hover: #f8fafc;
-  --color-bg-sidebar: #ffffff;
-  --color-bg-header: rgba(255, 255, 255, 0.85);
-  --color-bg-input: #ffffff;
-  --color-bg-hover: #f1f5f9;
-  --color-bg-modal-overlay: rgba(0, 0, 0, 0.40);
+  /* ──────────────── Background ──────────────── */
+  --color-bg-page: var(--color-bg-page);
+  --color-bg-card: var(--color-bg-card);
+  --color-bg-card-hover: var(--color-bg-card-hover);
+  --color-bg-sidebar: var(--color-bg-sidebar);
+  --color-bg-sidebar-item-active: var(--color-bg-sidebar-item-active);
+  --color-bg-header: var(--color-bg-header);
+  --color-bg-input: var(--color-bg-input);
+  --color-bg-hover: var(--color-bg-hover);
+  --color-bg-modal-overlay: var(--color-bg-modal-overlay);
 
-  /* Border tokens */
-  --color-border: #e2e8f0;
-  --color-border-light: #f1f5f9;
-  --color-border-input: #cbd5e1;
-  --color-border-focus: #059669;
+  /* ──────────────── Border ──────────────── */
+  --color-border: var(--color-border);
+  --color-border-light: var(--color-border-light);
+  --color-border-input: var(--color-border-input);
+  --color-border-focus: var(--color-border-focus);
 
-  /* Text tokens */
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #475569;
-  --color-text-muted: #94a3b8;
-  --color-text-inverse: #ffffff;
-  --color-text-link: #059669;
-  --color-text-accent: #059669;
+  /* ──────────────── Text ──────────────── */
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-inverse: var(--color-text-inverse);
+  --color-text-link: var(--color-text-link);
+  --color-text-accent: var(--color-text-accent);
 
-  /* Surface tokens */
-  --color-surface: #ffffff;
-  --color-surface-raised: #ffffff;
-  --color-surface-overlay: rgba(0, 0, 0, 0.40);
-  --color-surface-modal: #ffffff;
+  /* ──────────────── Surface ──────────────── */
+  --color-surface: var(--color-surface);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-surface-overlay: var(--color-surface-overlay);
+  --color-surface-modal: var(--color-surface-modal);
 
-  /* Status tokens */
-  --color-online: #22c55e;
-  --color-online-light: rgba(34, 197, 94, 0.10);
-  --color-offline: #ef4444;
-  --color-offline-light: rgba(239, 68, 68, 0.10);
-  --color-idle: #f59e0b;
-  --color-idle-light: rgba(245, 158, 11, 0.10);
+  /* ──────────────── Status ──────────────── */
+  --color-online: var(--color-online);
+  --color-online-light: var(--color-online-light);
+  --color-offline: var(--color-offline);
+  --color-offline-light: var(--color-offline-light);
+  --color-idle: var(--color-idle);
+  --color-idle-light: var(--color-idle-light);
 
-  /* ABC Rank tokens */
-  --color-abc-a: #10b981;
-  --color-abc-a-light: rgba(16, 185, 129, 0.15);
-  --color-abc-b: #f59e0b;
-  --color-abc-b-light: rgba(245, 158, 11, 0.15);
-  --color-abc-c: #ef4444;
-  --color-abc-c-light: rgba(239, 68, 68, 0.15);
+  /* ──────────────── ABC Rank ──────────────── */
+  --color-abc-a: var(--color-abc-a);
+  --color-abc-a-light: var(--color-abc-a-light);
+  --color-abc-b: var(--color-abc-b);
+  --color-abc-b-light: var(--color-abc-b-light);
+  --color-abc-c: var(--color-abc-c);
+  --color-abc-c-light: var(--color-abc-c-light);
 
-  /* Stock gauge */
-  --color-stock-high: #22c55e;
-  --color-stock-medium: #f59e0b;
-  --color-stock-low: #ef4444;
+  /* ──────────────── Stock gauge ──────────────── */
+  --color-stock-high: var(--color-stock-high);
+  --color-stock-medium: var(--color-stock-medium);
+  --color-stock-low: var(--color-stock-low);
 
-  /* Chart colors for data viz */
-  --color-chart-1: #059669;
-  --color-chart-2: #f59e0b;
-  --color-chart-3: #6366f1;
-  --color-chart-4: #06b6d4;
-  --color-chart-5: #64748b;
+  /* ──────────────── Chart ──────────────── */
+  --color-chart-1: var(--color-chart-1);
+  --color-chart-2: var(--color-chart-2);
+  --color-chart-3: var(--color-chart-3);
+  --color-chart-4: var(--color-chart-4);
+  --color-chart-5: var(--color-chart-5);
 
-  /* Font families — default to Inter + JetBrains Mono */
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Inter', sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  /* ──────────────── Typography ──────────────── */
+  --font-sans: var(--font-body);
+  --font-body: var(--font-body);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
-  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.10);
-  --shadow-card-hover: 0 4px 6px -1px rgb(0 0 0 / 0.10);
-  --shadow-modal: 0 10px 25px -5px rgb(0 0 0 / 0.15);
-  --shadow-kpi: 0 1px 3px 0 rgba(5, 150, 105, 0.10);
-  --shadow-toast: 0 4px 6px -1px rgb(0 0 0 / 0.10);
+  /* ──────────────── Shadows ──────────────── */
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-card: var(--shadow-card);
+  --shadow-card-hover: var(--shadow-card-hover);
+  --shadow-modal: var(--shadow-modal);
+  --shadow-kpi: var(--shadow-kpi);
+  --shadow-toast: var(--shadow-toast);
 
-  /* Border radius */
-  --radius-sm: var(--radius-sm, 0.25rem);
-  --radius-md: var(--radius-md, 0.375rem);
-  --radius-lg: var(--radius-lg, 0.5rem);
-  --radius-xl: var(--radius-xl, 0.75rem);
-  --radius-2xl: var(--radius-2xl, 1rem);
-  --radius-full: var(--radius-full, 9999px);
+  /* ──────────────── Radius ──────────────── */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+  --radius-full: var(--radius-full);
 
-  /* Layout tokens */
-  --sidebar-width: var(--sidebar-width, 240px);
-  --header-height: var(--header-height, 64px);
-  --mobile-nav-height: var(--mobile-nav-height, 64px);
-  --content-max-width: var(--content-max-width, 64rem);
-  --card-padding: var(--card-padding, 1.5rem);
-  --card-gap: var(--card-gap, 1.5rem);
+  /* ──────────────── Layout ──────────────── */
+  --sidebar-width: var(--sidebar-width);
+  --header-height: var(--header-height);
+  --mobile-nav-height: var(--mobile-nav-height);
+  --content-max-width: var(--content-max-width);
+  --card-padding: var(--card-padding);
+  --card-gap: var(--card-gap);
 }
 
-/* Dark mode refinement (used when .dark class or flagship theme) */
+/* ── 3. Dark mode refinement ── */
 .dark,
 [data-theme="flagship"] {
   color-scheme: dark;
 }
 
-/* Scrollbar (Webkit) */
+/* ── 4. Scrollbar ── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -138,7 +152,10 @@
   background: #475569;
 }
 
-/* Base animations */
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMATIONS
+════════════════════════════════════════════════════════════════════════════ */
+
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
@@ -174,53 +191,268 @@
   to { opacity: 0; transform: translateY(20px); }
 }
 
-/* Utility classes */
-.animate-fade-in-up {
-  animation: fade-in-up 0.5s ease-out both;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 0.8s ease-out;
-}
-
-.animate-slide-up {
-  animation: slide-up 0.3s ease-out;
-}
-
-.animate-scale-in {
-  animation: scale-in 0.4s ease-out both;
-}
-
-.animate-page-in {
-  animation: page-fade-in 0.3s ease-out both;
-}
-
-.animate-fade-out {
-  animation: fade-out 0.2s ease-in both;
-}
-
-.animate-slide-down {
-  animation: slide-down 0.2s ease-in both;
-}
-
-/* Card hover lift */
-.card-hover {
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.card-hover:hover {
-  transform: translateY(-1px);
-}
-
-/* Input focus ring refinement */
-input:focus, select:focus, textarea:focus {
-  outline: none;
-}
-
-/* Highlight pulse for re-scanned items in inventory */
 @keyframes highlight-pulse {
   0%, 100% { background-color: transparent; }
   50% { background-color: var(--color-primary); opacity: 0.08; }
 }
-.animate-highlight-pulse {
-  animation: highlight-pulse 1.5s ease-out;
+
+/* Utility classes */
+.animate-fade-in-up { animation: fade-in-up 0.5s ease-out both; }
+.animate-pulse-glow { animation: pulse-glow 0.8s ease-out; }
+.animate-slide-up { animation: slide-up 0.3s ease-out; }
+.animate-scale-in { animation: scale-in 0.4s ease-out both; }
+.animate-page-in { animation: page-fade-in 0.3s ease-out both; }
+.animate-fade-out { animation: fade-out 0.2s ease-in both; }
+.animate-slide-down { animation: slide-down 0.2s ease-in both; }
+.animate-highlight-pulse { animation: highlight-pulse 1.5s ease-out; }
+
+/* Card hover lift — reutilizável */
+.card-hover {
+  transition: transform var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* Focus ring refinement */
+input:focus, select:focus, textarea:focus, button:focus-visible {
+  outline: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FONT DISPLAY UTILITIES
+   Use estas classes para aplicar a hierarquia tipográfica
+════════════════════════════════════════════════════════════════════════════ */
+
+/* Display — para títulos grandes, KPIs, hero sections */
+.font-display { font-family: var(--font-display); }
+
+/* Type scale utility classes */
+.text-2xs  { font-size: var(--text-2xs); }
+.text-xs   { font-size: var(--text-xs); }
+.text-sm   { font-size: var(--text-sm); }
+.text-base { font-size: var(--text-base); }
+.text-md   { font-size: var(--text-md); }
+.text-lg   { font-size: var(--text-lg); }
+.text-xl   { font-size: var(--text-xl); }
+.text-2xl  { font-size: var(--text-2xl); }
+.text-3xl  { font-size: var(--text-3xl); }
+.text-4xl  { font-size: var(--text-4xl); }
+
+/* Tracking utilities */
+.tracking-tight   { letter-spacing: var(--tracking-tight); }
+.tracking-wider   { letter-spacing: var(--tracking-wider); }
+.tracking-widest  { letter-spacing: var(--tracking-widest); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SPACING UTILITY CLASSES
+   Gap / padding / margin helpers usando a spacing scale
+════════════════════════════════════════════════════════════════════════════ */
+
+.gap-space-1  { gap: var(--space-1); }
+.gap-space-2  { gap: var(--space-2); }
+.gap-space-3  { gap: var(--space-3); }
+.gap-space-4  { gap: var(--space-4); }
+.gap-space-5  { gap: var(--space-5); }
+.gap-space-6  { gap: var(--space-6); }
+.gap-space-8  { gap: var(--space-8); }
+.gap-space-10 { gap: var(--space-10); }
+.gap-space-12 { gap: var(--space-12); }
+.gap-space-16 { gap: var(--space-16); }
+
+.p-space-1  { padding: var(--space-1); }
+.p-space-2  { padding: var(--space-2); }
+.p-space-3  { padding: var(--space-3); }
+.p-space-4  { padding: var(--space-4); }
+.p-space-5  { padding: var(--space-5); }
+.p-space-6  { padding: var(--space-6); }
+.p-space-8  { padding: var(--space-8); }
+.p-space-10 { padding: var(--space-10); }
+.p-space-12 { padding: var(--space-12); }
+.p-space-16 { padding: var(--space-16); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CARD PRESETS — classes utilitárias para cards consistentes
+════════════════════════════════════════════════════════════════════════════ */
+
+.card-base {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+}
+
+.card-bordered {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+}
+
+.card-elevated {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.card-interactive {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  transition: box-shadow var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+.card-interactive:hover {
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TABLE PRESETS
+════════════════════════════════════════════════════════════════════════════ */
+
+.table-base {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--text-sm);
+}
+
+.table-header-cell {
+  padding: 0.625rem 0.75rem;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--color-border);
+  user-select: none;
+}
+
+.table-header-cell-sortable {
+  composes: table-header-cell;
+  cursor: pointer;
+}
+.table-header-cell-sortable:hover {
+  color: var(--color-text-primary);
+}
+
+.table-cell {
+  padding: 0.625rem 0.75rem;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.table-row {
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+.table-row:last-child .table-cell {
+  border-bottom: none;
+}
+.table-row:hover {
+  background-color: var(--color-bg-hover);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FORM PRESETS
+════════════════════════════════════════════════════════════════════════════ */
+
+.form-input-base {
+  width: 100%;
+  border: 1px solid var(--color-border-input);
+  background: var(--color-bg-input);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-lg);
+  padding: 0.5rem 0.75rem;
+  font-size: var(--text-md);
+  font-family: var(--font-body);
+  transition: border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+.form-input-base::placeholder {
+  color: var(--color-text-muted);
+}
+.form-input-base:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 2px var(--color-border-focus);
+}
+.form-input-base:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.form-label {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.form-error {
+  font-size: var(--text-2xs);
+  color: var(--color-danger);
+  margin-top: 0.25rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   KPI / HERO PRESETS
+════════════════════════════════════════════════════════════════════════════ */
+
+.kpi-value {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-2xl);
+  line-height: 1.1;
+  color: var(--color-text-primary);
+}
+
+.kpi-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PAGE SECTION PRESETS
+════════════════════════════════════════════════════════════════════════════ */
+
+.page-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap);
+}
+
+.page-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-1);
+}
+
+.page-section-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  letter-spacing: var(--tracking-tight);
+}
+
+.page-section-subtitle {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin-top: 0.125rem;
 }

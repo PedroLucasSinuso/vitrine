@@ -13,10 +13,10 @@ interface Props {
 }
 
 const variants: Record<string, string> = {
-  primary:   'bg-primary text-white hover:brightness-110 shadow-kpi',
-  secondary: 'bg-bg-card border border-border text-text-secondary hover:bg-bg-card-hover hover:text-text-primary',
+  primary:   'bg-primary text-white hover:bg-primary-hover shadow-sm',
+  secondary: 'bg-bg-card border border-border text-text-secondary hover:bg-bg-hover hover:text-text-primary',
   ghost:     'text-text-secondary hover:bg-bg-hover hover:text-text-primary',
-  danger:    'bg-danger text-white hover:brightness-110',
+  danger:    'bg-danger text-white hover:bg-red-600',
   outline:   'border border-primary text-primary hover:bg-primary hover:text-white',
 }
 
@@ -36,7 +36,7 @@ export default function Button({
       type={type}
       onClick={onClick}
       disabled={isDisabled}
-      className={`font-semibold transition-all duration-fast flex items-center justify-center gap-2 active:scale-95 ${
+      className={`font-semibold transition-all duration-fast flex items-center justify-center gap-2 active:scale-[0.97] ${
         variants[variant]} ${sizes[size]} ${fullWidth ? 'w-full' : ''} ${
         isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
       } ${className}`}

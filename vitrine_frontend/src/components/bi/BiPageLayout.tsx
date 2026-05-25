@@ -15,8 +15,8 @@ export default function BiPageLayout({ titulo, subtitulo, breadcrumb, children }
   const location = useLocation()
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Mobile breadcrumb */}
+    <div className="flex flex-col gap-5 max-w-full">
+      {/* Breadcrumb (mobile only — desktop uses AdminHeader breadcrumb) */}
       {breadcrumb && breadcrumb.length > 0 && (
         <nav className="text-xs text-text-muted flex items-center gap-0.5 flex-wrap md:hidden" aria-label="Breadcrumb">
           {breadcrumb.map((b, i) => (
@@ -31,16 +31,18 @@ export default function BiPageLayout({ titulo, subtitulo, breadcrumb, children }
         </nav>
       )}
 
-      {/* Page title */}
-      <div>
-        <h1 className="text-xl md:text-2xl font-bold text-text-primary tracking-tight">{titulo}</h1>
-        {subtitulo && <p className="text-sm text-text-muted mt-0.5">{subtitulo}</p>}
+      {/* Page title + subtitle */}
+      <div className="page-section-header mb-0">
+        <div>
+          <h1 className="page-section-title">{titulo}</h1>
+          {subtitulo && <p className="page-section-subtitle">{subtitulo}</p>}
+        </div>
       </div>
 
-      {/* BI Sub-nav — horizontal tab bar for all screen sizes */}
+      {/* BI Sub-nav */}
       <BiSubNav />
 
-      {/* Content */}
+      {/* Content area */}
       <div key={location.pathname} className="animate-page-in flex flex-col gap-5">
         {children}
       </div>

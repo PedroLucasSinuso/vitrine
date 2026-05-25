@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useTheme } from '../themes/useTheme'
 import { getConfigsCache } from '../stores/configStore'
 import { RefreshCw, Tags, ClipboardList, Users, Settings, Search, BarChart3, Sun, Moon, ArrowLeft, ChevronRight, LogOut } from 'lucide-react'
 import NotificationCenter from './NotificationCenter'
@@ -42,19 +43,14 @@ const COMMON_LINKS: Link[] = [
 export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, onLogout }: Props) {
   const navigate = useNavigate()
   const { logout, getRole, getNomeExibicao, getExpiresInMs } = useAuth()
+  const { setTheme, isDark } = useTheme()
   const role = getRole()
 
-  const [dark, setDark] = useState(() => localStorage.getItem('app_darkMode') === 'true')
   const [menuOpen, setMenuOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const logoUrl = localStorage.getItem('app_marketLogoUrl')
   const marketName = localStorage.getItem('app_marketName')
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark)
-    localStorage.setItem('app_darkMode', String(dark))
-  }, [dark])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -160,12 +156,12 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
           )}
           <NotificationCenter />
           <button
-            onClick={() => setDark((prev) => !prev)}
+            onClick={() => setTheme(isDark ? 'vitrine' : 'flagship')}
             className="text-text-muted hover:text-text-primary transition p-1.5 rounded-lg hover:bg-bg-hover"
             aria-label="Alternar tema"
-            title={dark ? 'Modo claro' : 'Modo escuro'}
+            title={isDark ? 'Modo claro' : 'Modo escuro'}
           >
-            {dark ? <Sun size={15} /> : <Moon size={15} />}
+            {isDark ? <Sun size={15} /> : <Moon size={15} />}
           </button>
           {/* User info + role — hidden on mobile */}
           <div className="hidden sm:flex items-center gap-1.5">

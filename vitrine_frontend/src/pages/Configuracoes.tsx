@@ -23,6 +23,7 @@ import {
   Key, Globe, Hash, Lock, Send, Calendar, FileText, Upload, Image as ImageIcon,
   Target, DollarSign,
 } from 'lucide-react'
+import PageContainer from '../components/layout/PageContainer'
 
 const REPORT_DAYS = [
   { value: 'monday', label: 'Segunda' },
@@ -252,8 +253,8 @@ export default function Configuracoes() {
   }
 
   return (
-    <div className="flex flex-col items-center px-4 pb-4 pt-0 overflow-x-auto">
-      <div className="w-full max-w-3xl flex flex-col gap-4">
+    <PageContainer maxWidth="md">
+      <div className="flex flex-col gap-4">
 
         {/* Tab bar */}
         <Card variant="default" className="p-1">
@@ -814,6 +815,6 @@ export default function Configuracoes() {
         </div>
 
       </div>
-    </div>
+    </PageContainer>
   )
 }

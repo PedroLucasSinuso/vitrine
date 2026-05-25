@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, type ReactNode } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { subDays, format } from 'date-fns'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -8,6 +8,7 @@ import { fetchKpisComparativo, fetchDiario, fetchRanking, fetchCurvaAbc } from '
 import { exportarExcelBI } from '../../api/bi'
 import type { PeriodoBi, KpisComparativoDTO, ItemRankingDTO, ItemCurvaAbcDTO, PontoDiarioDTO } from '../../types'
 import { formatCurrency } from '../../utils/formatters'
+import type { Column } from '../../components/ui/DataTable'
 import KpiCard from '../../components/ui/KpiCard'
 import ProgressBar from '../../components/ui/ProgressBar'
 import DataTable from '../../components/ui/DataTable'
@@ -36,10 +37,8 @@ function formatDateBR(dateStr: string): string {
   return d.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
 }
 
-interface Col<T> {
-  header: string
-  accessor: (row: T) => ReactNode
-}
+// Old Col — replaced by Column from DataTable
+// Keeping for backward compat during migration
 
 function trendDirection(v: number | null | undefined): 'up' | 'down' | 'flat' {
   if (v == null) return 'flat'
@@ -121,26 +120,32 @@ export default function DashboardConsolidado() {
   const varTicket = kpis?.ticket_medio?.variacao_pct
   const varItensTicket = kpis?.itens_por_ticket?.variacao_pct
 
-  const abcColumns: Col<ItemCurvaAbcDTO>[] = [
+  const abcColumns: Column<ItemCurvaAbcDTO>[] = [
     {
-      header: 'Produto',
-      accessor: (r) => r.produto ?? r.grupo ?? '—',
+      key: 'produto',
+      label: 'Produto',
+      render: (r) => r.produto ?? r.grupo ?? '—',
     },
     {
-      header: 'Receita',
-      accessor: (r) => <span className="font-semibold tabular-nums">{formatCurrency(r.receita)}</span>,
+      key: 'receita',
+      label: 'Receita',
+      align: 'right',
+      render: (r) => <span className="font-semibold tabular-nums">{formatCurrency(r.receita)}</span>,
     },
     {
-      header: 'Participação',
-      accessor: (r) => <span className="tabular-nums">{r.participacao_pct.toFixed(1)}%</span>,
+      key: 'participacao',
+      label: 'Participação',
+      align: 'right',
+      render: (r) => <span className="tabular-nums">{r.participacao_pct.toFixed(1)}%</span>,
     },
     {
-      header: 'Curva',
-      accessor: (r) => (
+      key: 'curva',
+      label: 'Curva',
+      render: (r) => (
         <Badge
           variant={r.curva === 'A' ? 'success' : r.curva === 'B' ? 'warning' : 'danger'}
           dot
-          dotPulse={r.curva === 'A'}
+          pulse={r.curva === 'A'}
         >
           {r.curva}
         </Badge>
@@ -373,7 +378,7 @@ export default function DashboardConsolidado() {
             <DataTable
               columns={abcColumns}
               data={mostrarTudoAbc ? curvaAbc : curvaAbc.slice(0, LIMITE_ABC)}
-              keyExtractor={(r) => r.produto ?? r.grupo ?? ''}
+              rowKey={(r) => r.produto ?? r.grupo ?? ''}
             />
             {curvaAbc.length > LIMITE_ABC && (
               <button

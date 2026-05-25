@@ -37,6 +37,7 @@ iniciar.ps1
 *.exe
 *.pem
 dev_utils/
+.opencode
 
 # Cobertura de teste
 .coverage

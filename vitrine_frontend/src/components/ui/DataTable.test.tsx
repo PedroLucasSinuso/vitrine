@@ -5,8 +5,8 @@ import DataTable from './DataTable'
 interface Item { id: number; name: string }
 
 const columns = [
-  { header: 'ID', accessor: (row: Item) => row.id },
-  { header: 'Nome', accessor: (row: Item) => row.name },
+  { key: 'id', label: 'ID', render: (row: Item) => row.id },
+  { key: 'name', label: 'Nome', render: (row: Item) => row.name },
 ]
 
 describe('DataTable', () => {
@@ -16,7 +16,7 @@ describe('DataTable', () => {
       <DataTable
         columns={columns}
         data={data}
-        keyExtractor={(row) => row.id}
+        rowKey={(row) => row.id}
       />
     )
     expect(screen.getByText('ID')).toBeInTheDocument()
@@ -28,22 +28,10 @@ describe('DataTable', () => {
       <DataTable
         columns={columns}
         data={[]}
-        keyExtractor={(row) => row.id}
-        emptyState={<span>Vazio</span>}
+        rowKey={(row) => row.id}
+        empty={<span>Vazio</span>}
       />
     )
     expect(screen.getByText('Vazio')).toBeInTheDocument()
-  })
-
-  it('renders footer', () => {
-    render(
-      <DataTable
-        columns={columns}
-        data={[]}
-        keyExtractor={(row) => row.id}
-        footer={<span>Total: 0</span>}
-      />
-    )
-    expect(screen.getByText('Total: 0')).toBeInTheDocument()
   })
 })
