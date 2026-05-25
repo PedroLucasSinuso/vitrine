@@ -282,10 +282,10 @@ export default function Configuracoes() {
           {/* ── GERAL ── */}
           {/* ════════════════════════════════════════════ */}
           {activeTab === 'geral' && (
-            <div className="p-5 flex flex-col gap-12 divide-y divide-border/15">
+            <div className="p-5 flex flex-col">
 
               {/* Branding section */}
-              <div>
+              <div className="mb-10">
                 <SectionHeader icon={Building2} title="Identidade da loja" description="Nome e logo exibidos no sistema" />
                 <div className="ml-9 flex flex-col items-start gap-3">
                   {/* Logo preview — larger and prominent */}
@@ -331,7 +331,7 @@ export default function Configuracoes() {
               </div>
 
               {/* Address section */}
-              <div>
+              <div className="mb-10 pt-6 border-t border-border/20">
                 <SectionHeader icon={MapPin} title="Endereço" description="Informações de localização do estabelecimento" />
                 <div className="ml-9 flex flex-col gap-3 max-w-md">
                   {/* Rua + Número */}
@@ -402,7 +402,7 @@ export default function Configuracoes() {
               </div>
 
               {/* Metas section */}
-              <div>
+              <div className="pt-6 border-t border-border/20">
                 <SectionHeader icon={Target} title="Metas" description="Metas de faturamento para projeção no dashboard" />
                 <div className="ml-9 flex flex-col gap-3">
                   <CompactInput
