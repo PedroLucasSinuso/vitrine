@@ -51,6 +51,8 @@ export default function Inventario() {
   const [confirmarLimpar, setConfirmarLimpar] = useState(false)
   const [editSheetItem, setEditSheetItem] = useState<ItemInventario | null>(null)
   const [scanFeedback, setScanFeedback] = useState<string | null>(null)
+  const [highlightedCode, setHighlightedCode] = useState<string | null>(null)
+  const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [excelLoading, setExcelLoading] = useState(false)
   const [excelConsolidadoLoading, setExcelConsolidadoLoading] = useState(false)
 
@@ -154,14 +156,14 @@ export default function Inventario() {
 
     try {
       const obs = naoCadastradoObs.trim()
-      setItens(prev => [...prev, {
+      setItens(prev => [{
         codigo,
         nome: 'Não cadastrado',
         grupo: '',
         familia: '',
         quantidade: 1,
         observacao: obs || undefined,
-      }])
+      }, ...prev].slice(0, 100))
       await adicionarItemInventario(sessaoAtiva.id, {
         codigo,
         nome: 'Não cadastrado',
@@ -281,9 +283,14 @@ export default function Inventario() {
     try {
       const existente = itens.find(i => i.codigo === codigoLimpo)
       if (existente) {
-        setItens(prev => prev.map(i =>
-          i.codigo === codigoLimpo ? { ...i, quantidade: i.quantidade + 1 } : i
-        ))
+        // Move to top + increment + highlight
+        setItens(prev => {
+          const semItem = prev.filter(i => i.codigo !== codigoLimpo)
+          return [{ ...existente, quantidade: existente.quantidade + 1 }, ...semItem]
+        })
+        if (highlightTimer.current) clearTimeout(highlightTimer.current)
+        setHighlightedCode(codigoLimpo)
+        highlightTimer.current = setTimeout(() => setHighlightedCode(null), 1500)
         await adicionarItemInventario(sessaoAtiva.id, { codigo: codigoLimpo, nome: existente.nome, grupo: existente.grupo, familia: existente.familia })
         if (inputRef.current) inputRef.current.value = ''
         haptico()
@@ -299,9 +306,15 @@ export default function Inventario() {
       setItens(prev => {
         const jaExiste = prev.find(i => i.codigo === internalCode)
         if (jaExiste) {
-          return prev.map(i => i.codigo === internalCode ? { ...i, quantidade: i.quantidade + 1 } : i)
+          // Move to top + increment + highlight
+          if (highlightTimer.current) clearTimeout(highlightTimer.current)
+          setHighlightedCode(internalCode)
+          highlightTimer.current = setTimeout(() => setHighlightedCode(null), 1500)
+          const semItem = prev.filter(i => i.codigo !== internalCode)
+          return [{ ...jaExiste, quantidade: jaExiste.quantidade + 1 }, ...semItem]
         }
-        return [...prev, { codigo: internalCode, nome: produto.nome, grupo: produto.grupo, familia: produto.familia, quantidade: 1 }]
+        // Novo item: prepend ao topo
+        return [{ codigo: internalCode, nome: produto.nome, grupo: produto.grupo, familia: produto.familia, quantidade: 1 }, ...prev]
       })
 
       await adicionarItemInventario(sessaoAtiva.id, { codigo: internalCode, nome: produto.nome, grupo: produto.grupo, familia: produto.familia })
@@ -408,8 +421,8 @@ export default function Inventario() {
   // ─── Estado A: Seleção de sessão ─────────────────────────────────────────
   if (!sessaoAtiva) {
     return (
-      <div className="flex flex-col">
-        <div className="w-full max-w-2xl flex flex-col gap-5">
+      <div className="flex flex-col items-center px-4 py-4 overflow-x-auto">
+        <div className="w-full max-w-md flex flex-col gap-5">
 
           {erro && <p className="text-red-500 text-sm" role="alert">{erro}</p>}
 
@@ -509,7 +522,7 @@ export default function Inventario() {
 
   // ─── Estado B/C: Bipagem / Consolidado ──────────────────────────────────
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col items-center px-4 py-4 overflow-x-auto">
       {camera && (
         <LeitorCodigo
           onLeitura={(codigo) => { handleCodigo(codigo) }}
@@ -517,7 +530,7 @@ export default function Inventario() {
         />
       )}
 
-      <div className="w-full max-w-2xl flex flex-col gap-5">
+      <div className="w-full max-w-md flex flex-col gap-5">
 
         {/* Info da sessão */}
         <div className="flex items-center justify-between gap-2">
@@ -597,7 +610,11 @@ export default function Inventario() {
                 <div
                   key={item.codigo}
                   onClick={() => setEditSheetItem(item)}
-                  className="flex justify-between items-center border border-border rounded-lg px-4 py-2 cursor-pointer hover:bg-bg-hover transition"
+                  className={`flex justify-between items-center border rounded-lg px-4 py-2 cursor-pointer transition ${
+                    highlightedCode === item.codigo
+                      ? 'border-primary/50 bg-primary/5 animate-highlight-pulse'
+                      : 'border-border hover:bg-bg-hover'
+                  }`}
                 >
                   <div className="min-w-0 flex-1">
                     <span className="text-sm font-semibold text-text-primary">{item.codigo}</span>

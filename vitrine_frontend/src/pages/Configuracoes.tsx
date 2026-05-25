@@ -252,7 +252,7 @@ export default function Configuracoes() {
   }
 
   return (
-    <div className="flex flex-col px-4 py-4">
+    <div className="flex flex-col items-center px-4 py-4 overflow-x-auto">
       <div className="w-full max-w-3xl flex flex-col gap-4">
 
         {/* Tab bar */}
@@ -282,12 +282,12 @@ export default function Configuracoes() {
           {/* ── GERAL ── */}
           {/* ════════════════════════════════════════════ */}
           {activeTab === 'geral' && (
-            <div className="p-5 flex flex-col gap-6">
+            <div className="p-5 flex flex-col gap-10">
 
               {/* Branding section */}
               <div>
                 <SectionHeader icon={Building2} title="Identidade da loja" description="Nome e logo exibidos no sistema" />
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 ml-9">
+                <div className="ml-9 flex flex-col gap-3">
                   {/* Logo preview — larger and prominent */}
                   <div className="relative group">
                     <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-border bg-bg-hover/50 flex items-center justify-center overflow-hidden">
@@ -355,7 +355,7 @@ export default function Configuracoes() {
                   </div>
 
                   {/* Complemento + Bairro */}
-                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr] gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
                     <CompactInput
                       label="Complemento"
                       value={form.endereco_complemento ?? ''}
@@ -426,7 +426,7 @@ export default function Configuracoes() {
           {/* ── ERP / SYNC ── */}
           {/* ════════════════════════════════════════════ */}
           {activeTab === 'erp' && (
-            <div className="p-5 flex flex-col gap-5">
+            <div className="p-5 flex flex-col gap-8">
 
               {/* Connection — collapsible */}
               <div>
@@ -527,7 +527,7 @@ export default function Configuracoes() {
           {/* ── WHATSAPP ── */}
           {/* ════════════════════════════════════════════ */}
           {activeTab === 'whatsapp' && (
-            <div className="p-5 flex flex-col gap-5">
+            <div className="p-5 flex flex-col gap-8">
 
               {/* Twilio credentials */}
               <div>
@@ -593,7 +593,7 @@ export default function Configuracoes() {
           {/* ── E-MAIL ── */}
           {/* ════════════════════════════════════════════ */}
           {activeTab === 'email' && (
-            <div className="p-5 flex flex-col gap-5">
+            <div className="p-5 flex flex-col gap-8">
 
               {/* SMTP */}
               <div>

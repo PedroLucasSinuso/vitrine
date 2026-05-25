@@ -72,7 +72,8 @@ export default function Produtos() {
   const endRecord = Math.min((page + 1) * pageSize, total)
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col items-center px-4 py-4 overflow-x-auto">
+      <div className="w-full max-w-4xl flex flex-col gap-5">
       <div>
         <h1 className="text-xl md:text-2xl font-bold text-text-primary tracking-tight">Tabela de Preços</h1>
       </div>
@@ -296,6 +297,7 @@ export default function Produtos() {
           )}
         </div>
       </Card>
+      </div>
     </div>
   )
 }

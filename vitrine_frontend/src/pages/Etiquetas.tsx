@@ -32,7 +32,7 @@ export default function Etiquetas() {
 
     try {
       const produto = await buscarProduto(codigoLimpo)
-      setItens(prev => [...prev, { codigo: produto.codigo_chamada, nome: produto.nome }])
+      setItens(prev => [{ codigo: produto.codigo_chamada, nome: produto.nome }, ...prev].slice(0, 100))
       if (inputRef.current) inputRef.current.value = ''
     } catch (e: unknown) {
       const error = e as { response?: { status?: number } }
@@ -59,7 +59,7 @@ export default function Etiquetas() {
   }
 
   return (
-    <div className="flex flex-col px-4 py-4">
+    <div className="flex flex-col items-center px-4 py-4 overflow-x-auto">
       {camera && (
         <LeitorCodigo
           onLeitura={(codigo) => { setCamera(false); setTimeout(() => handleCodigo(codigo), 50) }}
@@ -67,7 +67,7 @@ export default function Etiquetas() {
         />
       )}
 
-      <div className="w-full max-w-2xl flex flex-col gap-5">
+      <div className="w-full max-w-md flex flex-col gap-5">
 
         {/* Input card */}
         <Card variant="elevated" className="p-6">

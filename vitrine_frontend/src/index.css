@@ -215,3 +215,12 @@
 input:focus, select:focus, textarea:focus {
   outline: none;
 }
+
+/* Highlight pulse for re-scanned items in inventory */
+@keyframes highlight-pulse {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: var(--color-primary); opacity: 0.08; }
+}
+.animate-highlight-pulse {
+  animation: highlight-pulse 1.5s ease-out;
+}
