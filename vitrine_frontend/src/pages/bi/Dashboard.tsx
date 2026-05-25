@@ -76,6 +76,7 @@ interface ResumoDiaProps {
   ticketMedio: PontoDiarioDTO[]
   anterior?: DiarioAnteriorData | null
   comparar: boolean
+  dadosParciaisAte?: string | null
 }
 
 /**
@@ -105,7 +106,7 @@ function findValorAnterior(dataAtual: string, dadosAnteriores: PontoDiarioDTO[])
   return null
 }
 
-function ResumoDia({ receita, tickets, ticketMedio, anterior, comparar: compAtivo }: ResumoDiaProps) {
+function ResumoDia({ receita, tickets, ticketMedio, anterior, comparar: compAtivo, dadosParciaisAte }: ResumoDiaProps) {
   const sorted = [...receita].sort((a, b) => b.data.localeCompare(a.data))
   const ultimo = sorted[0]
   if (!ultimo) return null
@@ -141,6 +142,10 @@ function ResumoDia({ receita, tickets, ticketMedio, anterior, comparar: compAtiv
     )
   }
 
+  // Verifica se o último dia é "hoje" (parcial)
+  const hojeFormatado = format(new Date(), 'yyyy-MM-dd')
+  const ultimoEParcial = ultimo.data === hojeFormatado && !!dadosParciaisAte
+
   return (
     <Card variant="bordered" padding="sm">
       {/* Header */}
@@ -149,6 +154,11 @@ function ResumoDia({ receita, tickets, ticketMedio, anterior, comparar: compAtiv
           <CalendarDays size={14} />
         </div>
         <span className="text-xs font-semibold text-text-primary">{formatDateWithWeekday(ultimo.data)}</span>
+        {ultimoEParcial && (
+          <span className="text-[10px] text-warning bg-warning-light px-1.5 py-0.5 rounded-full font-medium ml-auto">
+            Parcial até {dadosParciaisAte}
+          </span>
+        )}
       </div>
 
       {/* Grid 3 colunas */}
@@ -598,6 +608,7 @@ export default function Dashboard() {
           ticketMedio={diarioTicketMedio}
           anterior={diarioAnterior}
           comparar={comparar}
+          dadosParciaisAte={kpisComp?.dados_parciais_ate ?? null}
         />
       )}
 
