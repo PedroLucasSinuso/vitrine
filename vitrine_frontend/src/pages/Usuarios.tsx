@@ -131,7 +131,7 @@ export default function Usuarios() {
   }
 
   return (
-    <div className="flex flex-col px-4 py-4">
+    <div className="flex flex-col items-center px-4 py-4 overflow-x-auto">
 
       {/* Modal de edição */}
       {modal && (
@@ -206,7 +206,7 @@ export default function Usuarios() {
             <div className="flex flex-col sm:flex-row gap-3">
               <input
                 type="password"
-                className="w-full sm:flex-1 border border-border-input bg-bg-input text-text-primary rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full sm:w-auto sm:min-w-[200px] border border-border-input bg-bg-input text-text-primary rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="Senha"
                 value={novoPassword}
                 onChange={(e) => setNovoPassword(e.target.value)}

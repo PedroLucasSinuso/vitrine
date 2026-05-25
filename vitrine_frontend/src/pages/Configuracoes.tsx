@@ -252,7 +252,7 @@ export default function Configuracoes() {
   }
 
   return (
-    <div className="flex flex-col items-center px-4 py-4 overflow-x-auto">
+    <div className="flex flex-col items-center px-4 pb-4 pt-0 overflow-x-auto">
       <div className="w-full max-w-3xl flex flex-col gap-4">
 
         {/* Tab bar */}
@@ -287,7 +287,7 @@ export default function Configuracoes() {
               {/* Branding section */}
               <div>
                 <SectionHeader icon={Building2} title="Identidade da loja" description="Nome e logo exibidos no sistema" />
-                <div className="ml-9 flex flex-col gap-3">
+                <div className="ml-9 flex flex-col items-start gap-3">
                   {/* Logo preview — larger and prominent */}
                   <div className="relative group">
                     <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-border bg-bg-hover/50 flex items-center justify-center overflow-hidden">
@@ -333,7 +333,7 @@ export default function Configuracoes() {
               {/* Address section */}
               <div>
                 <SectionHeader icon={MapPin} title="Endereço" description="Informações de localização do estabelecimento" />
-                <div className="ml-9 flex flex-col gap-3">
+                <div className="ml-9 flex flex-col gap-3 max-w-md">
                   {/* Rua + Número */}
                   <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
                     <CompactInput
@@ -404,7 +404,7 @@ export default function Configuracoes() {
               {/* Metas section */}
               <div>
                 <SectionHeader icon={Target} title="Metas" description="Metas de faturamento para projeção no dashboard" />
-                <div className="ml-9 flex flex-col gap-3">
+                <div className="ml-9 flex flex-col gap-3 max-w-md">
                   <CompactInput
                     label="Meta de Faturamento Mensal (R$)"
                     icon={DollarSign}

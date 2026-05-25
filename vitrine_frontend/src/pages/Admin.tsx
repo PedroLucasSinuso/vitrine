@@ -105,7 +105,7 @@ export default function Admin() {
   }, [])
 
   return (
-    <div className="flex flex-col px-4 py-4">
+    <div className="flex flex-col items-center px-4 py-4 overflow-x-auto">
       <div className="w-full max-w-2xl flex flex-col gap-5">
         {/* Trigger sync */}
         <Card variant="elevated" className="p-6">
