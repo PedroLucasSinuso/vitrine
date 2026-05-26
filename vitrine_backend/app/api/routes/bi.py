@@ -7,7 +7,7 @@ from app.api.deps import get_db, require_supervisor, get_transaction_source, get
 from app.domain.models.usuario import Usuario
 from app.core.interfaces.source import TransactionSource
 from sqlalchemy.orm import Session
-from app.application.bi.factory import criar_dominio, criar_dominio_comparativo
+from app.application.bi.factory import criar_dominio, criar_dominio_comparativo, obter_comparativo_diario
 from app.application.bi.domain.perdas import Perdas
 from app.application.bi.domain.consumo import Consumo
 from app.application.bi.reporting.relatorio import Relatorio, comparar_kpis
@@ -25,6 +25,7 @@ from app.schemas.bi_schema import (
     TrocasDTO,
     MovimentoDTO,
     PontoDiarioDTO,
+    PontoDiarioComparativoDTO,
     PontoHoraDTO,
     PontoDiaSemanaDTO,
     SkuDTO,
@@ -227,6 +228,30 @@ def serie_diaria(
     logger.info("BI Request | diario periodo=%s..%s metrica=%s", data_inicio, data_fim, metrica.value)
     dominio = criar_dominio(source, data_inicio, data_fim)
     return RelatorioDiario(dominio.vendas).serie_temporal(metrica)
+
+
+@router.get("/diario/comparativo", response_model=PontoDiarioComparativoDTO)
+@limiter.limit("20/minute")
+def diario_comparativo(
+    request: Request,
+    data_inicio: date = Query(...),
+    data_fim: date = Query(...),
+    metrica: Metrica = Query(Metrica.RECEITA),
+    source: TransactionSource = Depends(get_transaction_source),
+    _usuario: Usuario = Depends(require_supervisor),
+):
+    """Retorna a comparação do último dia do período com offset apropriado.
+
+    Se data_fim == hoje (parcial), compara com -7 dias (mesmo weekday da semana anterior)
+    e corta ambos os dias na hora atual. Caso contrário, compara com YoY.
+    """
+    data_inicio, data_fim = _periodo(data_inicio, data_fim)
+    logger.info(
+        "BI Request | diario/comparativo periodo=%s..%s metrica=%s",
+        data_inicio, data_fim, metrica.value,
+    )
+    resultado = obter_comparativo_diario(source, data_inicio, data_fim, metrica)
+    return PontoDiarioComparativoDTO(**resultado)
 
 
 @router.get("/diario/produto", response_model=list[PontoDiarioDTO])

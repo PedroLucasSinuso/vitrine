@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { format, formatDistanceToNow, subYears, getDay, addDays } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -15,10 +15,10 @@ import ErrorBanner from '../../components/ui/ErrorBanner'
 import Card from '../../components/ui/Card'
 import SectionHeader from '../../components/ui/SectionHeader'
 import Skeleton from '../../components/ui/Skeleton'
-import { fetchKpis, fetchKpisComparativo, fetchRanking, fetchDiario, fetchTemporalHora, exportarExcelBI } from '../../api/bi'
+import { fetchKpis, fetchKpisComparativo, fetchRanking, fetchDiario, fetchDiarioComparativo, fetchTemporalHora, exportarExcelBI } from '../../api/bi'
 import { baixarCSVdeArray } from '../../utils/csv'
 import { getConfigsCache } from '../../stores/configStore'
-import type { KpisDTO, KpisComparativoDTO, ItemRankingDTO, PontoDiarioDTO, PontoHoraDTO, PeriodoBi } from '../../types'
+import type { KpisDTO, KpisComparativoDTO, ItemRankingDTO, PontoDiarioDTO, PontoHoraDTO, DiarioComparativoDTO, PeriodoBi } from '../../types'
 import { formatCurrency, formatDateWithWeekday } from '../../utils/formatters'
 import { useBiCache } from '../../stores/biCache'
 import { useToast } from '../../hooks/useToast'
@@ -63,52 +63,20 @@ function formatDateTick(value: string): string {
   return format(d, 'dd/MM')
 }
 
-// ── Resumo do Dia — último dia completo do período ────────────────
-interface DiarioAnteriorData {
-  receita: PontoDiarioDTO[]
-  tickets: PontoDiarioDTO[]
-  ticketMedio: PontoDiarioDTO[]
-}
-
+// ── Resumo do Dia — último dia do período (backed by /diario/comparativo) ──
 interface ResumoDiaProps {
   receita: PontoDiarioDTO[]
   tickets: PontoDiarioDTO[]
   ticketMedio: PontoDiarioDTO[]
-  anterior?: DiarioAnteriorData | null
   comparar: boolean
-  dadosParciaisAte?: string | null
-  /** Fallback: variação geral do período (kpisComp) quando findValorAnterior não achar data */
-  variacaoPeriodo?: { fatBruto: number | null; tickets: number | null; ticketMedio: number | null } | null
+  comparativo?: {
+    receita: DiarioComparativoDTO | null
+    tickets: DiarioComparativoDTO | null
+    ticketMedio: DiarioComparativoDTO | null
+  } | null
 }
 
-/**
- * Encontra o valor no ano anterior para o mesmo dia da semana.
- * Varre os dados anteriores procurando a data que casa com o weekday alvo,
- * com tolerância de ±4 dias para garantir cobertura mesmo em feriados/ausências.
- */
-function findValorAnterior(dataAtual: string, dadosAnteriores: PontoDiarioDTO[]): number | null {
-  if (dadosAnteriores.length === 0) return null
-
-  const date = new Date(dataAtual + 'T00:00:00')
-  const targetWeekday = getDay(date)
-  const lastYear = subYears(date, 1)
-  let lastYearWeekday = getDay(lastYear)
-  let diff = targetWeekday - lastYearWeekday
-  if (diff > 3) diff -= 7
-  if (diff < -3) diff += 7
-
-  // Tenta exata + tolerância de ±4 dias (cobre feriados mais longos)
-  for (let tol = 0; tol <= 4; tol++) {
-    for (const sign of tol === 0 ? [0] : [-1, 1]) {
-      const candidate = format(addDays(lastYear, diff + tol * sign), 'yyyy-MM-dd')
-      const found = dadosAnteriores.find((d) => d.data === candidate)
-      if (found) return found.valor
-    }
-  }
-  return null
-}
-
-function ResumoDia({ receita, tickets, ticketMedio, anterior, comparar: compAtivo, dadosParciaisAte, variacaoPeriodo }: ResumoDiaProps) {
+function ResumoDia({ receita, tickets, ticketMedio, comparar: compAtivo, comparativo }: ResumoDiaProps) {
   const sorted = [...receita].sort((a, b) => b.data.localeCompare(a.data))
   const ultimo = sorted[0]
   if (!ultimo) return null
@@ -117,30 +85,24 @@ function ResumoDia({ receita, tickets, ticketMedio, anterior, comparar: compAtiv
   const valorTickets = tickets.find((t) => t.data === ultimo.data)?.valor ?? 0
   const valorTicketMedio = ticketMedio.find((t) => t.data === ultimo.data)?.valor ?? 0
 
-  // ── Busca valor do mesmo weekday no ano anterior (com tolerância) ──
-  const ant = anterior && compAtivo && anterior.receita.length > 0 ? anterior : null
-  const antReceitaDaily = ant ? findValorAnterior(ultimo.data, ant.receita) : null
-  const antTicketsDaily = ant ? findValorAnterior(ultimo.data, ant.tickets) : null
-  const antTicketMedioDaily = ant ? findValorAnterior(ultimo.data, ant.ticketMedio) : null
+  const compReceita = compAtivo ? comparativo?.receita ?? null : null
+  const compTickets = compAtivo ? comparativo?.tickets ?? null : null
+  const compTicketMedio = compAtivo ? comparativo?.ticketMedio ?? null : null
 
-  // ── Fallback: variação geral do período (kpisComp) ──
-  const fallbackVariacao = compAtivo && variacaoPeriodo ? variacaoPeriodo : null
+  const ultimoEParcial = !!compReceita?.parcial_ate
+  const parcialAte = compReceita?.parcial_ate ?? null
 
-  function BadgeVariacao({ atual, anterior: antVal, fallback }: { atual: number; anterior: number | null; fallback?: { variacao: number | null } | null }) {
+  function BadgeVariacao({ atual, comp }: { atual: number; comp: DiarioComparativoDTO | null }) {
+    const antVal = comp?.valor_offset ?? null
+    const rotuloBase = comp?.rotulo ?? 'vs período anterior'
+
     let diff: number | null = null
-    let rotulo = 'vs ano anterior'
-
     if (antVal !== null) {
       if (antVal === 0 && atual > 0) {
         diff = 100
       } else if (antVal > 0) {
         diff = ((atual / antVal) - 1) * 100
       }
-    }
-
-    if (diff === null && fallback?.variacao != null) {
-      diff = fallback.variacao
-      rotulo = 'vs período anterior'
     }
 
     if (diff === null) return <span className="block h-[18px]" />
@@ -150,22 +112,19 @@ function ResumoDia({ receita, tickets, ticketMedio, anterior, comparar: compAtiv
       <span className={`text-xs font-semibold inline-flex items-center gap-1.5 ${isPositive ? 'text-success' : 'text-danger'}`}>
         <span className="text-sm leading-none">{isPositive ? '▲' : '▼'}</span>
         {Math.abs(diff).toFixed(1)}%
-        <span className="text-text-muted font-normal text-[10px]">{rotulo}</span>
+        <span className="text-text-muted font-normal text-[10px]">{rotuloBase}</span>
       </span>
     )
   }
 
-  function LinhaAnterior({ valor, fmt }: { valor: number | null; fmt: (v: number) => string }) {
-    if (valor === null) return <p className="h-[14px]" />
+  function LinhaOffset({ comp, fmt }: { comp: DiarioComparativoDTO | null; fmt: (v: number) => string }) {
+    if (comp?.valor_offset == null) return <p className="h-[14px]" />
     return (
       <p className="text-[11px] text-text-muted leading-tight h-[14px]">
-        Ano passado: <span className="font-medium text-text-secondary">{fmt(valor)}</span>
+        Ano passado: <span className="font-medium text-text-secondary">{fmt(comp.valor_offset)}</span>
       </p>
     )
   }
-
-  const hojeFormatado = format(new Date(), 'yyyy-MM-dd')
-  const ultimoEParcial = ultimo.data === hojeFormatado && !!dadosParciaisAte
 
   return (
     <Card variant="elevated" padding="md">
@@ -176,9 +135,9 @@ function ResumoDia({ receita, tickets, ticketMedio, anterior, comparar: compAtiv
         <div className="flex-1 min-w-0">
           <span className="text-xs font-semibold text-text-primary">{formatDateWithWeekday(ultimo.data)}</span>
         </div>
-        {ultimoEParcial && (
+        {ultimoEParcial && parcialAte && (
           <span className="text-[10px] text-warning bg-warning-light px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1 shrink-0">
-            <Clock size={10} /> Parcial até {dadosParciaisAte}
+            <Clock size={10} /> Parcial até {parcialAte}
           </span>
         )}
       </div>
@@ -188,24 +147,24 @@ function ResumoDia({ receita, tickets, ticketMedio, anterior, comparar: compAtiv
         <div className="flex flex-col gap-1.5">
           <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-text-muted">Vendas</p>
           <p className="text-xl font-bold text-text-primary tabular-nums tracking-tight">{formatCurrency(valorReceita)}</p>
-          <BadgeVariacao atual={valorReceita} anterior={antReceitaDaily} fallback={fallbackVariacao ? { variacao: fallbackVariacao.fatBruto } : null} />
-          <LinhaAnterior valor={antReceitaDaily} fmt={formatCurrency} />
+          <BadgeVariacao atual={valorReceita} comp={compReceita} />
+          <LinhaOffset comp={compReceita} fmt={formatCurrency} />
         </div>
 
         {/* Tickets */}
         <div className="flex flex-col gap-1.5">
           <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-text-muted">Tickets</p>
           <p className="text-xl font-bold text-text-primary tabular-nums tracking-tight">{Math.round(valorTickets).toLocaleString('pt-BR')}</p>
-          <BadgeVariacao atual={valorTickets} anterior={antTicketsDaily} fallback={fallbackVariacao ? { variacao: fallbackVariacao.tickets } : null} />
-          <LinhaAnterior valor={antTicketsDaily} fmt={(v) => Math.round(v).toLocaleString('pt-BR')} />
+          <BadgeVariacao atual={valorTickets} comp={compTickets} />
+          <LinhaOffset comp={compTickets} fmt={(v) => Math.round(v).toLocaleString('pt-BR')} />
         </div>
 
         {/* Ticket Médio */}
         <div className="flex flex-col gap-1.5">
           <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-text-muted">Ticket Médio</p>
           <p className="text-xl font-bold text-text-primary tabular-nums tracking-tight">{formatCurrency(valorTicketMedio)}</p>
-          <BadgeVariacao atual={valorTicketMedio} anterior={antTicketMedioDaily} fallback={fallbackVariacao ? { variacao: fallbackVariacao.ticketMedio } : null} />
-          <LinhaAnterior valor={antTicketMedioDaily} fmt={formatCurrency} />
+          <BadgeVariacao atual={valorTicketMedio} comp={compTicketMedio} />
+          <LinhaOffset comp={compTicketMedio} fmt={formatCurrency} />
         </div>
       </div>
     </Card>
@@ -238,12 +197,12 @@ export default function Dashboard() {
   const [dadosHora, setDadosHora] = useState<PontoHoraDTO[]>([])
   const [loadingHora, setLoadingHora] = useState(false)
 
-  // ── Dados diários do ano anterior (para comparação same-weekday) ──
-  const [diarioAnterior, setDiarioAnterior] = useState<{
-    receita: PontoDiarioDTO[]
-    tickets: PontoDiarioDTO[]
-    ticketMedio: PontoDiarioDTO[]
-  }>({ receita: [], tickets: [], ticketMedio: [] })
+  // ── Comparativo do último dia (backed by /diario/comparativo) ──
+  const [diarioComparativo, setDiarioComparativo] = useState<{
+    receita: DiarioComparativoDTO | null
+    tickets: DiarioComparativoDTO | null
+    ticketMedio: DiarioComparativoDTO | null
+  }>({ receita: null, tickets: null, ticketMedio: null })
 
   // Determina qual fonte de dados usar (comparativo ou simples)
   const kpisAtivos = kpisComp ?? kpis
@@ -304,20 +263,20 @@ export default function Dashboard() {
       .finally(() => setLoadingMeta(false))
   }, [])
 
-  // ── Carregar dados diários para os gráficos ──
+  // ── Carregar dados diários + comparativo ──
   const buscarDiario = useCallback(async (p: PeriodoBi) => {
     if (p.data_inicio === p.data_fim) {
       setDiarioReceita([])
       setDiarioTicketMedio([])
       setDiarioTickets([])
       setDadosHora([])
-      setDiarioAnterior({ receita: [], tickets: [], ticketMedio: [] })
+      setDiarioComparativo({ receita: null, tickets: null, ticketMedio: null })
       return
     }
     setLoadingDiario(true)
     setLoadingHora(true)
     try {
-      // 1. Dados ATUAIS são críticos — fetch obrigatório
+      // 1. Dados da série diária + hora
       const [rc, tm, qt, hora] = await Promise.all([
         fetchDiario(p, 'receita_produto'),
         fetchDiario(p, 'ticket_medio'),
@@ -329,28 +288,23 @@ export default function Dashboard() {
       setDiarioTickets(qt)
       setDadosHora(hora)
 
-      // 2. Dados do ANO ANTERIOR são best-effort (fetch separado)
-      //    Se falharem, o Resumo do Dia simplesmente não mostra badges
+      // 2. Comparativo do último dia (best-effort)
       if (comparar) {
-        const pAnt: PeriodoBi = {
-          data_inicio: format(addDays(subYears(new Date(p.data_inicio + 'T00:00:00'), 1), -4), 'yyyy-MM-dd'),
-          data_fim: format(addDays(subYears(new Date(p.data_fim + 'T00:00:00'), 1), 4), 'yyyy-MM-dd'),
-        }
         try {
-          const [antRc, antTm, antQt] = await Promise.all([
-            fetchDiario(pAnt, 'receita_produto'),
-            fetchDiario(pAnt, 'ticket_medio'),     // antTm = ticket médio
-            fetchDiario(pAnt, 'qtd_tickets'),      // antQt = qtd tickets
+          const [compRc, compTk, compTm] = await Promise.all([
+            fetchDiarioComparativo(p, 'receita_produto'),
+            fetchDiarioComparativo(p, 'qtd_tickets'),
+            fetchDiarioComparativo(p, 'ticket_medio'),
           ])
-          setDiarioAnterior({ receita: antRc, tickets: antQt, ticketMedio: antTm })
+          setDiarioComparativo({ receita: compRc, tickets: compTk, ticketMedio: compTm })
         } catch {
-          setDiarioAnterior({ receita: [], tickets: [], ticketMedio: [] })
+          setDiarioComparativo({ receita: null, tickets: null, ticketMedio: null })
         }
       } else {
-        setDiarioAnterior({ receita: [], tickets: [], ticketMedio: [] })
+        setDiarioComparativo({ receita: null, tickets: null, ticketMedio: null })
       }
     } catch {
-      // silencioso — dados atuais falharam
+      // silencioso — série diária falhou
     } finally {
       setLoadingDiario(false)
       setLoadingHora(false)
@@ -601,21 +555,15 @@ export default function Dashboard() {
       )}
 
       {/* ============================================================ */}
-      {/* RESUMO DO DIA — Último dia completo do período               */}
+      {/* RESUMO DO DIA — Último dia (backed by /diario/comparativo)    */}
       {/* ============================================================ */}
       {kpisAtivos && diarioReceita.length > 0 && (
         <ResumoDia
           receita={diarioReceita}
           tickets={diarioTickets}
           ticketMedio={diarioTicketMedio}
-          anterior={diarioAnterior}
           comparar={comparar}
-          dadosParciaisAte={kpisComp?.dados_parciais_ate ?? null}
-          variacaoPeriodo={temComparativo ? {
-            fatBruto: getVariacao('faturamento_bruto'),
-            tickets: getVariacao('qtd_tickets'),
-            ticketMedio: getVariacao('ticket_medio'),
-          } : null}
+          comparativo={diarioComparativo}
         />
       )}
 

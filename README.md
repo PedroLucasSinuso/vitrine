@@ -65,9 +65,9 @@ Além da consulta, o sistema faz:
 | Gráficos | **Recharts** |
 | HTTP | **Axios** |
 | Ícones | **Lucide React** |
-| Planilhas | **SheetJS** (xlsx) |
+| Planilhas | **openpyxl** (geração no backend) |
 | Código de barras | **@zxing/browser** + **@zxing/library** |
-| Cache | AbortController + stale-while-revalidate |
+| Cache | AbortController + TTL 30s + stale-while-revalidate |
 | Componentes | Design system próprio (Button, Card, Input, Modal, Skeleton, CmdK…) |
 
 ---
@@ -175,7 +175,7 @@ src/
 Usuário (câmera / input)
     └─► React (consulta)
             └─► Axios GET /api/produtos/{codigo}
-                    └─► Caddy reverse proxy (produção) / Vite proxy (dev)
+                    └─► Vite proxy (dev) / FastAPI static (produção)
                             └─► FastAPI Route → Service → Repository → SQLite
                     └─► JSON Response
             └─► React renderiza resultado
@@ -194,39 +194,15 @@ cd vitrine
 cd vitrine_backend
 cp .env.example .env        # Configure suas credenciais
 uv sync                     # Instala dependências
-uv run python -m run_etl    # Popula cache SQLite (SyncService)
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Após iniciar, crie um admin:
+# uv run python -m app.cli admin "Nome" minha_senha
 
 # Frontend (outro terminal)
 cd vitrine_frontend
 npm install
 npm run dev                 # → http://localhost:5173
 ```
-
----
-
-## Deploy em produção (Windows Server)
-
-Deploy automatizado em servidor Windows limpo — sem precisar instalar Python, Node ou Docker manualmente:
-
-| Componente | Função |
-|-----------|--------|
-| **Python Embedded** | Runtime portátil (~30 MB) |
-| **Caddy** | Servidor web (1 .exe, zero config) |
-| **NSSM** | Serviços Windows que iniciam com o sistema |
-| **Cloudflare Tunnel** | Acesso HTTPS público (opcional) |
-
-```powershell
-# No PC de desenvolvimento, gere o pacote:
-.\deploy\package.ps1
-# → gera vitrine-deploy.zip
-
-# No servidor, extraia e execute:
-.\deploy\install.ps1
-# → tudo automático: Git, Python, Caddy, NSSM, clone, deps, serviços
-```
-
-> Instruções detalhadas em [`deploy/README.md`](deploy/README.md)
 
 ---
 
@@ -243,25 +219,31 @@ http://localhost:8000/docs
 | Método | Rota | Descrição |
 |--------|------|-----------|
 | `POST` | `/auth/token` | Login (JWT) |
+| `POST` | `/auth/logout` | Revogar token |
+| `POST` | `/auth/logout-all` | Invalidar todos os tokens |
 | `GET` | `/produtos/{codigo}` | Consulta por EAN ou PLU |
-| `GET` | `/produtos/busca?q=` | Busca por nome |
+| `GET` | `/produtos/{codigo}/completo` | Consulta completa (supervisor+) |
+| `GET` | `/produtos/busca` | Busca por nome |
+| `GET` | `/produtos/` | Listagem paginada |
 | `GET` | `/bi/kpis` | KPIs financeiros |
 | `GET` | `/bi/kpis/comparativo` | KPIs com YoY |
 | `GET` | `/bi/receita` | Receita por dimensão |
 | `GET` | `/bi/curva-abc` | Classificação ABC |
 | `GET` | `/bi/sku` | Análise detalhada de SKU |
-| `POST` | `/admin/sync` | Disparar ETL manual |
-| `GET` | `/admin/cache/status` | Status do cache (último sync, TTL) |
-| `POST` | `/admin/testar-anthropic` | Testar conexão com Anthropic |
-| `PATCH` | `/admin/endereco` | Atualizar endereço da loja |
-| `GET` | `/config` | Listar configurações (admin) |
-| `PUT` | `/config` | Atualizar configurações |
-| `GET` | `/contatos/email` | Listar contatos de email |
-| `POST` | `/contatos/email` | Adicionar contato de email |
-| `GET` | `/contatos/whatsapp` | Listar contatos de WhatsApp |
-| `POST` | `/contatos/whatsapp` | Adicionar contato de WhatsApp |
+| `GET` | `/bi/diario/comparativo` | Comparação diária YoY |
+| `GET` | `/bi/tabela-produtos` | Tabela de preços (paginada) |
+| `GET` | `/bi/exportar/excel` | Exportar relatório em .xlsx |
+| `POST` | `/admin/sync` | Disparar sync manual |
+| `GET` | `/admin/sync/{job_id}` | Status de sync |
+| `GET` | `/admin/configuracoes` | Listar configurações |
+| `PATCH` | `/admin/configuracoes` | Atualizar configurações |
+| `POST` | `/admin/configuracoes/testar-erp` | Testar conexão ERP |
+| `GET` | `/admin/inventario/sessoes` | Listar sessões de inventário |
+| `POST` | `/admin/inventario/sessoes` | Criar sessão |
+| `GET` | `/admin/inventario/sessoes/{id}/exportar-excel` | Exportar inventário |
+| `GET` | `/status/` | Status do cache |
 
-> Lista completa de endpoints e parâmetros: [`docs/API.md`](docs/API.md) _(em breve)_ ou diretamente no Swagger UI.
+> Documentação completa em `http://localhost:8000/docs` (Swagger UI).
 
 ### Autenticação
 
@@ -285,23 +267,26 @@ uv run python -m app.cli admin "Admin" sua_senha
 
 ```bash
 cd vitrine_backend
-uv run pytest
+uv run pytest          # 184+ testes
 ```
+
+> Estado atual: **184 testes passando**, 0 erros TypeScript, 0 lint warnings.
 
 | Categoria | Casos |
 |-----------|-------|
-| Autenticação | Token, credenciais, registro, permissões |
+| Autenticação | Token, credenciais, registro, permissões, logout, revogação |
 | Produtos | Busca por código/nome, paginação, detalhes |
 | Códigos | Validação EAN-13/8/12, PLU-6, checksum |
-| BI | KPIs, receita, ranking, curva ABC, SKU, trocas, exportação |
+| BI | KPIs, receita, ranking, curva ABC, SKU, trocas, exportação, comparativo YoY |
 | Inventário | Sessões, itens, consolidado multi-usuário |
 | Sync | Sincronização de produtos |
 | CORS | Headers em requisições OPTIONS |
-| Config Service | CRUD, encriptação Fernet, fallback `.env`, senhas sensíveis |
+| Config Service | CRUD, encriptação Fernet, fallback `.env`, chaves somente-env |
 | Cache Status | Admin com/sem registro, supervisor 403, operador 403, sem auth 401 |
 | Contatos Email | CRUD completo |
 | Contatos WhatsApp | CRUD completo |
 | Value Objects | Endereco (CEP, UF, formatação, 3 níveis de dados) |
+| Bootstrap | Init DB idempotente, migrations |
 
 ---
 
@@ -346,7 +331,7 @@ O antigo pipeline ETL foi substituído pelo **SyncService**, que usa o `ProductS
 
 ```bash
 cd vitrine_backend
-uv run python -m run_etl
+uv run python -m app.etl.run_etl
 ```
 
 Pode ser executado manualmente, via scheduler interno (intervalo configurável pela UI, mínimo 10 min) ou via API (`POST /admin/sync`).
@@ -359,17 +344,17 @@ Pode ser executado manualmente, via scheduler interno (intervalo configurável p
 |---------|--------|
 | **Adapter Pattern para ERP** | `ProductSource` / `TransactionSource` isolam o core do Vitrine dos detalhes de cada ERP. Trocar de ERP = novo adapter, sem mexer no core |
 | **SQLite como cache** | Desacopla API da disponibilidade do PostgreSQL. Consultas locais são rápidas e não geram carga no banco operacional |
-| **Separação Model / Schema** | `Produto` (ORM) ≠ `ProdutoResponse` (Pydantic). Métricas computadas (`markup`, `margem`) como `@property` no model |
+| **Separação Model / Schema** | `Produto` (ORM) ≠ `ProdutoResponse` (Pydantic). Métricas computadas (`markup`, `margem`) calculadas no schema/response |
 | **Camadas domain/application/infrastructure** | Isola regras de negócio de detalhes técnicos (SOLID) |
 | **Injeção de dependência** | Sessão gerenciada por `Depends` do FastAPI, repositório desacoplado do ciclo de vida da request |
 | **Value Objects (`Codigo`, `Endereco`)** | Encapsulam validação e invariantes do domínio (EAN/PLU, CEP/UF) sem poluir o service |
 | **Domain Services (`enriquecer_endereco`)** | Orquestra chamadas externas (BrasilAPI → ViaCEP) mantendo o VO imutável |
 | **Fernet para senhas em repouso** | ConfigService encripta valores sensíveis (senha ERP) com chave de `ERPS_ENCRYPTION_KEY` — única proteção em DB SQLite sem segredo. ⚠️ **NÃO altere a chave após o primeiro uso** — senhas criptografadas se tornarão permanentemente ilegíveis |
 | **Sentinel `***configurado***`** | A UI exibe `••••••` em vez de retornar a senha descriptada; o valor enviado de volta é ignorado pelo backend se igual ao sentinel |
-| **ConfigService com fallback `.env`** | Lê de `.env` se a chave não existe no banco; ao salvar pela UI, escreve no SQLite e sobrescreve o `.env` |
+| **ConfigService com fallback `.env` e SQLite** | Chaves operacionais editáveis via UI. Lê de `.env` se não existe no SQLite. Ao salvar pela UI, escreve apenas no SQLite — `.env` permanece imutável. `jwt_secret` é exclusivamente `.env` (não pode ser lido/alterado via UI) |
 | **Templates Jinja2 para relatórios** | `relatorio_email.j2` / `relatorio_semanal.j2` permitem customizar o HTML sem recompilar |
 | **APScheduler para jobs dinâmicos** | Sync e notificações agendados com intervalo configurável pela UI (mín. 10 min), sem reiniciar o servidor |
-| **Cache frontend com AbortController** | Stale-while-revalidate com cancelamento de requests duplicadas (evita waterfall em navegação de BI) |
+| **Cache frontend com TTL 30s** | configStore com cache em memória + localStorage + debounce de requisições paralelas. BI cache FIFO com 50 entradas |
 | **Componentização do BI** | `KpiCard`, `PeriodoForm`, `BiSubNav`, `BiSideRail` — componentes puros e reutilizáveis |
 | **Design system próprio (`ui/`)** | `Button`, `Card`, `Input`, `Modal`, `Skeleton`, `CmdK` — consistência visual sem dependência pesada de UI library |
 

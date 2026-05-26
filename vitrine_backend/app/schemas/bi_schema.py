@@ -104,6 +104,15 @@ class FiltrosDisponiveis(BaseModel):
     familias: list[str]
 
 
+class PontoDiarioComparativoDTO(BaseModel):
+    data: str                    # data do último dia do período
+    valor: float                 # valor atual (cortado na hora se parcial)
+    valor_offset: float | None   # valor do offset day (cortado na mesma hora)
+    offset_data: str | None      # data do offset day
+    parcial_ate: str | None      # "HH:MM" se hoje for parcial
+    rotulo: str                  # "vs semana passada" | "vs ano anterior"
+
+
 class TabelaProdutosResponse(BaseModel):
     items: list[ProdutoTabelaResponse]
     total: int

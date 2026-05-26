@@ -2,7 +2,7 @@ import api from './client'
 import type {
   KpisDTO, KpisComparativoDTO, ItemDimensaoDTO, ItemCurvaAbcDTO, ItemRankingDTO,
   TrocasDTO, MovimentoDTO, PontoDiarioDTO, PontoHoraDTO,
-  PontoDiaSemanaDTO, SkuDTO, Dimensao, Metrica, PeriodoBi,
+  PontoDiaSemanaDTO, SkuDTO, DiarioComparativoDTO, Dimensao, Metrica, PeriodoBi,
   TabelaProdutosResponse,
 } from '../types'
 
@@ -72,6 +72,11 @@ export async function fetchConsumo(periodo: PeriodoBi): Promise<MovimentoDTO> {
 
 export async function fetchDiario(periodo: PeriodoBi, metrica: Metrica): Promise<PontoDiarioDTO[]> {
   const r = await api.get('/bi/diario', { params: params(periodo, { metrica }) })
+  return r.data
+}
+
+export async function fetchDiarioComparativo(periodo: PeriodoBi, metrica: Metrica): Promise<DiarioComparativoDTO> {
+  const r = await api.get('/bi/diario/comparativo', { params: params(periodo, { metrica }) })
   return r.data
 }
 

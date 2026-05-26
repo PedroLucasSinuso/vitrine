@@ -80,6 +80,15 @@ export interface PontoHoraDTO {
   valor: number
 }
 
+export interface DiarioComparativoDTO {
+  data: string
+  valor: number
+  valor_offset: number | null
+  offset_data: string | null
+  parcial_ate: string | null
+  rotulo: string
+}
+
 export interface PontoDiaSemanaDTO {
   dia_semana: string
   valor: number

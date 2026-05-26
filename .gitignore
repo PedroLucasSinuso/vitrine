@@ -39,6 +39,9 @@ iniciar.ps1
 dev_utils/
 .opencode
 
+# Runtime
+.scheduler.lock
+
 # Cobertura de teste
 .coverage
 htmlcov/
