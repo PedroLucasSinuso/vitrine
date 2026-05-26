@@ -149,7 +149,7 @@ utils/ (formatters, colors)
 - **Perms:** edit/write allowed, bash requires confirmation.
 - **Skills available (7):** adversarial-review, anti-overengineering, brainstorming, cross-layer-review, frontend-design, performance-review, security-review. Carregadas sob demanda via `/skill`.
 - **Stitch tools disponíveis:** `stitch_create_design_system`, `stitch_generate_screen_from_text`, `stitch_edit_screens`, `stitch_list_projects`, etc — para geração/edição de telas e temas.
-- **Docs in `.opencode/docs/`:** `architecture.md` (full audit), `decisions.md` (15 ADRs), `context.md` (current status + next steps), `api-contracts.md` (formal API contracts), `coding-standards.md` (keep it simple), `known-issues.md` (fix history + active bugs + all sprints corrections).
+- **Docs in `.opencode/docs/`:** `architecture.md` (full audit), `decisions.md` (15 ADRs), `context.md` (current status + next steps), `api-contracts.md` (formal API contracts), `coding-standards.md` (keep it simple), `known-issues.md` (fix history + active bugs + all sprints corrections), `hotfix-resumo-dia-parcial.md` (partial day comparison fix).
 
 ---
 

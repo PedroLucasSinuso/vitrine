@@ -33,3 +33,18 @@ class TransactionSource(ABC):
         external_document_id = None quando não houver documento comprobatório.
         """
         ...
+
+    def get_kpi_aggregates(self, start: date, end: date) -> dict | None:
+        """Opcional: retorna agregados de KPI para o período sem carregar linhas.
+
+        Retorna dict com chaves:
+            faturamento_bruto (float)
+            total_trocas (float)
+            qtd_tickets (int)
+            ticket_medio (float)
+            itens_por_ticket (float)
+
+        Retorna None se o adapter não suportar consulta agregada.
+        Implementação padrão retorna None — o adapter pode sobrescrever.
+        """
+        return None

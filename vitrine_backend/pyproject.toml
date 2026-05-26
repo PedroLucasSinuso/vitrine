@@ -24,6 +24,7 @@ dependencies = [
     "twilio>=9.10.9",
     "pillow>=12.2.0",
     "cryptography>=44.0.0",
+    "weasyprint>=68.1",
 ]
 
 [tool.setuptools]

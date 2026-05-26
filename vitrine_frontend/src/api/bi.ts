@@ -3,7 +3,7 @@ import type {
   KpisDTO, KpisComparativoDTO, ItemDimensaoDTO, ItemCurvaAbcDTO, ItemRankingDTO,
   TrocasDTO, MovimentoDTO, PontoDiarioDTO, PontoHoraDTO,
   PontoDiaSemanaDTO, SkuDTO, DiarioComparativoDTO, Dimensao, Metrica, PeriodoBi,
-  TabelaProdutosResponse,
+  TabelaProdutosResponse, SortByProduto,
 } from '../types'
 
 const MAX_BI_DAYS = 180
@@ -104,7 +104,7 @@ export async function fetchTabelaProdutos(params: {
   grupo?: string
   familia?: string
   search?: string
-  sort_by?: string
+  sort_by?: SortByProduto
   sort_order?: string
   limit?: number
   offset?: number
@@ -112,6 +112,36 @@ export async function fetchTabelaProdutos(params: {
   const r = await api.get('/bi/tabela-produtos', { params })
   return r.data
 }
+
+/**
+ * Tenta baixar o PDF do relatório semanal via API.
+ * Se falhar (501 — WeasyPrint não disponível), retorna false
+ * para que o caller use window.print() como fallback.
+ */
+export async function exportarPDF(): Promise<boolean> {
+  try {
+    const r = await api.get('/bi/exportar/pdf', {
+      responseType: 'blob',
+      timeout: 30000,
+    })
+    const rawContentType = r.headers['content-type']
+    const contentType = typeof rawContentType === 'string' ? rawContentType : ''
+    if (!contentType.includes('application/pdf')) {
+      // Servidor retornou 501 (ou erro) — conteúdo é JSON
+      return false
+    }
+    const url = URL.createObjectURL(r.data)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `relatorio_semanal_${new Date().toISOString().slice(0, 10)}.pdf`
+    link.click()
+    URL.revokeObjectURL(url)
+    return true
+  } catch {
+    return false
+  }
+}
+
 
 export async function exportarExcelBI(
   periodo: PeriodoBi,
@@ -122,6 +152,21 @@ export async function exportarExcelBI(
     params: { ...params(periodo), relatorio, ...extra },
     responseType: 'blob',
   })
+
+  // ── Verifica se a resposta é JSON de erro (ex: 500 com corpo JSON) ──
+  const rawContentType = r.headers['content-type']
+  const contentType = typeof rawContentType === 'string' ? rawContentType : ''
+  if (contentType.includes('application/json')) {
+    // Resposta inesperada: tenta ler o JSON para extrair mensagem de erro
+    const text = await r.data.text()
+    try {
+      const err = JSON.parse(text)
+      throw new Error(err.detail ?? err.message ?? 'Erro ao exportar Excel')
+    } catch {
+      throw new Error('Erro ao exportar Excel')
+    }
+  }
+
   const url = URL.createObjectURL(r.data)
   const link = document.createElement('a')
   link.href = url

@@ -512,6 +512,22 @@ Toda prop inline (arrow functions, objetos literais) causa re-render em cascata.
 
 ---
 
+### 🟡 BI-01: Resumo do Dia comparava dados parciais com full-day do ano anterior
+
+**Status:** ✅ **Corrigido (2026-05-26) — Hotfix frontend-only**
+
+**Problema:** O `ResumoDia` no Dashboard comparava o último dia do período com o mesmo weekday do ano anterior (`findValorAnterior`), sem verificar se o último dia era parcial (hoje em andamento). Isso gerava variação artificial (ex: parcial vs full-day → -55% enganoso).
+
+**Correção:** `ultimoEParcial` é calculado primeiro; quando verdadeiro, as variáveis `ant*Daily` (`antReceitaDaily`, `antTicketsDaily`, `antTicketMedioDaily`) são forçadas a `null`, fazendo o badge de variação cair no fallback `variacaoPeriodo` (kpisComp, já com `_filtrar_hora` do backend).
+
+**Arquivo:** `vitrine_frontend/src/pages/bi/Dashboard.tsx` — ±20 linhas alteradas.
+
+**Documentação completa:** `docs/hotfix-resumo-dia-parcial.md`
+
+**Próximo passo:** Endpoint `/api/bi/diario/comparativo` delegado ao `architect` para comparação YoY com hora truncada.
+
+---
+
 ### 🔴 Pré-existentes (Não Requerem Ação Imedita)
 
 #### 🟡 A3: Export SKU exige `codigo` no query param

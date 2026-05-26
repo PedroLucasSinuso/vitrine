@@ -1,3 +1,4 @@
+import logging
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -5,12 +6,14 @@ from pathlib import Path
 from cachetools import TTLCache
 from sqlalchemy import text
 
+logger = logging.getLogger(__name__)
+
 from app.core.interfaces.source import TransactionSource
 from app.core.models.transaction import TransactionItem, OperationType
 from app.adapters.alterdata.config import OPERATION_MAP, CANCELED_MARKER
 
 
-_cache: TTLCache = TTLCache(maxsize=32, ttl=3600)
+_cache: TTLCache = TTLCache(maxsize=32, ttl=300)  # TTL baixo (5 min) para evitar dados obsoletos após sync
 
 
 class AlterdataTransactionSource(TransactionSource):
@@ -39,6 +42,65 @@ class AlterdataTransactionSource(TransactionSource):
         items = [self._to_item(r) for r in rows]
         _cache[key] = items
         return items
+
+    def get_kpi_aggregates(self, start: date, end: date) -> dict | None:
+        """Retorna agregados de KPI via SQL para evitar carregar todas as linhas.
+
+        Query usa CTEs para agregar vendas e trocas em 2 passadas (documento
+        em vez de item), reduzindo drasticamente a quantidade de dados trafegados.
+        """
+        sql = text("""
+            WITH vendas_doc AS (
+                SELECT
+                    d.iddocumento,
+                    d.vltotal,
+                    SUM(doc.vlmovimento) AS receita_bruta,
+                    SUM(doc.qtitem) AS qtd_itens
+                FROM wshop.documen d
+                JOIN wshop.docitem doc ON doc.iddocumento = d.iddocumento
+                WHERE d.dtemissao >= :data_inicio
+                  AND d.dtemissao <= :data_fim
+                  AND d.tpoperacao = 'V'
+                  AND COALESCE(d.stdocumentocancelado, '') != '*'
+                GROUP BY d.iddocumento, d.vltotal
+            ),
+            trocas_doc AS (
+                SELECT
+                    d.iddocumento,
+                    SUM(ABS(doc.vlmovimento)) AS valor_troca
+                FROM wshop.documen d
+                JOIN wshop.docitem doc ON doc.iddocumento = d.iddocumento
+                WHERE d.dtemissao >= :data_inicio
+                  AND d.dtemissao <= :data_fim
+                  AND d.tpoperacao = 'E'
+                  AND d.tpdevolucao IN ('T','D')
+                  AND COALESCE(d.stdocumentocancelado, '') != '*'
+                GROUP BY d.iddocumento
+            )
+            SELECT
+                COUNT(v.iddocumento)::int AS qtd_tickets,
+                COALESCE(SUM(v.receita_bruta), 0) AS faturamento_bruto,
+                COALESCE((SELECT SUM(t.valor_troca) FROM trocas_doc t), 0) AS total_trocas,
+                COALESCE(AVG(v.vltotal), 0) AS ticket_medio,
+                COALESCE(AVG(v.qtd_itens), 0) AS itens_por_ticket
+            FROM vendas_doc v
+        """)
+        try:
+            with self._engine.connect() as conn:
+                row = conn.execute(sql, {
+                    "data_inicio": start.isoformat(),
+                    "data_fim": end.isoformat(),
+                }).mappings().one()
+            return {
+                "faturamento_bruto": float(row["faturamento_bruto"]),
+                "total_trocas": float(row["total_trocas"]),
+                "qtd_tickets": int(row["qtd_tickets"]),
+                "ticket_medio": float(row["ticket_medio"]),
+                "itens_por_ticket": float(row["itens_por_ticket"]),
+            }
+        except Exception:
+            logger.exception("BI KPI aggregates | erro na query agregada, fallback para full load")
+            return None
 
     def _to_item(self, row: dict) -> TransactionItem:
         operacao_raw = row["operacao"]

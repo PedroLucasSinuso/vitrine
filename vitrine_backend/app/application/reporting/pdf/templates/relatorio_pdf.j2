@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+/* ═══════════════════════════════════════
+   Page setup
+   ═══════════════════════════════════════ */
+@page {
+  size: A4;
+  margin: 2cm 1.5cm;
+  @bottom-center {
+    content: counter(page) " / " counter(pages);
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 9px;
+    color: #9ca3af;
+  }
+}
+
+/* ═══════════════════════════════════════
+   Base
+   ═══════════════════════════════════════ */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  color: #1f2937;
+  background: #fff;
+  line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════
+   Header / Branding
+   ═══════════════════════════════════════ */
+.header {
+  background: #1e2937;
+  color: #fff;
+  padding: 28px 24px 18px;
+  border-radius: 8px 8px 0 0;
+  text-align: center;
+}
+.header h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.header .accent {
+  width: 40px;
+  height: 3px;
+  background: #10b981;
+  margin: 8px auto;
+}
+.header .periodo {
+  font-size: 10px;
+  color: #9ca3af;
+  margin: 6px 0 0;
+}
+
+/* ═══════════════════════════════════════
+   Section titles
+   ═══════════════════════════════════════ */
+.section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  text-align: center;
+  margin: 24px 0 14px;
+  padding-bottom: 6px;
+  border-bottom: 1.5px solid #d1d5db;
+}
+
+/* ═══════════════════════════════════════
+   KPI grid
+   ═══════════════════════════════════════ */
+.kpi-grid {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.kpi-card {
+  flex: 1;
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 12px 8px;
+  text-align: center;
+}
+.kpi-card .label {
+  font-size: 9px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.kpi-card .value {
+  font-size: 16px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+.kpi-card .value.green { color: #059669; }
+.kpi-card .value.blue  { color: #2563eb; }
+.kpi-card .value.dark  { color: #1f2937; }
+.kpi-card .variacao {
+  font-size: 10px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+.kpi-card .variacao.up   { color: #16a34a; }
+.kpi-card .variacao.down { color: #ef4444; }
+.kpi-card .variacao.neutral { color: #9ca3af; }
+.kpi-card .sub {
+  font-size: 9px;
+  color: #9ca3af;
+  margin-top: 1px;
+}
+
+/* ═══════════════════════════════════════
+   Ranking table
+   ═══════════════════════════════════════ */
+.ranking-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 4px;
+}
+.ranking-table th {
+  font-size: 9px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 6px 4px 6px 0;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+}
+.ranking-table th:last-child {
+  text-align: right;
+}
+.ranking-table td {
+  padding: 6px 4px 6px 0;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 12px;
+  color: #374151;
+}
+.ranking-table td:last-child {
+  text-align: right;
+  font-weight: 600;
+}
+.ranking-table .pos {
+  color: #9ca3af;
+  font-size: 11px;
+  width: 24px;
+}
+
+/* ═══════════════════════════════════════
+   YoY section
+   ═══════════════════════════════════════ */
+.yoy-box {
+  background: #f0fdf4;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-top: 10px;
+  text-align: center;
+}
+.yoy-box .title {
+  font-size: 10px;
+  color: #16a34a;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.yoy-box .kpis {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  font-size: 11px;
+  color: #374151;
+}
+
+/* ═══════════════════════════════════════
+   Footer
+   ═══════════════════════════════════════ */
+.footer {
+  text-align: center;
+  padding: 16px;
+  font-size: 9px;
+  color: #9ca3af;
+}
+
+/* ═══════════════════════════════════════
+   Page breaks
+   ═══════════════════════════════════════ */
+.page-break {
+  page-break-before: always;
+}
+.no-break {
+  page-break-inside: avoid;
+}
+
+/* ═══════════════════════════════════════
+   Hide from screen, show on print
+   (in case viewed in browser)
+   ═══════════════════════════════════════ */
+@media screen {
+  body { padding: 20px; max-width: 800px; margin: 0 auto; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<div class="header">
+  <h1>{{ nome_loja }}</h1>
+  <div class="accent"></div>
+  <p class="periodo">Relatório {{ mes_atual }} &mdash; {{ data_inicio_mes }} a {{ data_fim_mes }}</p>
+</div>
+
+<!-- ═══ SEMANA ═══ -->
+<div class="no-break">
+  <div class="section-title">Semana &mdash; {{ data_inicio_semana }} a {{ data_fim_semana }}</div>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="label">Faturamento</div>
+      <div class="value green">R$ {{ faturamento_bruto_semana | fmt_money }}</div>
+      {% set up = "▲" in variacao_semana %}
+      {% set dn = "▼" in variacao_semana %}
+      <div class="variacao {{ 'up' if up else ('down' if dn else 'neutral') }}">{{ variacao_semana }}</div>
+      <div class="sub">vs. semana anterior</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Ticket Médio</div>
+      <div class="value dark">R$ {{ ticket_medio_semana | fmt_money }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Tickets</div>
+      <div class="value dark">{{ qtd_tickets_semana }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MÊS (page break before) ═══ -->
+<div class="page-break no-break">
+  <div class="section-title">Mês &mdash; {{ mes_atual }}</div>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="label">Faturamento</div>
+      <div class="value blue">R$ {{ faturamento_bruto_mes | fmt_money }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Faturamento Líq.</div>
+      <div class="value blue">R$ {{ faturamento_liquido_mes | fmt_money }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Ticket Médio</div>
+      <div class="value dark">R$ {{ ticket_medio_mes | fmt_money }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Tickets</div>
+      <div class="value dark">{{ qtd_tickets_mes }}</div>
+    </div>
+  </div>
+
+  {% if yoy %}
+  <div class="yoy-box">
+    <div class="title">Comparativo &mdash; {{ mes_atual_ref }} x {{ mes_anterior_ref }}</div>
+    <div class="kpis">
+      {% set fb_pct = yoy.faturamento_bruto.variacao_pct %}
+      {% set tm_pct = yoy.ticket_medio.variacao_pct %}
+      {% set qt_pct = yoy.qtd_tickets.variacao_pct %}
+      <span>Faturamento: <strong>{{ fb_pct | fmt_variacao if fb_pct is not none else '—' }}</strong></span>
+      <span>Ticket Médio: <strong>{{ tm_pct | fmt_variacao if tm_pct is not none else '—' }}</strong></span>
+      <span>Tickets: <strong>{{ qt_pct | fmt_variacao if qt_pct is not none else '—' }}</strong></span>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ═══ RANKING (page break before) ═══ -->
+{% if ranking %}
+<div class="page-break no-break">
+  <div class="section-title">Top 5 Produtos &mdash; {{ mes_atual }}</div>
+  <table class="ranking-table">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Produto</th>
+        <th>Valor</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in ranking %}
+      <tr>
+        <td class="pos">{{ loop.index }}</td>
+        <td>{{ item.produto }}</td>
+        <td>R$ {{ item.valor | fmt_money }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- ═══ FOOTER ═══ -->
+<div class="footer">
+  <p>Relatório Automático — Gerado em {{ data_geracao }}</p>
+</div>
+
+</body>
+</html>

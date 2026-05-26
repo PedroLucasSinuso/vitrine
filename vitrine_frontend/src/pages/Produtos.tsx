@@ -8,7 +8,7 @@ import Input from '../components/ui/Input'
 import Badge from '../components/ui/Badge'
 import EmptyState from '../components/ui/EmptyState'
 import ErrorBanner from '../components/ui/ErrorBanner'
-import type { ProdutoTabelaResponse } from '../types'
+import type { ProdutoTabelaResponse, SortByProduto } from '../types'
 import { formatCurrency } from '../utils/formatters'
 
 function margemVariant(margem: number): 'success' | 'warning' | 'danger' {
@@ -45,7 +45,7 @@ export default function Produtos() {
     if (sortBy === col) {
       setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
     } else {
-      setSortBy(col)
+      setSortBy(col as SortByProduto)
       setSortOrder('asc')
     }
   }

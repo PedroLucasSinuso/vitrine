@@ -1,7 +1,7 @@
 ﻿from fastapi import APIRouter, Depends, HTTPException, Request
 from app.api.deps import get_produto_repository, get_current_user, require_supervisor
 from app.application.services.produto_service import ProdutoService
-from app.schemas.produto_schema import ObservacaoNaoEncontrado, ProdutoPublicResponse, ProdutoResponse
+from app.schemas.produto_schema import ObservacaoNaoEncontrado, ObservacaoNaoEncontradoResponse, ProdutoPublicResponse, ProdutoResponse
 from app.domain.value_objects.codigo import Codigo
 from app.limiter import limiter
 import logging
@@ -82,7 +82,7 @@ def obter_produto_completo(
     logger.info("Busca completa | codigo=%s", codigo)
     return _buscar(codigo, repo, ProdutoResponse)
 
-@router.post("/nao-encontrado", status_code=201)
+@router.post("/nao-encontrado", status_code=201, response_model=ObservacaoNaoEncontradoResponse)
 @limiter.limit("20/minute")
 def registrar_nao_encontrado(
     request: Request,

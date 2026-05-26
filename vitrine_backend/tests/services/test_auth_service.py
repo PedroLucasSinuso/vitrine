@@ -34,8 +34,9 @@ def usuario_existente():
 
 def test_autenticar_credenciais_validas(usuario_existente):
     repo = FakeUsuarioRepository(usuario=usuario_existente)
-    token = AuthService(repo).autenticar("supervisor1", "senha123")
-    assert isinstance(token, str) and len(token) > 0
+    access_token, refresh_token = AuthService(repo).autenticar("supervisor1", "senha123")
+    assert isinstance(access_token, str) and len(access_token) > 0
+    assert isinstance(refresh_token, str) and len(refresh_token) > 0
 
 
 def test_autenticar_senha_errada(usuario_existente):

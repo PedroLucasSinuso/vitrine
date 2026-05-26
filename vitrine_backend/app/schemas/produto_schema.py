@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # Schema: define o formato/contrato de dados para validacao e resposta da API.
 class ProdutoPublicResponse(BaseModel):
@@ -20,4 +20,8 @@ class ProdutoResponse(ProdutoPublicResponse):
 
 class ObservacaoNaoEncontrado(BaseModel):
     codigo: str
-    observacao: str
+    observacao: str = Field(default="", max_length=500)
+
+
+class ObservacaoNaoEncontradoResponse(BaseModel):
+    ok: bool

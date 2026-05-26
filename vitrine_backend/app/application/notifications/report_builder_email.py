@@ -1,6 +1,10 @@
+import logging
 from datetime import date, timedelta
 from pathlib import Path
+
 from jinja2 import Environment, FileSystemLoader
+
+logger = logging.getLogger(__name__)
 from app.core.interfaces.source import TransactionSource
 from app.application.bi.factory import criar_dominio
 from app.application.bi.reporting.relatorio import Relatorio, comparar_kpis
@@ -75,8 +79,10 @@ def _carregar_imagens() -> list[tuple[str, bytes, str]]:
     return imagens
 
 
-def construir_relatorio_email(nome_loja: str, source: TransactionSource) -> tuple[str, list[tuple[str, bytes, str]]]:
-    """Retorna (html, imagens_cid)."""
+def construir_relatorio_email(nome_loja: str, source: TransactionSource) -> tuple[str, list[tuple[str, bytes, str]], bytes | None]:
+    """Retorna (html, imagens_cid, anexo_xlsx_bytes). O anexo pode ser None se não houver dados."""
+    from app.application.bi.reporting.exportador import build_bi_anexo
+
     hoje = date.today()
 
     inicio_semana = hoje - timedelta(days=7)
@@ -102,6 +108,13 @@ def construir_relatorio_email(nome_loja: str, source: TransactionSource) -> tupl
 
     ranking_mes = rel_mes.ranking(metrica=Metrica.RECEITA, top=5)
 
+    # Gera .xlsx com os mesmos dados (anexo)
+    anexo_bytes = build_bi_anexo(
+        kpis_semana=kpis_semana.model_dump(),
+        kpis_mes=kpis_mes.model_dump(),
+        ranking=[r.model_dump() for r in ranking_mes],
+    )
+
     try:
         inicio_yoy = inicio_mes.replace(year=inicio_mes.year - 1)
         fim_yoy = fim_mes.replace(year=fim_mes.year - 1)
@@ -109,7 +122,8 @@ def construir_relatorio_email(nome_loja: str, source: TransactionSource) -> tupl
         rel_ant = Relatorio(dominio_anterior.vendas, dominio_anterior.trocas)
         kpis_ant = rel_ant.kpis()
         yoy = comparar_kpis(kpis_mes, kpis_ant)
-    except Exception:
+    except Exception as e:
+        logger.warning("YoY comparison failed (ERP data may be unavailable for prior year) | erro=%s", e)
         yoy = None
 
     imagens = _carregar_imagens()
@@ -145,7 +159,7 @@ def construir_relatorio_email(nome_loja: str, source: TransactionSource) -> tupl
         data_geracao=_formatar_data(hoje),
     )
 
-    return html, imagens
+    return html, imagens, anexo_bytes
 
 
 def _calcular_variacao_str(atual: float, anterior: float) -> str:

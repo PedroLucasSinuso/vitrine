@@ -40,8 +40,6 @@ export async function getConfigsCache(): Promise<ConfigCache> {
       }
       _cacheTimestamp = Date.now()
       localStorage.setItem('vitrine_config', JSON.stringify(_cache))
-      if (c.market_name) localStorage.setItem('app_marketName', c.market_name)
-      if (c.logo_url) localStorage.setItem('app_marketLogoUrl', c.logo_url)
       return _cache
     })
     .catch((err) => {

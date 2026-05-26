@@ -19,3 +19,7 @@ export async function buscarProdutosPorNome(nome: string, limit = 20, offset = 0
 export async function registrarNaoEncontrado(codigo: string, observacao: string) {
   await api.post('/produtos/nao-encontrado', { codigo, observacao })
 }
+
+export async function reportarNaoEncontrado(codigo: string, observacao: string): Promise<void> {
+  await api.post('/produtos/nao-encontrado', { codigo, observacao })
+}

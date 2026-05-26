@@ -11,7 +11,6 @@ interface Tab {
 
 const TABS: Tab[] = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/bi' },
-  { label: 'Consolidado', icon: LayoutDashboard, path: '/bi/dashboard-consolidado' },
   { label: 'Receita', icon: TrendingUp, path: '/bi/receita' },
   { label: 'Ranking', icon: BarChart3, path: '/bi/ranking' },
   { label: 'Curva ABC', icon: PieChart, path: '/bi/curva-abc' },
@@ -74,7 +73,7 @@ export default function BiSubNav() {
           scrollbarWidth: 'none',
         }}
       >
-        <div className="inline-flex gap-1 p-1 rounded-xl bg-bg-card border border-border min-w-0">
+        <div className="inline-flex gap-1 p-1 rounded-xl bg-bg-card border border-border min-w-0 lg:w-full">
           {TABS.map((tab, i) => {
             const ativo = activeIndex === i
             return (
@@ -83,7 +82,7 @@ export default function BiSubNav() {
                 onClick={() => navigate(tab.path)}
                 className={`
                   relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
-                  transition-all duration-200 shrink-0
+                  transition-all duration-200 shrink-0 lg:flex-1 lg:justify-center
                   ${ativo
                     ? 'bg-primary text-white shadow-sm shadow-primary/20'
                     : 'text-text-muted hover:text-text-primary hover:bg-bg-hover'

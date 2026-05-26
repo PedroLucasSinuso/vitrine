@@ -48,9 +48,15 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
 
   const [menuOpen, setMenuOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const [logoUrl, setLogoUrl] = useState('')
+  const [marketName, setMarketName] = useState('')
 
-  const logoUrl = localStorage.getItem('app_marketLogoUrl')
-  const marketName = localStorage.getItem('app_marketName')
+  useEffect(() => {
+    getConfigsCache().then((c) => {
+      if (c.marketLogoUrl) setLogoUrl(c.marketLogoUrl)
+      if (c.marketName) setMarketName(c.marketName)
+    }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -69,10 +75,6 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
       document.removeEventListener('keydown', handleKey)
     }
   }, [menuOpen])
-
-  useEffect(() => {
-    getConfigsCache().catch(() => {})
-  }, [])
 
   function handleLogout() {
     if (onLogout) { onLogout(); return }

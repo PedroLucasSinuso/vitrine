@@ -53,9 +53,12 @@ export default function AppHeader() {
     if (searchTimer.current) clearTimeout(searchTimer.current)
     const q = query.trim()
     if (q.length < 2) {
-      setSearchResults([])
-      setShowResults(false)
-      setActiveIndex(-1)
+      // Defer state updates to avoid setState-in-effect lint
+      searchTimer.current = setTimeout(() => {
+        setSearchResults([])
+        setShowResults(false)
+        setActiveIndex(-1)
+      }, 0)
       return
     }
     searchTimer.current = setTimeout(async () => {

@@ -108,8 +108,13 @@ def _enviar_relatorio_email():
                 return
 
             assunto = f"Relatório Semanal — {nome_loja}"
-            html, imagens = construir_relatorio_email(nome_loja, source)
+            html, imagens, anexo_bytes = construir_relatorio_email(nome_loja, source)
             smtp_port = int(smtp_port_str)
+
+        # Monta anexo se houver
+        anexos = None
+        if anexo_bytes:
+            anexos = [(anexo_bytes, "relatorio_semanal.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")]
 
         # Envio fora do with (não precisa de sessão)
         resultados = enviar_para_lista_com_imagens(
@@ -117,6 +122,7 @@ def _enviar_relatorio_email():
             smtp_host=smtp_host, smtp_port=smtp_port,
             smtp_user=smtp_user, smtp_password=smtp_password,
             email_from=email_from,
+            anexos=anexos,
         )
         logger.info("Email enviado | resultados=%s", resultados)
     except Exception as e:

@@ -3,132 +3,56 @@
 Serviço unificado para ler e escrever configurações do sistema no SQLite.
 Fallback automático para .env (Settings) quando a chave não existe no banco,
 permitindo migração transparente.
+
+Responsabilidades delegadas a módulos especializados:
+  - ``config_cache``: Cache TTL + thread lock
+  - ``config_crypto``: Fernet encryption/decryption
+  - ``config_validator``: Whitelist de chaves editáveis e validação de sensibilidade
 """
 
 import logging
-import threading
 from datetime import datetime, timezone
 from urllib.parse import urlparse, unquote
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from cryptography.fernet import Fernet
 
 from app.domain.models.configuracao import Configuracao
 from app.core.config import settings
 
+# ── Delegado: cache ──────────────────────────────────────────────────
+from app.application.config_cache import (
+    get_from_cache,
+    set_in_cache,
+    invalidate_cache as _invalidate_cache_impl,
+    _cache,  # exposto para testes (test_config_service)
+)
+
+# ── Delegado: criptografia ───────────────────────────────────────────
+from app.application.config_crypto import (
+    encrypt as _encrypt,
+    decrypt as _decrypt,
+    SENTINEL_MASCARADO,
+    CHAVES_CRIPTOGRAFADAS,
+    migrar_chaves_criptografia as _migrar_chaves_criptografia_impl,
+)
+
+# ── Delegado: validação ──────────────────────────────────────────────
+from app.application.config_validator import (
+    is_sensitive,
+    CHAVES_EDITAVEIS,
+    is_only_env,
+    CHAVES_SOMENTE_ENV as _CHAVES_SOMENTE_ENV,
+)
+
 logger = logging.getLogger(__name__)
 
-# ── Criptografia condicional ────────────────────────────────────────────────
-# Se ERPS_ENCRYPTION_KEY estiver configurada no .env, senhas sensíveis
-# (ex: erp_password) são criptografadas antes de salvar no banco e
-# descriptografadas ao serem lidas. Sem a chave, as senhas são salvas
-# em texto plano (compatibilidade retroativa).
-_cipher: Fernet | None = None
-if settings.erps_encryption_key:
-    try:
-        _cipher = Fernet(settings.erps_encryption_key.encode())
-    except Exception:
-        logger.warning("ERPS_ENCRYPTION_KEY inválida — senhas serão salvas em texto plano")
+# Re-export da API pública para não quebrar consumidores existentes
+invalidar_cache = _invalidate_cache_impl
+_migrar_chaves_criptografia = _migrar_chaves_criptografia_impl
 
-# Cache leve com TTL (segundos) — evita ler do banco a cada chamada,
-# mas sem os problemas de invalidação manual entre workers.
-# C4: thread lock protege contra race condition em _cache.clear() + _cache[]
-_cache: dict[str, tuple[str, float]] = {}
-_cache_lock: threading.Lock = threading.Lock()
-CACHE_TTL = 30
-
+# Flag para rastrear chaves copiadas do .env (usado internamente)
 CHAVES_COPIADAS_DO_ENV: set[str] = set()
-
-# ── Chaves que SOMENTE vêm do .env (ignoram cache e banco) ────────────────
-# Estas chaves nunca devem ser lidas do SQLite nem sobrescritas via UI.
-# Proteção crítica contra escalada de privilégio via JWT.
-_CHAVES_SOMENTE_ENV: set[str] = {"jwt_secret"}
-
-# ── Whitelist de chaves editáveis via API ──────────────────────────────────
-# Qualquer chave não listada aqui será rejeitada por set_many().
-# Mantenha esta lista sincronizada com as abas da UI de Admin > Configurações.
-CHAVES_EDITAVEIS: set[str] = {
-    # Aba Geral
-    "nome_estabelecimento",
-    "logo_url",
-    # Aba Geral — Endereço
-    "endereco_rua",
-    "endereco_numero",
-    "endereco_complemento",
-    "endereco_bairro",
-    "endereco_cidade",
-    "endereco_estado",
-    "endereco_cep",
-    # Aba ERP — campos individuais (substitui erp_postgres_url)
-    "erp_host",
-    "erp_port",
-    "erp_database",
-    "erp_user",
-    "erp_password",
-    "cache_refresh_interval",
-    # Aba WhatsApp
-    "twilio_account_sid",
-    "twilio_auth_token",
-    "twilio_from_number",
-    # Aba E-mail
-    "smtp_host",
-    "smtp_port",
-    "smtp_user",
-    "smtp_password",
-    "email_from",
-    # Aba Intelligence / Agendamentos
-    "report_day",
-    "report_time",
-    "report_email_day",
-    "report_email_time",
-    "etl_interval_minutes",
-    "relatorio_dias_retroativos",
-    # Aba Sistema
-    "anthropic_api_key",
-    "openai_api_key",
-    # Aba Metas
-    "meta_faturamento_mensal",
-}
-
-# Chaves sensíveis — nunca retornar valor real no GET.
-# Usa heurística por nome + lista explícita para segurança extra.
-_CHAVES_SENSIVEIS_POR_PADRAO: set[str] = {
-    "twilio_auth_token", "twilio_account_sid",
-    "smtp_password", "anthropic_api_key", "openai_api_key",
-    "erp_password",
-}
-
-# Padrões de chaves sensíveis — lista explícita, sem regex complexo.
-# Qualquer chave que contenha um destes termos (case-insensitive) é considerada
-# sensível, exceto as que estão em _CHAVES_NAO_SENSIVEIS.
-_CHAVES_SENSIVEIS_POR_PADRAO = _CHAVES_SENSIVEIS_POR_PADRAO | {
-    "jwt_secret", "erp_postgres_url", "erp_password",
-    "postgres_password", "twilio_auth_token", "twilio_account_sid",
-    "smtp_password", "anthropic_api_key", "openai_api_key",
-}
-# Chaves que corresponderiam a padrões mas não são sensíveis (ex: logo_url)
-_CHAVES_NAO_SENSIVEIS: set[str] = {"logo_url"}
-
-
-def is_sensitive(chave: str) -> bool:
-    """Retorna True se a chave é considerada sensível (não expor valor real).
-
-    Usa lista explícita de padrões em vez de regex com negative lookbehind
-    para clareza e manutenibilidade.
-    """
-    chave_lower = chave.lower()
-    if chave_lower in _CHAVES_NAO_SENSIVEIS:
-        return False
-    if chave_lower in _CHAVES_SENSIVEIS_POR_PADRAO:
-        return True
-    # Heurística por palavra-chave no nome (exceto logo_url)
-    _termos_sensiveis = {"password", "secret", "token", "api_key", "auth_token", "sid", "url"}
-    for termo in _termos_sensiveis:
-        if termo in chave_lower:
-            return True
-    return False
-
 
 # Mapeamento de chaves do banco para atributos do Settings (.env)
 _ENV_FALLBACK_MAP: dict[str, str] = {
@@ -217,7 +141,7 @@ def _seed_from_env(db: Session, chave: str) -> str | None:
             return existing.valor
 
         # Criptografa antes de salvar se for chave protegida
-        valor_final = _criptografar(env_val) if chave in _CHAVES_CRIPTOGRAFADAS else env_val
+        valor_final = _encrypt(env_val) if chave in CHAVES_CRIPTOGRAFADAS else env_val
         db.add(Configuracao(
             chave=chave,
             valor=valor_final,
@@ -246,34 +170,30 @@ def get(db: Session, chave: str, default: str = "") -> str:
     4. default informado
     """
     # 0. Chaves que só vêm do .env — ignoram cache e banco completamente
-    if chave in _CHAVES_SOMENTE_ENV:
+    if is_only_env(chave):
         env_val: str | None = getattr(settings, chave, None)
         return env_val if env_val else default
 
     now = datetime.now(timezone.utc).timestamp()
 
-    # 1. Cache (C4: protegido por lock)
-    with _cache_lock:
-        cached = _cache.get(chave)
-        if cached is not None and (now - cached[1]) < CACHE_TTL:
-            return cached[0]
+    # 1. Cache
+    cached = get_from_cache(chave, now)
+    if cached is not None:
+        return cached
 
     # 2. SQLite
     row = db.execute(
         select(Configuracao).where(Configuracao.chave == chave)
     ).scalar_one_or_none()
     if row is not None and row.valor:
-        with _cache_lock:  # C4
-            _cache[chave] = (row.valor, now)
+        set_in_cache(chave, row.valor, now)
         return row.valor
 
     # 3. Fallback .env com seed automático
-    # Só tenta seed para chaves que estão no map de fallback
     if chave in _ENV_FALLBACK_MAP:
         seeded = _seed_from_env(db, chave)
         if seeded is not None:
-            with _cache_lock:  # C4
-                _cache[chave] = (seeded, now)
+            set_in_cache(chave, seeded, now)
             return seeded
 
     # 4. Default
@@ -285,7 +205,7 @@ def get_many(db: Session, chaves: list[str]) -> dict[str, str]:
 
     Popula o cache interno para todas as chaves encontradas.
     Chaves não encontradas retornam string vazia (mesmo comportamento
-    de `get()` sem default).
+    de ``get()`` sem default).
     """
     now = datetime.now(timezone.utc).timestamp()
     resultado: dict[str, str] = {}
@@ -293,7 +213,7 @@ def get_many(db: Session, chaves: list[str]) -> dict[str, str]:
     # Separa chaves que só vêm do .env
     pendentes: list[str] = []
     for chave in chaves:
-        if chave in _CHAVES_SOMENTE_ENV:
+        if is_only_env(chave):
             env_val: str | None = getattr(settings, chave, None)
             resultado[chave] = env_val if env_val else ""
         else:
@@ -303,11 +223,10 @@ def get_many(db: Session, chaves: list[str]) -> dict[str, str]:
         return resultado
 
     # Cache hit
-    with _cache_lock:
-        for chave in pendentes:
-            cached = _cache.get(chave)
-            if cached is not None and (now - cached[1]) < CACHE_TTL:
-                resultado[chave] = cached[0]
+    for chave in pendentes:
+        cached = get_from_cache(chave, now)
+        if cached is not None:
+            resultado[chave] = cached
 
     ainda_pendentes = [c for c in pendentes if c not in resultado]
     if not ainda_pendentes:
@@ -319,26 +238,21 @@ def get_many(db: Session, chaves: list[str]) -> dict[str, str]:
     ).scalars().all()
     row_map = {r.chave: r.valor for r in rows}
 
-    with _cache_lock:
-        for chave in ainda_pendentes:
-            valor = row_map.get(chave, "")
-            if valor:
-                _cache[chave] = (valor, now)
-            resultado[chave] = valor
+    for chave in ainda_pendentes:
+        valor = row_map.get(chave, "")
+        if valor:
+            set_in_cache(chave, valor, now)
+        resultado[chave] = valor
 
     # Seed do .env para chaves não encontradas (apenas chaves do fallback map)
     for chave in ainda_pendentes:
         if not resultado[chave] and chave in _ENV_FALLBACK_MAP:
             seeded = _seed_from_env(db, chave)
             if seeded is not None:
-                with _cache_lock:
-                    _cache[chave] = (seeded, now)
+                set_in_cache(chave, seeded, now)
                 resultado[chave] = seeded
 
     return resultado
-
-
-# ── Função pública para obter valor descriptografado ───────────────────────────
 
 
 def get_decrypted(db: Session, chave: str, default: str = "") -> str:
@@ -348,16 +262,9 @@ def get_decrypted(db: Session, chave: str, default: str = "") -> str:
     de conexão), não do hash/cyphertext armazenado.
     """
     valor = get(db, chave, default)
-    if chave in _CHAVES_CRIPTOGRAFADAS and valor:
-        return _descriptografar(valor)
+    if chave in CHAVES_CRIPTOGRAFADAS and valor:
+        return _decrypt(valor)
     return valor
-
-
-# Sentinel value usado pelo frontend para campos mascarados.
-# Quando o PATCH recebe este valor, o backend interpreta como
-# "não alterar" — útil para campos sensíveis que o frontend
-# não pode revelar.
-SENTINEL_MASCARADO = "***configurado***"
 
 
 def set_many(db: Session, valores: dict[str, str]) -> list[str]:
@@ -375,7 +282,7 @@ def set_many(db: Session, valores: dict[str, str]) -> list[str]:
     preservadas: list[str] = []
     for chave, valor in valores.items():
         # Bloqueia chaves que só podem vir do .env (ex: jwt_secret)
-        if chave in _CHAVES_SOMENTE_ENV:
+        if is_only_env(chave):
             ignoradas.append(chave)
             logger.warning(
                 "Tentativa de salvar chave protegida (somente .env) | chave=%s", chave
@@ -385,8 +292,8 @@ def set_many(db: Session, valores: dict[str, str]) -> list[str]:
             ignoradas.append(chave)
             logger.warning("Tentativa de salvar chave não editável | chave=%s", chave)
             continue
+
         # String vazia = preservar valor atual se já existir algo salvo
-        # Impede que o frontend sobrescreva senhas ao enviar "" durante edição
         if not valor:
             existing = db.execute(
                 select(Configuracao).where(Configuracao.chave == chave)
@@ -397,18 +304,16 @@ def set_many(db: Session, valores: dict[str, str]) -> list[str]:
 
         # Sentinel = preservar valor atual
         if valor == SENTINEL_MASCARADO:
-            # Verifica se a chave já existe — se não existir, salva o sentinel
-            # (caso o usuário queira literalmente "***configurado***" como valor,
-            #  cenário improvável mas seguro)
             existing = db.execute(
                 select(Configuracao).where(Configuracao.chave == chave)
             ).scalar_one_or_none()
             if existing:
                 preservadas.append(chave)
                 continue
+
         # Criptografa antes de salvar se a chave estiver na lista de protegidas
-        if chave in _CHAVES_CRIPTOGRAFADAS and valor and valor != SENTINEL_MASCARADO:
-            valor = _criptografar(valor)
+        if chave in CHAVES_CRIPTOGRAFADAS and valor and valor != SENTINEL_MASCARADO:
+            valor = _encrypt(valor)
 
         existing = db.execute(
             select(Configuracao).where(Configuracao.chave == chave)
@@ -435,77 +340,12 @@ def set_many(db: Session, valores: dict[str, str]) -> list[str]:
     return ignoradas
 
 
-# ── Chaves que são criptografadas em repouso ────────────────────────────────
-_CHAVES_CRIPTOGRAFADAS: set[str] = {"erp_password"}
-
-
-def _migrar_chaves_criptografia(db: Session) -> None:
-    """Re-salva chaves protegidas que ainda estão em texto puro.
-
-    Executado uma vez na inicialização (via `get()` ou explicitamente).
-    Detecta se o valor já está criptografado tentando descriptografar:
-    - Se falhar → é texto puro → criptografa e salva.
-    - Se funcionar → já está criptografado → pula.
-    """
-    if not _cipher:
-        return  # sem chave de criptografia configurada, nada a migrar
-    for chave in _CHAVES_CRIPTOGRAFADAS:
-        row = db.execute(
-            select(Configuracao).where(Configuracao.chave == chave)
-        ).scalar_one_or_none()
-        if row is None or not row.valor:
-            continue
-        # Tenta descriptografar — se falhar é texto puro
-        try:
-            _cipher.decrypt(row.valor.encode())
-            # OK, já criptografado
-            continue
-        except Exception:
-            pass  # texto puro — precisa migrar
-        try:
-            row.valor = _cipher.encrypt(row.valor.encode()).decode()
-            row.atualizado_em = datetime.now(timezone.utc)
-            db.commit()
-            logger.info("Chave criptografada na migração | chave=%s", chave)
-        except Exception as e:
-            db.rollback()
-            logger.error("Erro ao migrar chave para criptografia | chave=%s erro=%s", chave, e)
-
-
-def _criptografar(valor: str) -> str:
-    """Criptografa um valor usando Fernet (simétrico)."""
-    if not _cipher or not valor:
-        return valor
-    return _cipher.encrypt(valor.encode()).decode()
-
-
-def _descriptografar(valor: str) -> str:
-    """Descriptografa um valor previamente criptografado com Fernet.
-
-    Se o valor já estiver em texto puro (legado anterior à criptografia),
-    retorna o próprio valor como fallback — sem quebrar a conexão.
-    """
-    if not _cipher or not valor:
-        return valor
-    try:
-        return _cipher.decrypt(valor.encode()).decode()
-    except Exception:
-        # Pode ser valor legado (texto puro) ou corrompido.
-        # Em ambos os casos, retornar o valor bruto é mais seguro
-        # do que retornar "" e quebrar a montagem da URL.
-        logger.warning(
-            "Valor não parece criptografado — retornando como está "
-            "(pode ser legado anterior à criptografia). chave=erp_password"
-        )
-        return valor
-
-
 def montar_url_postgres(db: Session) -> str:
     """Monta a URL de conexão PostgreSQL a partir dos campos individuais.
 
     Lê erp_host, erp_port, erp_database, erp_user do ConfigService e
-    descriptografa erp_password automaticamente via get_decrypted().
-    Usa get_many() (m3) para fazer uma única query em vez de 5 get() separados.
+    descriptografa erp_password automaticamente via ``get_decrypted()``.
+    Usa ``get_many()`` (m3) para fazer uma única query em vez de 5 ``get()`` separados.
     """
     _CHAVES_ERP = ["erp_host", "erp_port", "erp_database", "erp_user", "erp_password"]
     valores = get_many(db, _CHAVES_ERP)
@@ -519,11 +359,5 @@ def montar_url_postgres(db: Session) -> str:
     if not all([host, database, user, enc_password]):
         return ""
 
-    password = _descriptografar(enc_password) if _cipher else enc_password
+    password = _decrypt(enc_password) if enc_password else enc_password
     return f"postgresql://{user}:{password}@{host}:{port}/{database}"
-
-
-def invalidar_cache() -> None:
-    """Limpa o cache interno. (C4: protegido por lock)"""
-    with _cache_lock:
-        _cache.clear()

@@ -5,6 +5,8 @@ export interface Column<T> {
   label: string
   sortable?: boolean
   align?: 'left' | 'right' | 'center'
+  /** Alinhamento do cabeçalho (padrão: 'center') */
+  headerAlign?: 'left' | 'right' | 'center'
   hide?: 'sm' | 'md' | 'lg'
   width?: string
   render?: (item: T) => React.ReactNode
@@ -195,7 +197,7 @@ export default function DataTable<T>({
               <div
                 key={col.key}
                 className="h-3 bg-bg-hover rounded animate-pulse"
-                style={{ width: col.width || `${60 + Math.random() * 30}%`, flex: col.width ? '0 0 auto' : 1 }}
+                style={{ width: col.width || `${60 + (col.key.charCodeAt(0) % 30)}%`, flex: col.width ? '0 0 auto' : 1 }}
               />
             ))}
           </div>
@@ -257,12 +259,13 @@ export default function DataTable<T>({
         )}
         {columns.map((col) => {
           const hideClass = col.hide ? hideMap[col.hide] : ''
-          const alignClass = col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
+          const headerAlign = col.headerAlign ?? 'center'
+          const headerAlignClass = headerAlign === 'right' ? 'text-right' : headerAlign === 'center' ? 'text-center' : 'text-left'
           const sortableClass = col.sortable ? 'table-header-cell-sortable group' : ''
           return (
             <th
               key={col.key}
-              className={`${col.sortable ? sortableClass : 'table-header-cell'} ${alignClass} ${hideClass}`}
+              className={`${col.sortable ? sortableClass : 'table-header-cell'} ${headerAlignClass} ${hideClass}`}
               style={col.width ? { width: col.width } : undefined}
               onClick={() => col.sortable && onSort?.(col.key)}
               aria-sort={sortBy === col.key ? (sortOrder === 'asc' ? 'ascending' : 'descending') : undefined}

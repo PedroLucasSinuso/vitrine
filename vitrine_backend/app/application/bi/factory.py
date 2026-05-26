@@ -8,6 +8,7 @@ from app.core.models.transaction import TransactionItem
 from app.application.bi.domain.vendas import Vendas
 from app.application.bi.domain.trocas import Trocas
 from app.application.bi.schema import Metrica
+from app.schemas.bi_schema import KpisDTO
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,30 @@ def _filtrar_hora(items: list[TransactionItem], data_limite: date, hora_atual: i
     ]
 
 
+def calcular_kpis_rapido(
+    source: TransactionSource,
+    data_inicio: date,
+    data_fim: date,
+) -> KpisDTO | None:
+    """Calcula KPIs diretamente de agregados SQL, sem carregar linhas.
+
+    Retorna KpisDTO se o adapter suportar consulta agregada,
+    None caso contrário (caller deve fazer full load).
+    """
+    aggregates = source.get_kpi_aggregates(data_inicio, data_fim)
+    if aggregates is None:
+        return None
+
+    return KpisDTO(
+        faturamento_bruto=aggregates["faturamento_bruto"],
+        faturamento_liquido=round(aggregates["faturamento_bruto"] - aggregates["total_trocas"], 2),
+        total_trocas=aggregates["total_trocas"],
+        qtd_tickets=aggregates["qtd_tickets"],
+        ticket_medio=aggregates["ticket_medio"],
+        itens_por_ticket=aggregates["itens_por_ticket"],
+    )
+
+
 def criar_dominio(
     source: TransactionSource,
     data_inicio: date,
@@ -48,16 +73,29 @@ def criar_dominio(
 
     Args:
         tipo: "completo" para fetch integral, "kpis" para apenas resumo.
-              TODO: implementar fetch parcial para tipo="kpis" evitando
-              carregar todos os itens transacionais quando só KPIs são
-              necessários. Atualmente o parâmetro é aceito mas o fetch
-              ainda é integral.
+              Quando "kpis", tenta usar get_kpi_aggregates() para carregar
+              apenas agregados SQL em vez de todas as linhas.
+              Se o adapter não suportar agregados, faz full load (fallback).
     """
     if tipo == "kpis":
-        logger.info("BI criando domínio (KPI, TODO: fetch parcial) | periodo=%s..%s", data_inicio, data_fim)
+        aggregates = source.get_kpi_aggregates(data_inicio, data_fim)
+        if aggregates is not None:
+            logger.info("BI domínio (KPI rápido) | periodo=%s..%s agg=%s",
+                        data_inicio, data_fim, aggregates)
+            # Cria dominios com dados vazios — o caller deve usar
+            # calcular_kpis_rapido() ou Relatorio.kpis() que aceitam
+            # items vazios pois o DataFrame vazio é válido.
+            # TODO: refatorar Vendas/Trocas para aceitar agregados
+            # pré-computados e evitar a criação de items/df desnecessária.
+            vendas = Vendas([])
+            trocas = Trocas([])
+            return DominioBI(vendas=vendas, trocas=trocas)
+
+        logger.info("BI criando domínio (KPI, fallback full load) | periodo=%s..%s",
+                    data_inicio, data_fim)
     else:
         logger.info("BI criando domínio | periodo=%s..%s", data_inicio, data_fim)
-    # TODO: para tipo="kpis", carregar apenas agregados em vez de todos os itens
+
     items = source.get_items(data_inicio, data_fim)
     vendas = Vendas(items)
     trocas = Trocas(items)
@@ -67,7 +105,12 @@ def criar_dominio(
 
 
 def _debug_items(items_before: list[TransactionItem], data_limite: date, hora_atual: int, label: str):
-    """Log detalhado para depuração do filtro de hora."""
+    """Log detalhado para depuração do filtro de hora.
+    Só executa as iterações se o logger estiver em nível DEBUG para evitar
+    percorrer a lista 3× desnecessariamente em produção.
+    """
+    if not logger.isEnabledFor(logging.DEBUG):
+        return
     filtrados = _filtrar_hora(items_before, data_limite, hora_atual)
 
     # Contagem por data no período

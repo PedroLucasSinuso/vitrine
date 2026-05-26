@@ -79,7 +79,8 @@ export default function Usuarios() {
     }
   }
 
-  useEffect(() => { carregar() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount legítimo
+  useEffect(() => { carregar() }, [])
 
   async function handleCriar() {
     setErroCriacao('')
