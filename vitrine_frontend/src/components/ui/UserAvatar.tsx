@@ -27,14 +27,17 @@ const SIZE_MAP = {
  * Nunca exibe foto real — apenas ilustrações abstratas com iniciais.
  */
 export default function UserAvatar({ name, size = 'md', className = '' }: Props) {
-  const initials = name
+  // Se name for vazio, exibe fallback seguro (não quebra o layout)
+  const safeName = name || '?'
+
+  const initials = safeName
     .split(' ')
     .map(n => n[0])
     .join('')
     .substring(0, 2)
     .toUpperCase()
 
-  const colorIdx = name.charCodeAt(0) % AVATAR_COLORS.length
+  const colorIdx = safeName.charCodeAt(0) % AVATAR_COLORS.length
   const color = AVATAR_COLORS[colorIdx]
 
   return (

@@ -124,8 +124,6 @@ function ResumoDia({ receita, tickets, ticketMedio, anterior, comparar: compAtiv
   const antTicketMedioDaily = ant ? findValorAnterior(ultimo.data, ant.ticketMedio) : null
 
   // ── Fallback: variação geral do período (kpisComp) ──
-  //    Usa a variação percentual do período *todo* quando o dado diário
-  //    do ano anterior não está disponível (ex: feriado, loja fechada)
   const fallbackVariacao = compAtivo && variacaoPeriodo ? variacaoPeriodo : null
 
   function BadgeVariacao({ atual, anterior: antVal, fallback }: { atual: number; anterior: number | null; fallback?: { variacao: number | null } | null }) {
@@ -133,15 +131,13 @@ function ResumoDia({ receita, tickets, ticketMedio, anterior, comparar: compAtiv
     let rotulo = 'vs ano anterior'
 
     if (antVal !== null) {
-      // Comparação diária (same-weekday)
       if (antVal === 0 && atual > 0) {
-        diff = 100 // se ano passado foi 0 e agora > 0, é 100%+
+        diff = 100
       } else if (antVal > 0) {
         diff = ((atual / antVal) - 1) * 100
       }
     }
 
-    // Fallback: variação geral do período (kpisComp)
     if (diff === null && fallback?.variacao != null) {
       diff = fallback.variacao
       rotulo = 'vs período anterior'
@@ -151,66 +147,65 @@ function ResumoDia({ receita, tickets, ticketMedio, anterior, comparar: compAtiv
 
     const isPositive = diff >= 0
     return (
-      <span className={`text-xs font-semibold inline-flex items-center gap-1 ${isPositive ? 'text-success' : 'text-danger'}`}>
+      <span className={`text-xs font-semibold inline-flex items-center gap-1.5 ${isPositive ? 'text-success' : 'text-danger'}`}>
         <span className="text-sm leading-none">{isPositive ? '▲' : '▼'}</span>
         {Math.abs(diff).toFixed(1)}%
-        <span className="text-text-muted font-normal text-[11px]">{rotulo}</span>
+        <span className="text-text-muted font-normal text-[10px]">{rotulo}</span>
       </span>
     )
   }
 
-  function LinhaAnterior({ label, valor }: { label: string; valor: number | null }) {
-    if (valor === null) return <p className="text-[11px] text-text-muted leading-tight h-[16px]" />
+  function LinhaAnterior({ valor, fmt }: { valor: number | null; fmt: (v: number) => string }) {
+    if (valor === null) return <p className="h-[14px]" />
     return (
-      <p className="text-[11px] text-text-muted leading-tight h-[16px]">
-        Ano passado: {label}
+      <p className="text-[11px] text-text-muted leading-tight h-[14px]">
+        Ano passado: <span className="font-medium text-text-secondary">{fmt(valor)}</span>
       </p>
     )
   }
 
-  // Verifica se o último dia é "hoje" (parcial)
   const hojeFormatado = format(new Date(), 'yyyy-MM-dd')
   const ultimoEParcial = ultimo.data === hojeFormatado && !!dadosParciaisAte
 
   return (
-    <Card variant="bordered" padding="sm">
-      {/* Header */}
-      <div className="flex items-center gap-2 pb-3 border-b border-border mb-3">
-        <div className="p-1.5 rounded-lg bg-primary-light text-primary shrink-0">
-          <CalendarDays size={14} />
+    <Card variant="elevated" padding="md">
+      <div className="flex items-center gap-3 pb-4 border-b border-border mb-4">
+        <div className="p-2 rounded-xl bg-primary-light text-primary shrink-0">
+          <CalendarDays size={16} />
         </div>
-        <span className="text-xs font-semibold text-text-primary">{formatDateWithWeekday(ultimo.data)}</span>
+        <div className="flex-1 min-w-0">
+          <span className="text-xs font-semibold text-text-primary">{formatDateWithWeekday(ultimo.data)}</span>
+        </div>
         {ultimoEParcial && (
-          <span className="text-[10px] text-warning bg-warning-light px-1.5 py-0.5 rounded-full font-medium ml-auto">
-            Parcial até {dadosParciaisAte}
+          <span className="text-[10px] text-warning bg-warning-light px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1 shrink-0">
+            <Clock size={10} /> Parcial até {dadosParciaisAte}
           </span>
         )}
       </div>
 
-      {/* Grid 3 colunas */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-8">
         {/* Vendas */}
-        <div className="flex flex-col gap-1">
-          <p className="text-[11px] font-mono font-bold uppercase tracking-widest text-text-muted">Vendas</p>
-          <p className="text-lg font-bold text-text-primary tabular-nums">{formatCurrency(valorReceita)}</p>
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-text-muted">Vendas</p>
+          <p className="text-xl font-bold text-text-primary tabular-nums tracking-tight">{formatCurrency(valorReceita)}</p>
           <BadgeVariacao atual={valorReceita} anterior={antReceitaDaily} fallback={fallbackVariacao ? { variacao: fallbackVariacao.fatBruto } : null} />
-          <LinhaAnterior label={antReceitaDaily != null ? formatCurrency(antReceitaDaily) : ''} valor={antReceitaDaily} />
+          <LinhaAnterior valor={antReceitaDaily} fmt={formatCurrency} />
         </div>
 
         {/* Tickets */}
-        <div className="flex flex-col gap-1">
-          <p className="text-[11px] font-mono font-bold uppercase tracking-widest text-text-muted">Tickets</p>
-          <p className="text-lg font-bold text-text-primary tabular-nums">{Math.round(valorTickets).toLocaleString('pt-BR')}</p>
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-text-muted">Tickets</p>
+          <p className="text-xl font-bold text-text-primary tabular-nums tracking-tight">{Math.round(valorTickets).toLocaleString('pt-BR')}</p>
           <BadgeVariacao atual={valorTickets} anterior={antTicketsDaily} fallback={fallbackVariacao ? { variacao: fallbackVariacao.tickets } : null} />
-          <LinhaAnterior label={antTicketsDaily != null ? Math.round(antTicketsDaily).toLocaleString('pt-BR') : ''} valor={antTicketsDaily} />
+          <LinhaAnterior valor={antTicketsDaily} fmt={(v) => Math.round(v).toLocaleString('pt-BR')} />
         </div>
 
         {/* Ticket Médio */}
-        <div className="flex flex-col gap-1">
-          <p className="text-[11px] font-mono font-bold uppercase tracking-widest text-text-muted">Ticket Médio</p>
-          <p className="text-lg font-bold text-text-primary tabular-nums">{formatCurrency(valorTicketMedio)}</p>
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-text-muted">Ticket Médio</p>
+          <p className="text-xl font-bold text-text-primary tabular-nums tracking-tight">{formatCurrency(valorTicketMedio)}</p>
           <BadgeVariacao atual={valorTicketMedio} anterior={antTicketMedioDaily} fallback={fallbackVariacao ? { variacao: fallbackVariacao.ticketMedio } : null} />
-          <LinhaAnterior label={antTicketMedioDaily != null ? formatCurrency(antTicketMedioDaily) : ''} valor={antTicketMedioDaily} />
+          <LinhaAnterior valor={antTicketMedioDaily} fmt={formatCurrency} />
         </div>
       </div>
     </Card>
@@ -437,19 +432,13 @@ export default function Dashboard() {
   const temGraficos = diarioTicketMedio.length > 1 || diarioTickets.length > 1
   const temDadosHora = dadosHora.length > 0
 
-  // Detecta se o preset "Este mês" está ativo
-  const presetEsteMesAtivo = (() => {
-    const mesAtual = periodoMesAtual()
-    return periodo.data_inicio === mesAtual.data_inicio && periodo.data_fim === mesAtual.data_fim
-  })()
-
   return (
     <BiPageLayout titulo="Dashboard" breadcrumb={[{ label: 'BI' }, { label: 'Dashboard' }]}>
       {/* ============================================================ */}
       {/* TOP BAR — Periodo + Controls + Status                        */}
       {/* ============================================================ */}
-      <Card variant="bordered" padding="sm">
-        <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+      <Card variant="bordered" padding="md">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           {/* Left: periodo form */}
           <div className="flex-1 min-w-0">
             <PeriodoForm
@@ -459,21 +448,15 @@ export default function Dashboard() {
               loading={loading}
               presets={PRESETS_DASHBOARD}
             />
-            {presetEsteMesAtivo && (
-              <span className="inline-flex items-center gap-1 mt-2 text-[11px] font-medium text-text-muted bg-bg-hover px-2 py-0.5 rounded-full">
-                <Clock size={10} />
-                Padrão — dados do mês vigente
-              </span>
-            )}
           </div>
 
-          {/* Right: controls + status */}
-          <div className="flex flex-col gap-2 sm:items-end sm:pt-1 shrink-0">
-            {/* Comparar toggle pill */}
+          {/* Right: controls inline */}
+          <div className="flex items-center gap-3 shrink-0 flex-wrap">
+            {/* Comparar toggle */}
             <button
               onClick={() => setComparar((prev) => !prev)}
               className={`
-                text-xs font-semibold px-3 py-1.5 rounded-full transition-all
+                text-xs font-semibold px-3 py-1.5 rounded-full transition-all whitespace-nowrap
                 ${comparar
                   ? 'bg-primary text-white shadow-sm'
                   : 'bg-bg-hover text-text-secondary hover:bg-primary-lighter hover:text-primary'
@@ -483,30 +466,31 @@ export default function Dashboard() {
               {comparar ? 'Comparando com ano anterior' : 'Comparar com ano anterior'}
             </button>
 
-            {/* Cache freshness + Export */}
-            <div className="flex items-center gap-3">
-              {cacheTimestamp && (
-                <span
-                  className="flex items-center gap-1.5 text-xs text-text-muted font-medium"
-                  title={`Cache atualizado às ${format(new Date(cacheTimestamp), 'HH:mm:ss')}`}
-                >
-                  <RefreshCw size={12} className={cacheFresh ? 'text-success' : 'text-warning'} />
-                  {formatDistanceToNow(new Date(cacheTimestamp), { locale: ptBR, addSuffix: true })}
-                </span>
-              )}
-              <ExportButtons
-                onExcel={() => { exportarExcelBI(periodo, 'kpis'); toast({ type: 'success', message: 'Excel exportado' }) }}
-                onCsv={() => { if (kpisAtivos) { baixarCSVdeArray([kpisAtivos], 'kpis'); toast({ type: 'success', message: 'CSV exportado' }) } }}
-                disabled={!kpisAtivos}
-              />
-            </div>
-
-            {kpisComp?.dados_parciais_ate && (
-              <span className="text-xs text-warning bg-warning-light px-2.5 py-1 rounded-full">
-                <Clock size={12} className="inline mr-1" /> Parcial até {kpisComp.dados_parciais_ate}
-              </span>
-            )}
+            {/* Export */}
+            <ExportButtons
+              onExcel={() => { exportarExcelBI(periodo, 'kpis'); toast({ type: 'success', message: 'Excel exportado' }) }}
+              onCsv={() => { if (kpisAtivos) { baixarCSVdeArray([kpisAtivos], 'kpis'); toast({ type: 'success', message: 'CSV exportado' }) } }}
+              disabled={!kpisAtivos}
+            />
           </div>
+        </div>
+
+        {/* Status bar — subtle, below the main row */}
+        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border">
+          {cacheTimestamp && (
+            <span
+              className="flex items-center gap-1.5 text-[11px] text-text-muted font-medium"
+              title={`Cache atualizado às ${format(new Date(cacheTimestamp), 'HH:mm:ss')}`}
+            >
+              <RefreshCw size={10} className={cacheFresh ? 'text-success' : 'text-warning'} />
+              {formatDistanceToNow(new Date(cacheTimestamp), { locale: ptBR, addSuffix: true })}
+            </span>
+          )}
+          {kpisComp?.dados_parciais_ate && (
+            <span className="text-[11px] text-warning bg-warning-light px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1">
+              <Clock size={10} /> Parcial até {kpisComp.dados_parciais_ate}
+            </span>
+          )}
         </div>
       </Card>
 
