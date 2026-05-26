@@ -33,8 +33,8 @@ class TestExportadorExcel:
         assert "Vazia" not in wb.sheetnames
         assert "Cheia" in wb.sheetnames
 
-    def test_formatacao_moeda_aplicada(self):
-        """Colunas com nome sugestivo de moeda devem receber number_format."""
+    def test_valores_preservados(self):
+        """Valores devem ser preservados sem formatação numérica adicional."""
         dados = {
             "KPIs": [
                 {"faturamento_bruto": 1234.56, "qtd_tickets": 42},
@@ -44,10 +44,11 @@ class TestExportadorExcel:
         buf = exportador.exportar(dados)
         wb = load_workbook(BytesIO(buf))
         ws = wb.active
-        # Célula A2 (faturamento_bruto) deve ter formatação de moeda
-        assert ws.cell(row=2, column=1).number_format == '#,##0.00'
-        # Célula B2 (qtd_tickets) deve ter formatação de inteiro
-        assert ws.cell(row=2, column=2).number_format == '#,##0'
+        # Valores devem estar presentes e sem formatação numérica automática
+        assert ws.cell(row=2, column=1).value == 1234.56
+        assert ws.cell(row=2, column=2).value == 42
+        # Formato deve ser 'General' (padrão do openpyxl) — não aplicamos formatos
+        assert ws.cell(row=2, column=1).number_format == 'General'
 
     def test_cabecalho_congelado(self):
         """Primeira linha deve estar congelada (freeze_panes = A2)."""

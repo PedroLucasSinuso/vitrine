@@ -34,44 +34,6 @@ _ALT_FILL = PatternFill("solid", start_color=COR_ALT, end_color=COR_ALT)
 _TOTAL_FILL = PatternFill("solid", start_color=COR_TOTAL_BG, end_color=COR_TOTAL_BG)
 _TOTAL_FONT = Font(bold=True, size=11)
 
-# ── Colunas que devem ser formatadas como moeda ─────────────────────────────
-_PALAVRAS_MOEDA = {
-    "receita", "faturamento", "valor", "preco", "custo",
-    "venda", "liquido", "bruto", "margem", "ticket",
-    "compra", "total", "markup", "mark-up",
-}
-_PALAVRAS_PCT = {"pct", "taxa", "percentual", "variacao", "%"}
-_PALAVRAS_INT = {"qtd", "quantidade", "tickets", "estoque", "qtde", "dias", "top"}
-
-
-def _detect_number_format(col_name: str) -> str | None:
-    """Detecta o formato numérico apropriado baseado no nome da coluna."""
-    lower = col_name.lower().replace("_", " ").replace("-", " ")
-    palavras = set(lower.split())
-
-    if palavras & _PALAVRAS_MOEDA:
-        return '#,##0.00'
-    if palavras & _PALAVRAS_PCT:
-        return '0.00%'
-    if palavras & _PALAVRAS_INT:
-        return '#,##0'
-    return None
-
-
-def _auto_column_widths(ws, cabecalhos: list[str], linhas: list[list]) -> None:
-    """Ajusta largura das colunas baseado no maior conteúdo (header + dados)."""
-    for col_idx, cab in enumerate(cabecalhos, 1):
-        max_len = len(str(cab))
-        for row in linhas:
-            val = row[col_idx - 1] if col_idx - 1 < len(row) else ""
-            cell_len = len(str(val))
-            if cell_len > max_len:
-                max_len = cell_len
-        # Limite: min 10, max 50
-        width = min(max(max_len + 3, 10), 50)
-        ws.column_dimensions[get_column_letter(col_idx)].width = width
-
-
 def _estilizar_planilha_bi(ws, cabecalhos: list[str], linhas: list[list]) -> None:
     """Aplica estilo completo a uma planilha BI."""
     # ── Cabeçalho ──
@@ -88,12 +50,6 @@ def _estilizar_planilha_bi(ws, cabecalhos: list[str], linhas: list[list]) -> Non
         for col_idx, valor in enumerate(linha, 1):
             cell = ws.cell(row=ri, column=col_idx, value=valor)
             cell.border = _BORDER
-            cab = cabecalhos[col_idx - 1]
-
-            # Formatação numérica automática
-            nf = _detect_number_format(cab)
-            if nf and isinstance(valor, (int, float)):
-                cell.number_format = nf
 
             # Alinhamento
             if isinstance(valor, (int, float)):
@@ -127,11 +83,6 @@ def _adicionar_linha_total(ws, cabecalhos: list[str], linhas: list[list],
             col_letter = get_column_letter(col_idx)
             cell.value = f"=SUM({col_letter}2:{col_letter}{total_row - 1})"
             cell.alignment = Alignment(horizontal="right", vertical="center")
-            # Herda formato numérico da primeira célula de dado
-            if linhas:
-                nf = _detect_number_format(cabecalhos[col_idx - 1])
-                if nf:
-                    cell.number_format = nf
         elif col_idx == len(cabecalhos):  # última coluna não-numérica
             cell.value = "TOTAL"
             cell.alignment = Alignment(horizontal="right", vertical="center")
@@ -240,11 +191,8 @@ class ExportadorExcel:
         dados_linhas = [[linha.get(h, "") for h in cabecalhos] for linha in linhas]
         _estilizar_planilha_bi(ws, cabecalhos, dados_linhas)
 
-        # Adicionar linha de total nas colunas numéricas
-        colunas_num = [
-            i for i, cab in enumerate(cabecalhos, 1)
-            if _detect_number_format(cab) is not None
-        ]
+        # Adicionar linha de total em todas as colunas exceto a primeira (data)
+        colunas_num = list(range(2, len(cabecalhos) + 1)) if len(cabecalhos) > 1 else []
         if colunas_num:
             _adicionar_linha_total(ws, cabecalhos, dados_linhas, colunas_num)
 
