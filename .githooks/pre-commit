@@ -1,0 +1,79 @@
+#!/bin/bash
+# Pre-commit hook — Vitrine
+# Roda backend tests, frontend type-check e lint antes de cada commit.
+# Se qualquer etapa falhar, o commit é abortado.
+#
+# Para ativar: git config core.hooksPath .githooks
+
+set -e
+set -u
+
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+FAIL=0
+
+echo ""
+echo "========================================"
+echo " 🧪  Pre-commit Checks"
+echo "========================================"
+echo ""
+
+# ──────────────────────────────────────────────
+# 1) Backend tests
+# ──────────────────────────────────────────────
+echo -e "${YELLOW}[1/3]${NC} Rodando testes do backend..."
+cd "$ROOT_DIR/vitrine_backend"
+if uv run pytest -q 2>&1; then
+    echo -e "${GREEN}✔ Backend tests: OK${NC}"
+else
+    echo -e "${RED}✖ Backend tests: FALHOU${NC}"
+    FAIL=1
+fi
+echo ""
+
+# ──────────────────────────────────────────────
+# 2) Frontend type-check (TypeScript)
+# ──────────────────────────────────────────────
+echo -e "${YELLOW}[2/3]${NC} Verificando TypeScript (noEmit)..."
+cd "$ROOT_DIR/vitrine_frontend"
+if npx tsc --noEmit 2>&1; then
+    echo -e "${GREEN}✔ TypeScript: OK${NC}"
+else
+    echo -e "${RED}✖ TypeScript: FALHOU${NC}"
+    FAIL=1
+fi
+echo ""
+
+# ──────────────────────────────────────────────
+# 3) Frontend lint
+# ──────────────────────────────────────────────
+echo -e "${YELLOW}[3/3]${NC} Rodando ESLint..."
+cd "$ROOT_DIR/vitrine_frontend"
+if npm run lint 2>&1; then
+    echo -e "${GREEN}✔ ESLint: OK${NC}"
+else
+    echo -e "${RED}✖ ESLint: FALHOU${NC}"
+    FAIL=1
+fi
+echo ""
+
+# ──────────────────────────────────────────────
+# Resultado
+# ──────────────────────────────────────────────
+echo "========================================"
+if [ "$FAIL" -eq 0 ]; then
+    echo -e " ${GREEN}✔  Todas as verificações passaram.${NC}"
+    echo "========================================"
+    echo ""
+    exit 0
+else
+    echo -e " ${RED}✖  Algumas verificações falharam. Commit abortado.${NC}"
+    echo -e " ${YELLOW}💡  Dica: corrija os erros acima e tente novamente.${NC}"
+    echo -e " ${YELLOW}💡  Para pular (emergência): git commit --no-verify${NC}"
+    echo "========================================"
+    echo ""
+    exit 1
+fi

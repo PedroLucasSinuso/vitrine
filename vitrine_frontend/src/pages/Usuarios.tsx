@@ -68,18 +68,19 @@ export default function Usuarios() {
 
   const meuUsername = getUsername()
 
-  async function carregar() {
-    try {
-      const data = await listarUsuarios()
-      setUsuarios(data)
-      setCarregando(false)
-    } catch {
-      setErroGeral('Erro ao carregar usuários.')
-      setCarregando(false)
-    }
-  }
-
-  useEffect(() => { carregar() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    // Carregar dados na montagem — IIFE para manter setState dentro do effect
+    ;(async () => {
+      try {
+        const data = await listarUsuarios()
+        setUsuarios(data)
+        setCarregando(false)
+      } catch {
+        setErroGeral('Erro ao carregar usuários.')
+        setCarregando(false)
+      }
+    })()
+  }, [])
 
   async function handleCriar() {
     setErroCriacao('')

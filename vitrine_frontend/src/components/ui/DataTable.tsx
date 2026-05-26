@@ -195,7 +195,7 @@ export default function DataTable<T>({
               <div
                 key={col.key}
                 className="h-3 bg-bg-hover rounded animate-pulse"
-                style={{ width: col.width || `${60 + Math.random() * 30}%`, flex: col.width ? '0 0 auto' : 1 }}
+                style={{ width: col.width || `${60 + (col.key.charCodeAt(0) % 30)}%`, flex: col.width ? '0 0 auto' : 1 }}
               />
             ))}
           </div>

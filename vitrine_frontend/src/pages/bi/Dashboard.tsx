@@ -76,12 +76,46 @@ interface ResumoDiaProps {
   } | null
 }
 
+function BadgeVariacao({ atual, comp }: { atual: number; comp: DiarioComparativoDTO | null }) {
+  const antVal = comp?.valor_offset ?? null
+  const rotuloBase = comp?.rotulo ?? 'vs período anterior'
+
+  let diff: number | null = null
+  if (antVal !== null) {
+    if (antVal === 0 && atual > 0) {
+      diff = 100
+    } else if (antVal > 0) {
+      diff = ((atual / antVal) - 1) * 100
+    }
+  }
+
+  if (diff === null) return <span className="block h-[18px]" />
+
+  const isPositive = diff >= 0
+  return (
+    <span className={`text-xs font-semibold inline-flex items-center gap-1.5 ${isPositive ? 'text-success' : 'text-danger'}`}>
+      <span className="text-sm leading-none">{isPositive ? '▲' : '▼'}</span>
+      {Math.abs(diff).toFixed(1)}%
+      <span className="text-text-muted font-normal text-[10px]">{rotuloBase}</span>
+    </span>
+  )
+}
+
+function LinhaOffset({ comp, fmt }: { comp: DiarioComparativoDTO | null; fmt: (v: number) => string }) {
+  if (comp?.valor_offset == null) return <p className="h-[14px]" />
+  return (
+    <p className="text-[11px] text-text-muted leading-tight h-[14px]">
+      Ano passado: <span className="font-medium text-text-secondary">{fmt(comp.valor_offset)}</span>
+    </p>
+  )
+}
+
 function ResumoDia({ receita, tickets, ticketMedio, comparar: compAtivo, comparativo }: ResumoDiaProps) {
   const sorted = [...receita].sort((a, b) => b.data.localeCompare(a.data))
   const ultimo = sorted[0]
   if (!ultimo) return null
 
-  const valorReceita = ultimo.valor
+  const valorReceita = receita.find((t) => t.data === ultimo.data)?.valor ?? 0
   const valorTickets = tickets.find((t) => t.data === ultimo.data)?.valor ?? 0
   const valorTicketMedio = ticketMedio.find((t) => t.data === ultimo.data)?.valor ?? 0
 
@@ -91,40 +125,6 @@ function ResumoDia({ receita, tickets, ticketMedio, comparar: compAtivo, compara
 
   const ultimoEParcial = !!compReceita?.parcial_ate
   const parcialAte = compReceita?.parcial_ate ?? null
-
-  function BadgeVariacao({ atual, comp }: { atual: number; comp: DiarioComparativoDTO | null }) {
-    const antVal = comp?.valor_offset ?? null
-    const rotuloBase = comp?.rotulo ?? 'vs período anterior'
-
-    let diff: number | null = null
-    if (antVal !== null) {
-      if (antVal === 0 && atual > 0) {
-        diff = 100
-      } else if (antVal > 0) {
-        diff = ((atual / antVal) - 1) * 100
-      }
-    }
-
-    if (diff === null) return <span className="block h-[18px]" />
-
-    const isPositive = diff >= 0
-    return (
-      <span className={`text-xs font-semibold inline-flex items-center gap-1.5 ${isPositive ? 'text-success' : 'text-danger'}`}>
-        <span className="text-sm leading-none">{isPositive ? '▲' : '▼'}</span>
-        {Math.abs(diff).toFixed(1)}%
-        <span className="text-text-muted font-normal text-[10px]">{rotuloBase}</span>
-      </span>
-    )
-  }
-
-  function LinhaOffset({ comp, fmt }: { comp: DiarioComparativoDTO | null; fmt: (v: number) => string }) {
-    if (comp?.valor_offset == null) return <p className="h-[14px]" />
-    return (
-      <p className="text-[11px] text-text-muted leading-tight h-[14px]">
-        Ano passado: <span className="font-medium text-text-secondary">{fmt(comp.valor_offset)}</span>
-      </p>
-    )
-  }
 
   return (
     <Card variant="elevated" padding="md">
