@@ -391,30 +391,39 @@ def exportar_excel(
 
     if relatorio == "kpis":
         dados["KPIs"] = [rel.kpis().model_dump()]
+        conteudo = exportador.exportar(dados)
     elif relatorio == "receita":
         dados["Receita"] = [i.model_dump() for i in rel.por_dimensao(dimensao, Metrica.RECEITA)]
+        conteudo = exportador.exportar(dados)
     elif relatorio == "quantidade":
         dados["Quantidade"] = [i.model_dump() for i in rel.por_dimensao(dimensao, Metrica.QUANTIDADE)]
+        conteudo = exportador.exportar(dados)
     elif relatorio == "curva-abc":
         dados["Curva ABC"] = [i.model_dump() for i in rel.curva_abc(dimensao)]
+        conteudo = exportador.exportar(dados)
     elif relatorio == "ranking":
-        dados["Ranking"] = [i.model_dump() for i in rel.ranking(metrica, top)]
+        linhas = [i.model_dump() for i in rel.ranking(metrica, top)]
+        conteudo = exportador.exportar_ranking(linhas)
     elif relatorio == "trocas":
         trocas_dto = rel.trocas_resumo()
         dados["Trocas Resumo"] = [{"total_trocas": trocas_dto.total_trocas, "taxa_troca_pct": trocas_dto.taxa_troca_pct}]
         dados["Trocas por Produto"] = [i.model_dump() for i in trocas_dto.por_produto]
+        conteudo = exportador.exportar(dados)
     elif relatorio == "perdas":
         items = source.get_items(data_inicio, data_fim)
         perdas_dto = RelatorioMovimento(Perdas(items)).resumo()
         dados["Perdas Resumo"] = [{"total": perdas_dto.total}]
         dados["Perdas por Produto"] = [i.model_dump() for i in perdas_dto.por_produto]
+        conteudo = exportador.exportar(dados)
     elif relatorio == "consumo":
         items = source.get_items(data_inicio, data_fim)
         consumo_dto = RelatorioMovimento(Consumo(items)).resumo()
         dados["Consumo Resumo"] = [{"total": consumo_dto.total}]
         dados["Consumo por Produto"] = [i.model_dump() for i in consumo_dto.por_produto]
+        conteudo = exportador.exportar(dados)
     elif relatorio == "diario":
-        dados["Série Diária"] = [i.model_dump() for i in RelatorioDiario(dominio.vendas).serie_temporal(metrica)]
+        linhas = [i.model_dump() for i in RelatorioDiario(dominio.vendas).serie_temporal(metrica)]
+        conteudo = exportador.exportar_diario(linhas)
     elif relatorio == "sku":
         if not codigo:
             raise HTTPException(status_code=400, detail="Parâmetro 'codigo' obrigatório para relatório SKU")
@@ -428,8 +437,7 @@ def exportar_excel(
         dados["SKU"] = [resultado.model_dump(exclude={"ranking_dias", "distribuicao_hora"})]
         dados["Ranking Dias"] = [i.model_dump() for i in resultado.ranking_dias]
         dados["Distribuição Hora"] = [i.model_dump() for i in resultado.distribuicao_hora]
-
-    conteudo = exportador.exportar(dados)
+        conteudo = exportador.exportar(dados)
     nome_arquivo = f"bi_{relatorio}_{data_inicio}_{data_fim}.xlsx"
 
     return StreamingResponse(
@@ -438,6 +446,44 @@ def exportar_excel(
         headers={
             "Content-Disposition": f'attachment; filename="{nome_arquivo}"',
             "Content-Length": str(len(conteudo)),
+        },
+    )
+
+
+# ── Exportação PDF ────────────────────────────────────────────────────────────
+
+
+@router.get("/exportar/pdf")
+@limiter.limit("5/minute")
+def exportar_pdf(
+    request: Request,
+    source: TransactionSource = Depends(get_transaction_source),
+    _usuario: Usuario = Depends(require_supervisor),
+    db: Session = Depends(get_db),
+):
+    """Gera PDF do relatório semanal (WeasyPrint no Linux, fallback window.print no frontend)."""
+    from app.application.reporting.pdf.relatorio_semanal_pdf import gerar_relatorio_semanal_pdf
+    from app.application.config_service import get as get_config
+
+    nome_loja = get_config(db, "nome_estabelecimento", "Vitrine")
+    pdf_bytes = gerar_relatorio_semanal_pdf(nome_loja, source)
+
+    if pdf_bytes is None:
+        # WeasyPrint não disponível — frontend deve usar window.print()
+        raise HTTPException(
+            status_code=501,
+            detail="PDF não disponível neste ambiente. Use o botão 'Imprimir' do navegador.",
+        )
+
+    hoje = date.today()
+    nome_arquivo = f"relatorio_semanal_{hoje.strftime('%Y%m%d')}.pdf"
+
+    return StreamingResponse(
+        BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{nome_arquivo}"',
+            "Content-Length": str(len(pdf_bytes)),
         },
     )
 

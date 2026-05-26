@@ -113,6 +113,36 @@ export async function fetchTabelaProdutos(params: {
   return r.data
 }
 
+/**
+ * Tenta baixar o PDF do relatório semanal via API.
+ * Se falhar (501 — WeasyPrint não disponível), retorna false
+ * para que o caller use window.print() como fallback.
+ */
+export async function exportarPDF(): Promise<boolean> {
+  try {
+    const r = await api.get('/bi/exportar/pdf', {
+      responseType: 'blob',
+      timeout: 30000,
+    })
+    const rawContentType = r.headers['content-type']
+    const contentType = typeof rawContentType === 'string' ? rawContentType : ''
+    if (!contentType.includes('application/pdf')) {
+      // Servidor retornou 501 (ou erro) — conteúdo é JSON
+      return false
+    }
+    const url = URL.createObjectURL(r.data)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `relatorio_semanal_${new Date().toISOString().slice(0, 10)}.pdf`
+    link.click()
+    URL.revokeObjectURL(url)
+    return true
+  } catch {
+    return false
+  }
+}
+
+
 export async function exportarExcelBI(
   periodo: PeriodoBi,
   relatorio: string,

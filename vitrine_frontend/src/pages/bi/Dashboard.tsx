@@ -15,7 +15,7 @@ import ErrorBanner from '../../components/ui/ErrorBanner'
 import Card from '../../components/ui/Card'
 import SectionHeader from '../../components/ui/SectionHeader'
 import Skeleton from '../../components/ui/Skeleton'
-import { fetchKpis, fetchKpisComparativo, fetchRanking, fetchDiario, fetchDiarioComparativo, fetchTemporalHora, exportarExcelBI } from '../../api/bi'
+import { fetchKpis, fetchKpisComparativo, fetchRanking, fetchDiario, fetchDiarioComparativo, fetchTemporalHora, exportarExcelBI, exportarPDF } from '../../api/bi'
 import { baixarCSVdeArray } from '../../utils/csv'
 import { getConfigsCache } from '../../stores/configStore'
 import type { KpisDTO, KpisComparativoDTO, ItemRankingDTO, PontoDiarioDTO, PontoHoraDTO, DiarioComparativoDTO, PeriodoBi } from '../../types'
@@ -423,6 +423,15 @@ export default function Dashboard() {
             {/* Export */}
             <ExportButtons
               onExcel={() => { exportarExcelBI(periodo, 'kpis'); toast({ type: 'success', message: 'Excel exportado' }) }}
+              onPdf={async () => {
+                const ok = await exportarPDF()
+                if (ok) {
+                  toast({ type: 'success', message: 'PDF exportado' })
+                } else {
+                  toast({ type: 'info', message: 'Usando impressão do navegador...' })
+                  window.print()
+                }
+              }}
               onCsv={() => { if (kpisAtivos) { baixarCSVdeArray([kpisAtivos], 'kpis'); toast({ type: 'success', message: 'CSV exportado' }) } }}
               disabled={!kpisAtivos}
             />

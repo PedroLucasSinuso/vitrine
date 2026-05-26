@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
+<style>
+@media print {
+  body { background-color:#fff !important; }
+  table { max-width:100% !important; }
+  .no-print { display:none !important; }
+}
+</style>
 </head>
 <body style="margin:0;padding:0;background-color:#f3f4f6;font-family:Helvetica Neue,Helvetica,Arial,sans-serif">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f4f6">
@@ -178,6 +185,7 @@
         <img src="cid:{{ vitrine_logo_cid }}" alt="Vitrine" height="22" style="display:block;margin:0 auto 8px;height:22px;width:auto;border:0;outline:none">
         {% endif %}
         <p style="margin:10px 0 0;font-size:11px;color:#9ca3af">Relatório Automático &mdash; Gerado em {{ data_geracao }}</p>
+        <p style="margin:6px 0 0;font-size:10px;color:#9ca3af">📎 Planilha com os dados em anexo</p>
       </td>
     </tr>
 

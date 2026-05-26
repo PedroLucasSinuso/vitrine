@@ -19,8 +19,11 @@ export function baixarCSV(conteudo: string, prefixo: string): void {
   URL.revokeObjectURL(url)
 }
 
-export function baixarCSVdeArray(dados: object[], prefixo: string): void {
-  if (dados.length === 0) return
+export function baixarCSVdeArray(dados: object[], prefixo: string): boolean {
+  if (dados.length === 0) {
+    console.warn('baixarCSVdeArray: dados vazios — nada exportado')
+    return false
+  }
   const cabecalhos = Object.keys(dados[0])
   const linhas = dados.map((linha) =>
     cabecalhos.map((h) => {
@@ -30,4 +33,5 @@ export function baixarCSVdeArray(dados: object[], prefixo: string): void {
   )
   const csv = [cabecalhos.join(';'), ...linhas].join('\n')
   baixarCSV(csv, prefixo)
+  return true
 }

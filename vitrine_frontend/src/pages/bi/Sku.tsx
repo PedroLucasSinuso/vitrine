@@ -191,8 +191,11 @@ export default function Sku() {
             onCsv={() => {
               if (!dados) return
               const linhas = dados.ranking_dias.map((d) => ({ data: d.data, receita: d.valor }))
-              baixarCSVdeArray(linhas, 'sku')
-              toast({ type: 'success', message: 'CSV exportado' })
+              if (baixarCSVdeArray(linhas, 'sku')) {
+                toast({ type: 'success', message: 'CSV exportado' })
+              } else {
+                toast({ type: 'info', message: 'Nenhum dado para exportar' })
+              }
             }}
             disabled={!dados}
           />
