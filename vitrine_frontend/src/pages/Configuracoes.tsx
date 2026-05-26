@@ -83,7 +83,7 @@ export default function Configuracoes() {
 
   if (loading) {
     return (
-      <PageContainer maxWidth="xl">
+      <PageContainer maxWidth="md">
         <div className="flex items-center justify-center gap-2 text-sm text-text-muted mt-12">
           <Loader2 size={16} className="animate-spin" /> Carregando...
         </div>
@@ -92,7 +92,7 @@ export default function Configuracoes() {
   }
 
   return (
-    <PageContainer maxWidth="xl">
+    <PageContainer maxWidth="md">
       <div className="flex flex-col gap-4">
         {/* Tab bar */}
         <Card variant="default" className="p-1">
@@ -114,34 +114,32 @@ export default function Configuracoes() {
           </div>
         </Card>
 
-        {/* Tab content + save bar inside card */}
+        {/* Tab content */}
         <Card variant="default" padding="none">
-          <div className="max-w-2xl mx-auto">
-            {activeTab === 'geral' && (
-              <ConfigGeral form={form} updateField={updateField} logoPreview={logoPreview} handleLogoUpload={handleLogoUpload} />
-            )}
-            {activeTab === 'erp' && <ConfigErp form={form} updateField={updateField} />}
-            {activeTab === 'whatsapp' && <ConfigWhatsApp form={form} updateField={updateField} />}
-            {activeTab === 'email' && <ConfigEmail form={form} updateField={updateField} />}
-            {activeTab === 'intelligence' && <ConfigIntelligence form={form} updateField={updateField} />}
-
-            {/* Save bar inside card, right-aligned */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border">
-              <button
-                onClick={handleSalvar}
-                disabled={saving}
-                className={`inline-flex items-center gap-2 font-semibold px-8 py-2.5 rounded-xl transition disabled:opacity-50 text-sm ${
-                  saved
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-primary hover:bg-primary-hover text-white shadow-sm hover:shadow'
-                }`}
-              >
-                {saved ? <Check size={15} /> : null}
-                {saving ? 'Salvando...' : saved ? 'Salvo!' : 'Salvar configurações'}
-              </button>
-            </div>
-          </div>
+          {activeTab === 'geral' && (
+            <ConfigGeral form={form} updateField={updateField} logoPreview={logoPreview} handleLogoUpload={handleLogoUpload} />
+          )}
+          {activeTab === 'erp' && <ConfigErp form={form} updateField={updateField} />}
+          {activeTab === 'whatsapp' && <ConfigWhatsApp form={form} updateField={updateField} />}
+          {activeTab === 'email' && <ConfigEmail form={form} updateField={updateField} />}
+          {activeTab === 'intelligence' && <ConfigIntelligence form={form} updateField={updateField} />}
         </Card>
+
+        {/* Save bar */}
+        <div className="flex items-center justify-center gap-3 py-2">
+          <button
+            onClick={handleSalvar}
+            disabled={saving}
+            className={`inline-flex items-center gap-2 font-semibold px-8 py-2.5 rounded-xl transition disabled:opacity-50 text-sm ${
+              saved
+                ? 'bg-emerald-500 text-white'
+                : 'bg-primary hover:bg-primary-hover text-white shadow-sm hover:shadow'
+            }`}
+          >
+            {saved ? <Check size={15} /> : null}
+            {saving ? 'Salvando...' : saved ? 'Salvo!' : 'Salvar configurações'}
+          </button>
+        </div>
       </div>
     </PageContainer>
   )
