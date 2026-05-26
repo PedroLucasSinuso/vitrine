@@ -458,23 +458,21 @@ export default function Inventario() {
                 </Card>
               )}
 
-              <div className="flex flex-col sm:flex-row gap-3">
-                {isSupervisor && (
-                  <Button onClick={() => setNovaSessaoModal(true)} fullWidth>
-                    <Plus size={16} /> Nova Sessão
-                  </Button>
-                )}
-                <div className="flex gap-2 flex-1">
-                  <input
-                    ref={conviteRef}
-                    placeholder="Código da sessão"
-                    className="form-input-base flex-1 rounded-xl uppercase"
-                    onKeyDown={(e) => e.key === 'Enter' && handleEntrarSessao()}
-                  />
-                  <Button onClick={handleEntrarSessao}>
-                    Entrar
-                  </Button>
-                </div>
+              {isSupervisor && (
+                <Button onClick={() => setNovaSessaoModal(true)} fullWidth>
+                  <Plus size={16} /> Nova Sessão
+                </Button>
+              )}
+              <div className="flex gap-2">
+                <input
+                  ref={conviteRef}
+                  placeholder="Código da sessão"
+                  className="form-input-base flex-1 rounded-xl uppercase min-w-0"
+                  onKeyDown={(e) => e.key === 'Enter' && handleEntrarSessao()}
+                />
+                <Button onClick={handleEntrarSessao}>
+                  Entrar
+                </Button>
               </div>
 
               {isSupervisor && (

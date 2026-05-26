@@ -68,7 +68,7 @@ export default function Etiquetas() {
         />
       )}
 
-      <div className="w-full max-w-md flex flex-col gap-5">
+      <div className="w-full max-w-md mx-auto flex flex-col gap-5">
 
         {/* Input card */}
         <Card variant="elevated" padding="lg">
