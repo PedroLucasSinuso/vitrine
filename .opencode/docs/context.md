@@ -1,8 +1,8 @@
 # Current Context
 
-> Audit stage: **Completa. UX Refactor + UI Fixes. 169 testes passando.**
-> Data da auditoria: **2026-05-25**
-> Status: **Sprints 1-4 concluídos. Sprint 5 (BI Dashboard + Temas) concluído. Lote 5 (Tabela de Preços) concluído. Hotfix scheduler/email aplicado. UX Refactor + UI Fixes concluído.**
+> Audit stage: **Completa. UX Refactor + UI Fixes + Hotfix Resumo Dia Parcial. 169 testes passando.**
+> Data da auditoria: **2026-05-26**
+> Status: **Sprints 1-4 concluídos. Sprint 5 (BI Dashboard + Temas) concluído. Lote 5 (Tabela de Preços) concluído. Hotfix scheduler/email aplicado. UX Refactor + UI Fixes concluído. Hotfix Resumo Dia Parcial concluído.**
 
 ---
 
@@ -150,6 +150,16 @@
 79. **Documentos criados:** `docs/debug-audit-2026-05-25.md` (relatório completo) + `docs/action-plan-2026-05-25.md` (plano de ação).
 80. **Todas as 23 issues corrigidas** em 6 sprints (Sprints 6-11) no commit `cdb135c` — 16 arquivos alterados, 0 regressões.
 81. **Testes:** 168/168 passando. **TypeScript:** 0 erros. **Lint:** 0 erros, 0 warnings.
+
+### Hotfix: Resumo do Dia — Comparação Parcial (2026-05-26)
+
+98. **Problema:** `ResumoDia` comparava último dia do período com ano anterior sem verificar se era parcial (hoje em andamento). Gerava variação artificial (parcial vs full-day).
+99. **Correção (frontend-only 🅰️):** `ultimoEParcial` calculado antes das variáveis `ant*Daily`; quando verdadeiro, as comparações YoY são puladas e o fallback `variacaoPeriodo` (kpisComp com `_filtrar_hora`) assume.
+100. **Arquivo:** `vitrine_frontend/src/pages/bi/Dashboard.tsx` — ±20 linhas alteradas.
+101. **Checkpoint:** `db8dd7b` (commit anterior ao hotfix).
+102. **Documentação:** `docs/hotfix-resumo-dia-parcial.md`.
+103. **Endpoint `/api/bi/diario/comparativo`:** Implementado (YoY com hora truncada para dias parciais). 15 testes.
+104. **Testes:** Nenhum teste alterado. 0 regressões.
 
 ### UX Refactor + UI Fixes (2026-05-25) — 6 Commits
 
