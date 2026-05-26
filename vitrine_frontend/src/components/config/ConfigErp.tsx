@@ -54,7 +54,7 @@ export default function ConfigErp({ form, updateField }: TabProps) {
         </div>
 
         {erpRevealed ? (
-          <div className="ml-9 flex flex-col gap-3 animate-fade-in-up">
+          <div className="flex flex-col gap-3 animate-fade-in-up">
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
               <CompactInput label="Host" icon={Globe} value={form.erp_host ?? ''} onChange={(e) => updateField('erp_host', e.target.value)} placeholder="192.168.1.100" />
               <CompactInput label="Porta" icon={Hash} type="number" min="1" max="65535" value={form.erp_port ?? '5432'} onChange={(e) => updateField('erp_port', e.target.value)} className="max-w-[90px]" />
@@ -67,7 +67,7 @@ export default function ConfigErp({ form, updateField }: TabProps) {
             <TestConnectionButton label="Testar conexão ERP" onTest={testarConexaoErp} warningText="Testa a configuração salva no servidor, não as alterações pendentes" />
           </div>
         ) : (
-          <div className="ml-9 text-[11px] text-text-muted bg-bg-hover/30 rounded-lg px-3 py-2 flex items-center gap-1.5">
+          <div className="text-[11px] text-text-muted bg-bg-hover/30 rounded-lg px-3 py-2 flex items-center gap-1.5">
             <Lock size={11} /> Dados de conexão ocultos — clique em "Mostrar" para editar
           </div>
         )}
@@ -78,7 +78,7 @@ export default function ConfigErp({ form, updateField }: TabProps) {
         <div className="mb-3">
           <SectionHeader icon={Clock} title="Agendamento" description="Intervalos de sincronização e cache" />
         </div>
-        <div className="ml-9 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <CompactSelect label="Intervalo ETL" value={form.etl_interval_minutes ?? '60'} onChange={(e) => updateField('etl_interval_minutes', e.target.value)}>
             {ETL_INTERVALS.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
           </CompactSelect>

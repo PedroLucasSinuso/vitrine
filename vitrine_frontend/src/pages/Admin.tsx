@@ -83,7 +83,7 @@ export default function Admin() {
 
   function pararPolling() {
     if (pollingRef.current) {
-      clearInterval(pollingRef.current)
+      clearTimeout(pollingRef.current)
       pollingRef.current = null
     }
     if (abortControllerRef.current) {
@@ -92,7 +92,35 @@ export default function Admin() {
     }
   }
 
+  async function pollSync(job_id: string) {
+    if (!mountedRef.current) return
+
+    abortControllerRef.current = new AbortController()
+    try {
+      const status: SyncJob = await getSyncStatus(job_id, abortControllerRef.current.signal)
+      if (!mountedRef.current) return
+      setActiveJob(status)
+      if (status.status !== 'em_progresso') {
+        pararPolling()
+        setLoading(false)
+        carregarHistorico()
+        carregarStatus()
+        return
+      }
+      // Ainda em progresso — agenda próxima verificação
+      pollingRef.current = window.setTimeout(() => pollSync(job_id), 2000)
+    } catch (e: unknown) {
+      const err = e as Error & { code?: string }
+      // Axios usa CanceledError quando abatido, e o nome do erro não é 'AbortError'
+      if (err.name === 'AbortError' || err.name === 'CanceledError' || err.code === 'ERR_CANCELED') return
+      pararPolling()
+      setLoading(false)
+      setErro('Erro ao verificar status do sync.')
+    }
+  }
+
   async function handleSync() {
+    pararPolling()
     setErro('')
     setLoading(true)
     setActiveJob(null)
@@ -100,29 +128,7 @@ export default function Admin() {
       const { job_id } = await triggerSync()
       if (!mountedRef.current) return
 
-      pollingRef.current = setInterval(async () => {
-        if (!mountedRef.current) {
-          clearInterval(pollingRef.current!)
-          pollingRef.current = null
-          return
-        }
-        abortControllerRef.current = new AbortController()
-        try {
-          const status: SyncJob = await getSyncStatus(job_id, abortControllerRef.current.signal)
-          setActiveJob(status)
-          if (status.status !== 'em_progresso') {
-            pararPolling()
-            setLoading(false)
-            carregarHistorico()
-            carregarStatus()
-          }
-        } catch (e: unknown) {
-          if ((e as Error).name === 'AbortError') return
-          pararPolling()
-          setLoading(false)
-          setErro('Erro ao verificar status do sync.')
-        }
-      }, 2000)
+      pollingRef.current = window.setTimeout(() => pollSync(job_id), 2000)
     } catch {
       setLoading(false)
       setErro('Erro ao iniciar sync.')
