@@ -39,7 +39,7 @@ export default function ConfigErp({ form, updateField }: TabProps) {
   const [erpRevealed, setErpRevealed] = useState(false)
 
   return (
-    <div className="p-5 flex flex-col gap-8">
+    <div className="p-5 flex flex-col gap-8 max-w-lg mx-auto">
       {/* Connection */}
       <div>
         <div className="flex items-center justify-between mb-3">

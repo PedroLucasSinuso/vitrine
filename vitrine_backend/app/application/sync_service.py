@@ -49,47 +49,46 @@ class SyncService:
             products = self.source.get_all_products()
             logger.info("SyncService source retornou %s produtos", len(products))
 
-            # Transação explícita: DELETE + INSERT são atômicos.
-            # Se add_all falhar, o rollback desfaz o DELETE.
-            with self.db.begin():
-                with temporizador("SyncService delete antigos", logger):
-                    self.db.execute(delete(ProdutoCodigo))
-                    self.db.execute(delete(Produto))
+            # Transação: DELETE + INSERT são atômicos via autobegin.
+            # Se add_all falhar, o rollback em sync_com_erro desfaz o DELETE.
+            with temporizador("SyncService delete antigos", logger):
+                self.db.execute(delete(ProdutoCodigo))
+                self.db.execute(delete(Produto))
 
-                produtos_orm = [self._to_orm(p) for p in products]
+            produtos_orm = [self._to_orm(p) for p in products]
 
-                with temporizador("SyncService insert", logger):
-                    self.db.add_all(produtos_orm)
+            with temporizador("SyncService insert", logger):
+                self.db.add_all(produtos_orm)
 
-                # ── Gravar histórico de preços (dentro da transação atômica — C1)
-                with temporizador("SyncService historico_precos", logger):
-                    from app.infrastructure.repositories.produto_repository import ProdutoRepository
+            # ── Gravar histórico de preços (dentro da transação atômica — C1)
+            with temporizador("SyncService historico_precos", logger):
+                from app.infrastructure.repositories.produto_repository import ProdutoRepository
 
-                    # C6: se job_id foi passado externamente, usa direto (evita
-                    # query race condition com func.max(SyncJob.id))
-                    if job_id is None:
-                        from app.domain.models.sync_job import SyncJob
-                        ultimo_job = self.db.query(SyncJob).order_by(SyncJob.id.desc()).first()
-                        job_id_resolved = ultimo_job.id if ultimo_job else None
-                    else:
-                        job_id_resolved = job_id
+                # C6: se job_id foi passado externamente, usa direto (evita
+                # query race condition com func.max(SyncJob.id))
+                if job_id is None:
+                    from app.domain.models.sync_job import SyncJob
+                    ultimo_job = self.db.query(SyncJob).order_by(SyncJob.id.desc()).first()
+                    job_id_resolved = ultimo_job.id if ultimo_job else None
+                else:
+                    job_id_resolved = job_id
 
-                    repo = ProdutoRepository(self.db)
-                    for p in products:
-                        repo.inserir_historico_preco(
-                            codigo=p.internal_code,
-                            preco_custo=float(p.cost_price),
-                            preco_venda=float(p.sale_price),
-                            sync_job_id=job_id_resolved,
-                        )
+                repo = ProdutoRepository(self.db)
+                for p in products:
+                    repo.inserir_historico_preco(
+                        codigo=p.internal_code,
+                        preco_custo=float(p.cost_price),
+                        preco_venda=float(p.sale_price),
+                        sync_job_id=job_id_resolved,
+                    )
 
-                # ── CacheStatus dentro da transação ─────────────────────────────
-                self.db.add(CacheStatus(
-                    last_updated=datetime.now(ZoneInfo("America/Sao_Paulo")),
-                    status="sucesso",
-                ))
+            # ── CacheStatus dentro da transação ─────────────────────────────
+            self.db.add(CacheStatus(
+                last_updated=datetime.now(ZoneInfo("America/Sao_Paulo")),
+                status="sucesso",
+            ))
 
-            # ← self.db.begin() comita aqui (rollback em caso de exceção)
+            self.db.commit()
 
             produtos_count = len(produtos_orm)
             codigos_count = sum(len(p.barcodes) for p in products)
