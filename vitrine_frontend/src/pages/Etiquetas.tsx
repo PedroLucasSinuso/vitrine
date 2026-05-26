@@ -4,6 +4,7 @@ import LeitorCodigo from '../components/LeitorCodigo'
 import { gerarCSV, baixarCSV, type CsvRow } from '../utils/csv'
 import { Camera, Tag, Trash2, Download, Plus } from 'lucide-react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+import PageContainer from '../components/layout/PageContainer'
 import Card from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -59,7 +60,7 @@ export default function Etiquetas() {
   }
 
   return (
-    <div className="flex flex-col items-center px-4 py-4 overflow-x-auto">
+    <PageContainer maxWidth="md">
       {camera && (
         <LeitorCodigo
           onLeitura={(codigo) => { setCamera(false); setTimeout(() => handleCodigo(codigo), 50) }}
@@ -145,6 +146,6 @@ export default function Etiquetas() {
           </Card>
         )}
       </div>
-    </div>
+    </PageContainer>
   )
 }

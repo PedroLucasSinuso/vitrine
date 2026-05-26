@@ -33,7 +33,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Busca',      path: '/busca',          icon: <Search size={20} />,       roles: ['operador', 'supervisor', 'admin'] },
       { label: 'Inventário', path: '/inventario',     icon: <ClipboardList size={20} />, roles: ['operador', 'supervisor', 'admin'] },
-      { label: 'Etiquetas',  path: '/admin/etiquetas', icon: <Tags size={20} />,        roles: ['supervisor', 'admin'] },
+      { label: 'Etiquetas',  path: '/etiquetas',       icon: <Tags size={20} />,        roles: ['operador', 'supervisor', 'admin'] },
     ],
   },
   {
@@ -63,7 +63,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
     if (path === '/admin') return location.pathname === '/admin' || (location.pathname.startsWith('/admin/') && !location.pathname.startsWith('/admin/usuarios') && !location.pathname.startsWith('/admin/configuracoes') && !location.pathname.startsWith('/admin/etiquetas'))
     if (path === '/admin/usuarios') return location.pathname.startsWith('/admin/usuario')
     if (path === '/admin/configuracoes') return location.pathname.startsWith('/admin/configuracoes')
-    if (path === '/admin/etiquetas') return location.pathname.startsWith('/admin/etiquetas')
+    if (path === '/etiquetas') return location.pathname.startsWith('/etiquetas')
     return location.pathname === path
   }
 

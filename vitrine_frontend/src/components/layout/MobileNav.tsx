@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { LayoutDashboard, Search, Package, Settings, ShieldAlert } from 'lucide-react'
+import { LayoutDashboard, Search, Package, Settings, ShieldAlert, Tags } from 'lucide-react'
 import type { Role } from '../../types'
 
 interface MobileTab {
@@ -11,11 +11,12 @@ interface MobileTab {
 }
 
 const tabs: MobileTab[] = [
-  { label: 'Resumo',   path: '/bi', icon: <LayoutDashboard size={22} />, roles: ['supervisor', 'admin'] },
-  { label: 'Busca',    path: '/busca',                    icon: <Search size={22} />,          roles: ['operador', 'supervisor', 'admin'] },
-  { label: 'Produtos', path: '/produtos',                 icon: <Package size={22} />,         roles: ['supervisor', 'admin'] },
-  { label: 'Admin',    path: '/admin',                    icon: <ShieldAlert size={22} />,     roles: ['admin'] },
-  { label: 'Config',   path: '/admin/configuracoes',      icon: <Settings size={22} />,        roles: ['admin'] },
+  { label: 'Resumo',   path: '/bi',                      icon: <LayoutDashboard size={22} />, roles: ['supervisor', 'admin'] },
+  { label: 'Busca',    path: '/busca',                   icon: <Search size={22} />,          roles: ['operador', 'supervisor', 'admin'] },
+  { label: 'Produtos', path: '/produtos',                icon: <Package size={22} />,         roles: ['supervisor', 'admin'] },
+  { label: 'Etiquetas',path: '/etiquetas',               icon: <Tags size={22} />,            roles: ['operador', 'supervisor', 'admin'] },
+  { label: 'Admin',    path: '/admin',                   icon: <ShieldAlert size={22} />,     roles: ['admin'] },
+  { label: 'Config',   path: '/admin/configuracoes',     icon: <Settings size={22} />,        roles: ['admin'] },
 ]
 
 export default function MobileNav() {

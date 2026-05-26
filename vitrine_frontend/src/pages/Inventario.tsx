@@ -650,7 +650,7 @@ export default function Inventario() {
                         if (e.key === 'Enter') definirQuantidade(item.codigo, (e.target as HTMLInputElement).value)
                       }}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-14 text-center text-sm font-semibold text-text-primary bg-transparent form-input-base px-1 py-1"
+                      className="w-20 text-center text-sm font-semibold text-text-primary bg-transparent form-input-base px-1 py-1"
                     />
                     <button
                       onClick={(e) => { e.stopPropagation(); ajustarQuantidade(item.codigo, 1) }}
