@@ -68,19 +68,19 @@ export default function Usuarios() {
 
   const meuUsername = getUsername()
 
-  useEffect(() => {
-    // Carregar dados na montagem — IIFE para manter setState dentro do effect
-    ;(async () => {
-      try {
-        const data = await listarUsuarios()
-        setUsuarios(data)
-        setCarregando(false)
-      } catch {
-        setErroGeral('Erro ao carregar usuários.')
-        setCarregando(false)
-      }
-    })()
-  }, [])
+  async function carregar() {
+    try {
+      const data = await listarUsuarios()
+      setUsuarios(data)
+      setCarregando(false)
+    } catch {
+      setErroGeral('Erro ao carregar usuários.')
+      setCarregando(false)
+    }
+  }
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount legítimo
+  useEffect(() => { carregar() }, [])
 
   async function handleCriar() {
     setErroCriacao('')
