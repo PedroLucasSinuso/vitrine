@@ -81,18 +81,18 @@ export default function Etiquetas() {
               <p className="text-xs text-text-muted">Adicione produtos à lista de etiquetas</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full">
             <input
               ref={inputRef}
               aria-label="Código do produto"
-              className="form-input-base flex-1 rounded-xl"
+              className="form-input-base flex-1 min-w-0 w-full rounded-xl"
               placeholder="Digite ou bipe o código"
               onKeyDown={handleKeyDown}
               autoFocus
             />
             <button
               onClick={() => setCamera(true)}
-              className="md:hidden bg-bg-input border border-border-input hover:bg-bg-hover text-text-secondary px-3 py-2 rounded-xl transition"
+              className="md:hidden bg-bg-input border border-border-input hover:bg-bg-hover text-text-secondary px-2 py-2 rounded-xl transition shrink-0"
               aria-label="Ler código de barras"
             >
               <Camera size={18} />
@@ -128,14 +128,14 @@ export default function Etiquetas() {
                     <div className="w-8 h-8 rounded-lg bg-bg-card flex items-center justify-center shrink-0">
                       <Tag size={14} className="text-text-muted" />
                     </div>
-                    <div className="min-w-0">
-                      <Badge variant="info">{item.codigo}</Badge>
-                      <span className="text-sm text-text-secondary ml-2 truncate">{item.nome}</span>
+                    <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+                      <Badge variant="info" className="shrink-0">{item.codigo}</Badge>
+                      <span className="text-sm text-text-secondary truncate min-w-0">{item.nome}</span>
                     </div>
                   </div>
                   <button
                     onClick={() => remover(item.codigo)}
-                    className="text-text-muted hover:text-danger transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1"
+                    className="text-text-muted hover:text-danger transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1 shrink-0"
                     aria-label={`Remover ${item.nome}`}
                   >
                     <Trash2 size={14} />

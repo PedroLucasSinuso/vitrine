@@ -554,18 +554,18 @@ export default function Inventario() {
         {/* Input de bipagem */}
         <Card variant="bordered" padding="md">
           <h2 className="text-base font-semibold text-text-primary mb-4">Bipar produtos</h2>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full">
             <input
               ref={inputRef}
               aria-label="Código do produto"
-              className="form-input-base flex-1"
+              className="form-input-base flex-1 min-w-0 w-full"
               placeholder="Digite ou bipe o código"
               onKeyDown={handleKeyDown}
               autoFocus
             />
             <button
               onClick={() => setCamera(true)}
-              className="md:hidden bg-bg-hover text-text-primary px-3 py-2 rounded-lg transition"
+              className="md:hidden bg-bg-hover text-text-primary px-2 py-2 rounded-lg transition shrink-0"
               aria-label="Ler código de barras"
             >
               <Camera size={18} />
@@ -609,32 +609,34 @@ export default function Inventario() {
                 <div
                   key={item.codigo}
                   onClick={() => setEditSheetItem(item)}
-                  className={`flex justify-between items-center border rounded-lg px-4 py-2 cursor-pointer transition ${
+                  className={`flex justify-between items-center border rounded-lg px-3 sm:px-4 py-2 cursor-pointer transition ${
                     highlightedCode === item.codigo
                       ? 'border-primary/50 bg-primary/5 animate-highlight-pulse'
                       : 'border-border hover:bg-bg-hover'
                   }`}
                 >
-                  <div className="min-w-0 flex-1">
-                    <span className="text-sm font-semibold text-text-primary">{item.codigo}</span>
-                    <span className="text-xs text-text-muted ml-2 truncate block sm:inline">
-                      {item.nome} {item.grupo && item.familia ? `• ${item.grupo} / ${item.familia}` : ''}
-                    </span>
-                    {item.nome === 'Não cadastrado' && (
-                      <span className="ml-2 inline-flex text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 uppercase tracking-wider">
-                        Sem cadastro
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <div className="flex items-center gap-1.5 flex-nowrap min-w-0">
+                      <span className="text-sm font-semibold text-text-primary shrink-0">{item.codigo}</span>
+                      <span className="text-xs text-text-muted truncate min-w-0">
+                        {item.nome} {item.grupo && item.familia ? `• ${item.grupo} / ${item.familia}` : ''}
                       </span>
-                    )}
+                      {item.nome === 'Não cadastrado' && (
+                        <span className="shrink-0 inline-flex text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 uppercase tracking-wider">
+                          Sem cadastro
+                        </span>
+                      )}
+                    </div>
                     {item.observacao && (
                       <p className="text-[10px] text-text-muted mt-0.5 truncate italic">
                         Obs: {item.observacao}
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0">
                     <button
                       onClick={(e) => { e.stopPropagation(); ajustarQuantidade(item.codigo, -1) }}
-                      className="w-7 h-7 rounded-full bg-bg-hover text-text-secondary font-bold transition flex items-center justify-center"
+                      className="w-6 sm:w-7 h-6 sm:h-7 rounded-full bg-bg-hover text-text-secondary font-bold transition flex items-center justify-center shrink-0"
                     >
                       <Minus size={14} />
                     </button>
@@ -648,11 +650,11 @@ export default function Inventario() {
                         if (e.key === 'Enter') definirQuantidade(item.codigo, (e.target as HTMLInputElement).value)
                       }}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-20 text-center text-sm font-semibold text-text-primary bg-transparent form-input-base px-1 py-1"
+                      className="w-12 sm:w-20 text-center text-sm font-semibold text-text-primary bg-transparent border border-border-input rounded-lg px-1 py-1"
                     />
                     <button
                       onClick={(e) => { e.stopPropagation(); ajustarQuantidade(item.codigo, 1) }}
-                      className="w-7 h-7 rounded-full bg-bg-hover text-text-secondary font-bold transition flex items-center justify-center"
+                      className="w-6 sm:w-7 h-6 sm:h-7 rounded-full bg-bg-hover text-text-secondary font-bold transition flex items-center justify-center shrink-0"
                     >
                       <Plus size={14} />
                     </button>
@@ -784,7 +786,7 @@ export default function Inventario() {
                       setEditSheetItem(null)
                     }
                   }}
-                  className="w-20 text-center text-xl font-bold text-text-primary bg-transparent form-input-base"
+                  className="w-20 text-center text-xl font-bold text-text-primary bg-transparent border border-border-input rounded-lg"
                   autoFocus
                 />
                 <button

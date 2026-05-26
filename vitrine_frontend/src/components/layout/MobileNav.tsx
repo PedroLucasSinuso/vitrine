@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { LayoutDashboard, Search, Package, Settings, ShieldAlert, Tags } from 'lucide-react'
+import { ClipboardList, LayoutDashboard, Search, Package, Settings, ShieldAlert, Tags } from 'lucide-react'
 import type { Role } from '../../types'
 
 interface MobileTab {
@@ -11,12 +11,16 @@ interface MobileTab {
 }
 
 const tabs: MobileTab[] = [
-  { label: 'Resumo',   path: '/bi',                      icon: <LayoutDashboard size={22} />, roles: ['supervisor', 'admin'] },
-  { label: 'Busca',    path: '/busca',                   icon: <Search size={22} />,          roles: ['operador', 'supervisor', 'admin'] },
-  { label: 'Produtos', path: '/produtos',                icon: <Package size={22} />,         roles: ['supervisor', 'admin'] },
-  { label: 'Etiquetas',path: '/etiquetas',               icon: <Tags size={22} />,            roles: ['operador', 'supervisor', 'admin'] },
-  { label: 'Admin',    path: '/admin',                   icon: <ShieldAlert size={22} />,     roles: ['admin'] },
-  { label: 'Config',   path: '/admin/configuracoes',     icon: <Settings size={22} />,        roles: ['admin'] },
+  // Left side
+  { label: 'Busca',      path: '/busca',                   icon: <Search size={20} />,          roles: ['operador', 'supervisor', 'admin'] },
+  { label: 'Produtos',   path: '/produtos',                icon: <Package size={20} />,         roles: ['supervisor', 'admin'] },
+  { label: 'Inventário', path: '/inventario',              icon: <ClipboardList size={20} />,   roles: ['operador', 'supervisor', 'admin'] },
+  // Center — destacado
+  { label: 'Resumo',     path: '/bi',                      icon: <LayoutDashboard size={24} />, roles: ['supervisor', 'admin'] },
+  // Right side
+  { label: 'Etiquetas',  path: '/etiquetas',               icon: <Tags size={20} />,            roles: ['operador', 'supervisor', 'admin'] },
+  { label: 'Admin',      path: '/admin',                   icon: <ShieldAlert size={20} />,     roles: ['admin'] },
+  { label: 'Config',     path: '/admin/configuracoes',     icon: <Settings size={20} />,        roles: ['admin'] },
 ]
 
 export default function MobileNav() {
@@ -43,16 +47,37 @@ export default function MobileNav() {
       <div className="absolute inset-0 bg-bg-sidebar/90 backdrop-blur-lg border-t border-border" />
 
       {/* Tabs */}
-      <div className="relative flex items-center justify-around w-full max-w-lg mx-auto">
+      <div className="relative flex items-center justify-center w-full max-w-lg mx-auto gap-1 sm:gap-2">
         {visibleTabs.map((tab) => {
           const active = isActive(tab.path)
+          const isCenter = tab.label === 'Resumo'
+
+          if (isCenter) {
+            return (
+              <button
+                key={tab.path}
+                onClick={() => navigate(tab.path)}
+                className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl transition-all duration-fast min-w-[64px] py-2 -mt-3 shadow-lg
+                  ${active
+                    ? 'bg-primary text-white scale-110 shadow-primary/30'
+                    : 'bg-primary/10 text-primary hover:bg-primary/20'
+                  }`}
+                aria-label={tab.label}
+                aria-current={active ? 'page' : undefined}
+              >
+                {tab.icon}
+                <span className="text-[10px] font-semibold leading-none">{tab.label}</span>
+              </button>
+            )
+          }
+
           return (
             <button
               key={tab.path}
               onClick={() => navigate(tab.path)}
-              className={`flex flex-col items-center justify-center gap-0.5 rounded-lg transition-all duration-fast min-w-[56px] py-1
+              className={`flex flex-col items-center justify-center gap-0.5 rounded-lg transition-all duration-fast min-w-[52px] py-1
                 ${active
-                  ? 'text-primary scale-110'
+                  ? 'text-primary'
                   : 'text-text-muted hover:text-text-secondary'
                 }`}
               aria-label={tab.label}
