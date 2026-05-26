@@ -1,45 +1,50 @@
 import type { ReactNode } from 'react'
-import { useLocation } from 'react-router-dom'
-import AdminHeader from '../AdminHeader'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { ChevronRight } from 'lucide-react'
 import BiSubNav from './BiSubNav'
-import BiSideRail from './BiSideRail'
 
 interface Props {
   titulo: string
   subtitulo?: string
-  breadcrumb: { label: string; path?: string }[]
-  maxWidth?: '3xl' | '4xl' | '5xl'
-  hideSubNav?: boolean
+  breadcrumb?: { label: string; path?: string }[]
   children: ReactNode
 }
 
-export default function BiPageLayout({ titulo, subtitulo, breadcrumb, maxWidth = '5xl', hideSubNav, children }: Props) {
+export default function BiPageLayout({ titulo, subtitulo, breadcrumb, children }: Props) {
+  const navigate = useNavigate()
   const location = useLocation()
 
-  const containerWidth = maxWidth === '3xl'
-    ? 'max-w-3xl xl:max-w-5xl 2xl:max-w-6xl'
-    : maxWidth === '4xl'
-    ? 'max-w-4xl xl:max-w-6xl 2xl:max-w-7xl'
-    : 'max-w-5xl xl:max-w-7xl 2xl:max-w-[90rem]'
-
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6">
-      <AdminHeader titulo={titulo} paginaAtual="bi" hideNav breadcrumb={breadcrumb} />
-      {/* BiSubNav: mobile only — desktop uses BiSideRail */}
-      {!hideSubNav && <div className="md:hidden w-full"><BiSubNav /></div>}
-      {/* Page title */}
-      <div className={`w-full ${containerWidth} mx-auto mb-4`}>
-        <h1 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-50 tracking-tight">{titulo}</h1>
-        {subtitulo && <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{subtitulo}</p>}
-      </div>
-      {/* Content area: centered with rail inside */}
-      <div key={location.pathname} className="animate-page-in w-full">
-        <div className={`w-full ${containerWidth} mx-auto flex gap-5`}>
-          <div className="relative z-10">
-            <BiSideRail />
-          </div>
-          <div className="flex-1 flex flex-col gap-5 min-w-0 relative z-0">{children}</div>
+    <div className="flex flex-col gap-5 max-w-full">
+      {/* Breadcrumb (mobile only — desktop uses AdminHeader breadcrumb) */}
+      {breadcrumb && breadcrumb.length > 0 && (
+        <nav className="text-xs text-text-muted flex items-center gap-0.5 flex-wrap md:hidden" aria-label="Breadcrumb">
+          {breadcrumb.map((b, i) => (
+            <span key={i} className="flex items-center gap-0.5">
+              {i > 0 && <ChevronRight size={10} className="opacity-40" />}
+              {b.path
+                ? <button onClick={() => navigate(b.path!)} className="hover:text-primary transition font-medium">{b.label}</button>
+                : <span className="text-text-secondary font-medium">{b.label}</span>
+              }
+            </span>
+          ))}
+        </nav>
+      )}
+
+      {/* Page title + subtitle */}
+      <div className="page-section-header mb-0">
+        <div>
+          <h1 className="page-section-title">{titulo}</h1>
+          {subtitulo && <p className="page-section-subtitle">{subtitulo}</p>}
         </div>
+      </div>
+
+      {/* BI Sub-nav */}
+      <BiSubNav />
+
+      {/* Content area */}
+      <div key={location.pathname} className="animate-page-in flex flex-col gap-5">
+        {children}
       </div>
     </div>
   )

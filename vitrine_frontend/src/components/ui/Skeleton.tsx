@@ -1,21 +1,22 @@
 interface Props {
-  className?: string
   variant?: 'text' | 'card' | 'circle' | 'table-row' | 'chart' | 'kpi'
+  className?: string
 }
 
 const variants: Record<string, string> = {
-  text: 'h-4 w-full rounded-md',
-  card: 'h-32 w-full rounded-xl',
-  circle: 'h-10 w-10 rounded-full',
+  text:      'h-4 w-full rounded',
+  card:      'h-32 w-full rounded-xl',
+  circle:    'h-10 w-10 rounded-full',
   'table-row': 'h-12 w-full rounded-lg',
-  chart: 'h-64 w-full rounded-xl',
-  kpi: 'h-24 w-full rounded-xl',
+  chart:     'h-[180px] w-full rounded-xl',
+  kpi:       'h-24 w-full rounded-xl',
 }
 
-export default function Skeleton({ className = '', variant = 'text' }: Props) {
+export default function Skeleton({ variant = 'text', className = '' }: Props) {
   return (
     <div
-      className={`animate-pulse bg-slate-200 dark:bg-slate-700/50 ${variants[variant]} ${className}`}
+      className={`animate-pulse bg-bg-hover ${variants[variant]} ${className}`}
+      aria-hidden="true"
     />
   )
 }

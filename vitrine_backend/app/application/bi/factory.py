@@ -7,6 +7,7 @@ from app.core.interfaces.source import TransactionSource
 from app.core.models.transaction import TransactionItem
 from app.application.bi.domain.vendas import Vendas
 from app.application.bi.domain.trocas import Trocas
+from app.application.bi.schema import Metrica
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ def _debug_items(items_before: list[TransactionItem], data_limite: date, hora_at
     soma_total = sum(float(i.line_total) for i in items_before if isinstance(i.line_total, (int, float, Decimal)))
     soma_filtrada = sum(float(i.line_total) for i in filtrados if isinstance(i.line_total, (int, float, Decimal)))
 
-    logger.info(
+    logger.debug(
         "BI debug | %s hora_atual=%s data_limite=%s "
         "items=%s filtrados=%s "
         "soma_total=%.2f soma_filtrada=%.2f "
@@ -90,7 +91,7 @@ def _debug_items(items_before: list[TransactionItem], data_limite: date, hora_at
     com_time = sum(1 for i in itens_na_data if i.time is not None)
     sem_time = sum(1 for i in itens_na_data if i.time is None)
     soma_data = sum(float(i.line_total) for i in itens_na_data if isinstance(i.line_total, (int, float, Decimal)))
-    logger.info(
+    logger.debug(
         "BI debug | %s data_limite=%s itens_na_data=%s "
         "com_time=%s sem_time=%s soma_total=%.2f",
         label, data_limite, len(itens_na_data), com_time, sem_time, soma_data,
@@ -99,7 +100,7 @@ def _debug_items(items_before: list[TransactionItem], data_limite: date, hora_at
     # Distribuição de horas na data limite
     if itens_na_data:
         horas = Counter(i.time.hour for i in itens_na_data if i.time is not None)
-        logger.info("BI debug | %s horas na data_limite=%s", label, dict(sorted(horas.items())))
+        logger.debug("BI debug | %s horas na data_limite=%s", label, dict(sorted(horas.items())))
 
 
 def criar_dominio_comparativo(
@@ -156,3 +157,97 @@ def criar_dominio_comparativo(
         dominio_anterior = None
 
     return dominio_atual, dominio_anterior
+
+
+def _calcular_metrica_diaria(
+    items: list[TransactionItem],
+    data: date,
+    metrica: Metrica,
+) -> float:
+    """Calcula o valor de uma métrica agregada para um dia específico.
+
+    Assume que os items já foram filtrados por Vendas (apenas SALE, não cancelados).
+    """
+    items_dia = [i for i in items if i.date == data]
+    if not items_dia:
+        return 0.0
+
+    if metrica == Metrica.RECEITA:
+        return round(sum(float(i.line_total) for i in items_dia), 2)
+    elif metrica == Metrica.QUANTIDADE:
+        return round(sum(float(i.quantity) for i in items_dia), 2)
+    elif metrica == Metrica.QTD_TICKETS:
+        return float(len({i.document_id for i in items_dia}))
+    elif metrica == Metrica.TICKET_MEDIO:
+        total_receita = sum(float(i.line_total) for i in items_dia)
+        qtd_tickets = len({i.document_id for i in items_dia})
+        if qtd_tickets:
+            return round(total_receita / qtd_tickets, 2)
+        return 0.0
+    return 0.0
+
+
+def obter_comparativo_diario(
+    source: TransactionSource,
+    data_inicio: date,
+    data_fim: date,
+    metrica: Metrica = Metrica.RECEITA,
+) -> dict:
+    """Retorna dados de comparação do último dia do período.
+
+    Se data_fim == hoje (parcial), corta a hora atual via _filtrar_hora()
+    tanto no período atual quanto no offset YoY.
+
+    Se data_fim for um dia completo, compara com o mesmo weekday do ano anterior (YoY).
+
+    Returns:
+        dict com chaves: data, valor, valor_offset, offset_data, parcial_ate, rotulo
+    """
+    hoje = date.today()
+    is_partial = data_fim == hoje
+    hora_atual = datetime.now().hour if is_partial else None
+
+    # ── Carrega período atual ──────────────────────────────────────────
+    items_raw = source.get_items(data_inicio, data_fim)
+    vendas_items = Vendas(items_raw).items
+
+    if is_partial:
+        items_filtrados = _filtrar_hora(vendas_items, data_fim, hora_atual)
+        valor = _calcular_metrica_diaria(items_filtrados, data_fim, metrica)
+    else:
+        valor = _calcular_metrica_diaria(vendas_items, data_fim, metrica)
+
+    # ── Determina offset (sempre YoY — mesmo weekday do ano anterior) ──
+    try:
+        offset_data = _ajustar_mesmo_dia_semana(
+            data_fim, data_fim.replace(year=data_fim.year - 1)
+        )
+    except ValueError:
+        offset_data = _ajustar_mesmo_dia_semana(
+            data_fim, data_fim.replace(year=data_fim.year - 1, day=28)
+        )
+    rotulo = "vs ano anterior"
+
+    # ── Carrega período de offset ──────────────────────────────────────
+    try:
+        items_offset_raw = source.get_items(offset_data, offset_data)
+        vendas_offset_items = Vendas(items_offset_raw).items
+
+        if is_partial:
+            items_offset = _filtrar_hora(vendas_offset_items, offset_data, hora_atual)
+        else:
+            items_offset = vendas_offset_items
+
+        valor_offset = _calcular_metrica_diaria(items_offset, offset_data, metrica)
+    except Exception:
+        valor_offset = None
+        offset_data = None  # sinaliza que não foi possível carregar
+
+    return {
+        "data": str(data_fim),
+        "valor": valor,
+        "valor_offset": valor_offset,
+        "offset_data": str(offset_data) if offset_data is not None else None,
+        "parcial_ate": f"{hora_atual:02d}:{datetime.now().minute:02d}" if is_partial else None,
+        "rotulo": rotulo,
+    }

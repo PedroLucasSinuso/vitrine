@@ -9,6 +9,8 @@ import EmptyState from '../../components/ui/EmptyState'
 import ErrorBanner from '../../components/ui/ErrorBanner'
 import Card from '../../components/ui/Card'
 import SectionHeader from '../../components/ui/SectionHeader'
+import DataTable from '../../components/ui/DataTable'
+import type { Column } from '../../components/ui/DataTable'
 import { fetchReceita, fetchQuantidade, exportarExcelBI } from '../../api/bi'
 import { baixarCSVdeArray } from '../../utils/csv'
 import type { ItemDimensaoDTO, PeriodoBi, Dimensao, Metrica } from '../../types'
@@ -125,6 +127,29 @@ export default function Receita() {
     valor: item.valor,
   }))
 
+  function buildReceitaColumns(): Column<ItemDimensaoDTO>[] {
+    const cols: Column<ItemDimensaoDTO>[] = [
+      { key: 'grupo', label: 'Grupo', render: (item) => <span className="truncate block" title={item.grupo}>{item.grupo}</span> },
+    ]
+    if (dimensao !== 'grupo') {
+      cols.push({
+        key: 'familia', label: 'Família',
+        render: (item) => <span className="truncate block text-text-muted" title={item.familia ?? ''}>{item.familia ?? '\u2014'}</span>,
+      })
+    }
+    if (dimensao === 'produto') {
+      cols.push({
+        key: 'produto', label: 'Produto',
+        render: (item) => <span className="truncate block" title={item.produto ?? ''}>{item.produto ?? '\u2014'}</span>,
+      })
+    }
+    cols.push({
+      key: 'valor', label: isReceita ? 'Receita' : 'Quantidade', align: 'right', mono: true,
+      render: (item) => <span className="font-semibold">{isReceita ? formatCurrency(item.valor) : item.valor.toLocaleString('pt-BR')}</span>,
+    })
+    return cols
+  }
+
   return (
     <BiPageLayout titulo="Receita por Dimensão" breadcrumb={[{ label: 'BI', path: '/bi' }, { label: 'Receita' }]}>
       <Card variant="bordered">
@@ -132,9 +157,9 @@ export default function Receita() {
           <PeriodoForm value={periodo} onChange={setPeriodo} onBuscar={handleBuscar} loading={loading} presets={PRESETS_RECEITA} />
           <div className="flex gap-4 flex-wrap">
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-500 dark:text-slate-400">Dimensão</label>
+              <label className="text-xs text-text-muted">Dimensão</label>
               <select
-                className="border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="form-input-base"
                 value={dimensao}
                 onChange={(e) => { const val = e.target.value as Dimensao; setDimensao(val); syncParams(val, metrica) }}
               >
@@ -144,9 +169,9 @@ export default function Receita() {
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-500 dark:text-slate-400">Métrica</label>
+              <label className="text-xs text-text-muted">Métrica</label>
               <select
-                className="border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="form-input-base"
                 value={metrica}
                 onChange={(e) => { const val = e.target.value as Metrica; setMetrica(val); syncParams(dimensao, val) }}
               >
@@ -158,10 +183,10 @@ export default function Receita() {
           {dimensao !== 'grupo' && (
             <div className="flex gap-4 flex-wrap">
               <div className="flex flex-col gap-1">
-                <label className="text-xs text-slate-500 dark:text-slate-400">Grupo</label>
-                <select
-                  className="border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  value={filtroGrupo}
+                <label className="text-xs text-text-muted">Grupo</label>
+              <select
+                className="form-input-base"
+                value={filtroGrupo}
                   onChange={(e) => { setFiltroGrupo(e.target.value); setFiltroFamilia('') }}
                 >
                   <option value="">Todos</option>
@@ -170,9 +195,9 @@ export default function Receita() {
               </div>
               {dimensao === 'produto' && filtroGrupo && (
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-slate-500 dark:text-slate-400">Família</label>
+                  <label className="text-xs text-text-muted">Família</label>
                   <select
-                    className="border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="form-input-base"
                     value={filtroFamilia}
                     onChange={(e) => setFiltroFamilia(e.target.value)}
                   >
@@ -218,9 +243,9 @@ export default function Receita() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e5e7eb" />
-                <XAxis type="number" tick={{ fontSize: 11, fill: '#9ca3af' }} tickFormatter={(v) => isReceita ? `${(v / 1000).toFixed(0)}k` : v} />
-                <YAxis type="category" dataKey="label" width={120} tick={{ fontSize: 11, fill: '#6b7280' }} />
-                <Tooltip content={<BiTooltip />} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={{ stroke: 'var(--color-border)' }} tickLine={false} tickFormatter={(v) => isReceita ? `${(v / 1000).toFixed(0)}k` : v} />
+                <YAxis type="category" dataKey="label" width={120} tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} />
+                <Tooltip content={<BiTooltip />} cursor={{ fill: 'rgba(100,100,100,0.06)' }} />
                 <Bar dataKey="valor" fill="url(#barGradientReceita)" radius={[0, 4, 4, 0]} animationBegin={0} animationDuration={600} />
               </BarChart>
             </ResponsiveContainer>
@@ -229,38 +254,16 @@ export default function Receita() {
 
           <Card variant="bordered">
             <SectionHeader>
-              Todos os resultados <span className="text-slate-400 dark:text-slate-500 font-normal">({dadosFiltrados.length})</span>
+              Todos os resultados <span className="text-text-muted font-normal">({dadosFiltrados.length})</span>
             </SectionHeader>
-            <div className="overflow-x-auto max-h-96 overflow-y-auto border border-slate-200 dark:border-slate-700/50 rounded-lg">
-              <table className="w-full text-sm table-fixed">
-                <thead>
-                  <tr className="border-b dark:border-slate-700 text-left sticky top-0 bg-white dark:bg-slate-800 z-10">
-                    <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium w-full">Grupo</th>
-                    {dimensao !== 'grupo' && <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium w-full">Família</th>}
-                    {dimensao === 'produto' && <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium w-full">Produto</th>}
-                    <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium text-right w-28">
-                      {isReceita ? 'Receita' : 'Quantidade'}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dadosFiltrados.map((item, i) => (
-                    <tr
-                      key={i}
-                      onClick={() => item.codigo && navigate(`/bi/sku?codigo=${item.codigo}`)}
-                      className={`border-b dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700 ${item.codigo ? 'cursor-pointer' : ''}`}
-                    >
-                      <td className="py-2 text-slate-700 dark:text-slate-300 truncate" title={item.grupo}>{item.grupo}</td>
-                      {dimensao !== 'grupo' && <td className="py-2 text-slate-500 dark:text-slate-400 truncate" title={item.familia ?? ''}>{item.familia ?? '\u2014'}</td>}
-                      {dimensao === 'produto' && <td className="py-2 text-slate-700 dark:text-slate-300 truncate" title={item.produto ?? ''}>{item.produto ?? '\u2014'}</td>}
-                      <td className="py-2 text-right font-semibold text-slate-800 dark:text-slate-100">
-                        {isReceita ? formatCurrency(item.valor) : item.valor.toLocaleString('pt-BR')}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              data={dadosFiltrados}
+              columns={buildReceitaColumns()}
+              rowKey={(item) => `${item.grupo}-${item.familia ?? ''}-${item.produto ?? ''}`}
+              onRowClick={(item) => item.codigo && navigate(`/bi/sku?codigo=${item.codigo}`)}
+              density="sm"
+              stickyHeader
+            />
           </Card>
         </>
       )}

@@ -45,9 +45,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_db)) ->
         raise HTTPException(status_code=401, detail="Token inválido")
 
     # ── Verifica blacklist (revogação individual) ──────────────────────
-    # Sempre verifica — sem bypass por idade de token.
-    # Tokens expirados na blacklist podem ser limpos por job futuro
-    # sem comprometer a segurança.
+    # Sempre verifica — sem bypass por idade de token (M7 removido porque
+    # o teste comprova que tokens podem ser revogados imediatamente).
     blacklisted = db.query(TokenBlacklist).filter(
         TokenBlacklist.jti == jti,
         TokenBlacklist.expires_at > datetime.now(timezone.utc)

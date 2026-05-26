@@ -177,7 +177,7 @@ class Relatorio:
 
             df_ranking = (
                 self.vendas.df
-                .groupby([COLUNAS.codigo, COLUNAS.produto])[col_metrica]
+                .groupby([COLUNAS.codigo, COLUNAS.produto])[[col_metrica, COLUNAS.qtd_item]]
                 .sum()
                 .reset_index()
                 .sort_values(col_metrica, ascending=False)
@@ -189,6 +189,7 @@ class Relatorio:
                     codigo=str(row[COLUNAS.codigo]),
                     produto=str(row[COLUNAS.produto]),
                     valor=round(float(row[col_metrica]), 2),
+                    quantidade=round(float(row[COLUNAS.qtd_item]), 0),
                 )
                 for row in df_ranking.to_dict(orient="records")
             ]

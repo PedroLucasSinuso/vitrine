@@ -33,13 +33,13 @@ class SyncService:
         self.source = source
         self.db = db
 
-    def sync(self) -> SyncResult:
+    def sync(self, job_id: str | None = None) -> SyncResult:
         try:
-            return self._sync()
+            return self._sync(job_id=job_id)
         except Exception as e:
             self.sync_com_erro(e)
 
-    def _sync(self) -> SyncResult:
+    def _sync(self, job_id: str | None = None) -> SyncResult:
         logger.info("SyncService iniciando sync")
 
         with temporizador("SyncService completo", logger):
@@ -49,24 +49,50 @@ class SyncService:
             products = self.source.get_all_products()
             logger.info("SyncService source retornou %s produtos", len(products))
 
-            with temporizador("SyncService delete antigos", logger):
-                self.db.execute(delete(ProdutoCodigo))
-                self.db.execute(delete(Produto))
+            # Transação explícita: DELETE + INSERT são atômicos.
+            # Se add_all falhar, o rollback desfaz o DELETE.
+            with self.db.begin():
+                with temporizador("SyncService delete antigos", logger):
+                    self.db.execute(delete(ProdutoCodigo))
+                    self.db.execute(delete(Produto))
 
-            produtos_orm = [self._to_orm(p) for p in products]
+                produtos_orm = [self._to_orm(p) for p in products]
 
-            with temporizador("SyncService insert", logger):
-                self.db.add_all(produtos_orm)
+                with temporizador("SyncService insert", logger):
+                    self.db.add_all(produtos_orm)
+
+                # ── Gravar histórico de preços (dentro da transação atômica — C1)
+                with temporizador("SyncService historico_precos", logger):
+                    from app.infrastructure.repositories.produto_repository import ProdutoRepository
+
+                    # C6: se job_id foi passado externamente, usa direto (evita
+                    # query race condition com func.max(SyncJob.id))
+                    if job_id is None:
+                        from app.domain.models.sync_job import SyncJob
+                        ultimo_job = self.db.query(SyncJob).order_by(SyncJob.id.desc()).first()
+                        job_id_resolved = ultimo_job.id if ultimo_job else None
+                    else:
+                        job_id_resolved = job_id
+
+                    repo = ProdutoRepository(self.db)
+                    for p in products:
+                        repo.inserir_historico_preco(
+                            codigo=p.internal_code,
+                            preco_custo=float(p.cost_price),
+                            preco_venda=float(p.sale_price),
+                            sync_job_id=job_id_resolved,
+                        )
+
+                # ── CacheStatus dentro da transação ─────────────────────────────
+                self.db.add(CacheStatus(
+                    last_updated=datetime.now(ZoneInfo("America/Sao_Paulo")),
+                    status="sucesso",
+                ))
+
+            # ← self.db.begin() comita aqui (rollback em caso de exceção)
 
             produtos_count = len(produtos_orm)
             codigos_count = sum(len(p.barcodes) for p in products)
-
-            self.db.add(CacheStatus(
-                last_updated=datetime.now(ZoneInfo("America/Sao_Paulo")),
-                status="sucesso",
-            ))
-
-            self.db.commit()
 
             logger.info("SyncService concluido | produtos=%s codigos=%s", produtos_count, codigos_count)
             return SyncResult(produtos_count=produtos_count, codigos_count=codigos_count)
@@ -93,6 +119,7 @@ class SyncService:
             preco_venda=float(p.sale_price),
             preco_custo=float(p.cost_price),
             estoque=p.stock,
+            ativo=p.is_active,
             codigos=[
                 ProdutoCodigo(codigo=b, codigo_chamada=p.internal_code)
                 for b in p.barcodes
@@ -103,6 +130,7 @@ class SyncService:
 def run_sync_scheduled():
     """Função para ser chamada pelo scheduler (sem argumentos).
     Cria seu próprio engine e sessão, executa o sync e invalida cache.
+    O engine é disposto ao final para evitar vazamento de conexões PostgreSQL.
     """
     from app.infrastructure.db.bootstrap import init_db
     from app.infrastructure.db.session import SqliteSession
@@ -112,8 +140,10 @@ def run_sync_scheduled():
 
     init_db()
     session = SqliteSession()
+    engine = None
     try:
-        source = AlterdataProductSource(get_alterdata_engine(session))
+        engine = get_alterdata_engine(session, pool_size=1)  # C2: pool mínimo p/ sync
+        source = AlterdataProductSource(engine)
         result = SyncService(source, session).sync()
         invalidar_cache_transacoes()
         logger.info("Sync agendado concluido | produtos=%s codigos=%s",
@@ -122,3 +152,5 @@ def run_sync_scheduled():
         logger.error("Sync agendado falhou: %s", sanitizar_erro(e))
     finally:
         session.close()
+        if engine is not None:
+            engine.dispose()

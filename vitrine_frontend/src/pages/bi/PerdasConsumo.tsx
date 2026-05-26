@@ -38,10 +38,10 @@ function TabelaMovimento({ dados }: { dados: MovimentoDTO }) {
       <KpiCard label="Total" valor={formatCurrency(animTotal)} />
       <Card variant="bordered">
         <SectionHeader>
-          Por produto <span className="text-slate-400 dark:text-slate-500 font-normal">({dados.por_produto.length})</span>
+          Por produto <span className="text-text-muted font-normal">({dados.por_produto.length})</span>
         </SectionHeader>
         {dados.por_produto.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Nenhum registro no período.</p>
+          <p className="text-sm text-text-muted">Nenhum registro no período.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {dados.por_produto.slice(0, 20).map((item, i) => (
@@ -51,17 +51,17 @@ function TabelaMovimento({ dados }: { dados: MovimentoDTO }) {
                 className="flex flex-col gap-0.5 cursor-pointer"
               >
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-700 dark:text-slate-300 truncate">
-                    <span className="text-slate-400 dark:text-slate-500 font-mono mr-1">{item.codigo}</span>
+                  <span className="text-text-primary truncate">
+                    <span className="text-text-muted font-mono mr-1">{item.codigo}</span>
                     {item.produto}
                   </span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-100 shrink-0 ml-2">{formatCurrency(item.receita)}</span>
+                  <span className="font-semibold text-text-primary shrink-0 ml-2">{formatCurrency(item.receita)}</span>
                 </div>
                 <ProgressBar value={item.receita} max={maximo} />
               </div>
             ))}
             {dados.por_produto.length > 20 && (
-              <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
+              <p className="text-xs text-text-muted text-center">
                 +{dados.por_produto.length - 20} produtos não listados
               </p>
             )}
@@ -149,31 +149,31 @@ export default function PerdasConsumo() {
         <>
           {perdas && consumo && (
             <div className="grid grid-cols-2 gap-3">
-              <Card variant="bordered" className="flex flex-col items-center text-center gap-1 p-4">
-                <TrendingDown size={16} className="text-red-500" />
-                <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">Perdas</p>
-                <p className="text-xl font-bold text-red-600">{formatCurrency(animPerdas)}</p>
-                <p className="text-xs text-slate-400 dark:text-slate-500">{perdas.por_produto.length} produtos</p>
+              <Card variant="bordered" padding="sm" className="flex flex-col items-center text-center gap-1">
+                <TrendingDown size={16} className="text-danger" />
+                <p className="text-xs text-text-muted font-medium">Perdas</p>
+                <p className="text-xl font-bold text-danger">{formatCurrency(animPerdas)}</p>
+                <p className="text-xs text-text-muted">{perdas.por_produto.length} produtos</p>
               </Card>
-              <Card variant="bordered" className="flex flex-col items-center text-center gap-1 p-4">
-                <PackageOpen size={16} className="text-amber-500" />
-                <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">Consumo</p>
-                <p className="text-xl font-bold text-amber-600">{formatCurrency(animConsumo)}</p>
-                <p className="text-xs text-slate-400 dark:text-slate-500">{consumo.por_produto.length} produtos</p>
+              <Card variant="bordered" padding="sm" className="flex flex-col items-center text-center gap-1">
+                <PackageOpen size={16} className="text-warning" />
+                <p className="text-xs text-text-muted font-medium">Consumo</p>
+                <p className="text-xl font-bold text-warning">{formatCurrency(animConsumo)}</p>
+                <p className="text-xs text-text-muted">{consumo.por_produto.length} produtos</p>
               </Card>
-              <Card variant="bordered" className="flex flex-col items-center text-center gap-1 p-4 col-span-2">
-                <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">Proporção</p>
-                <p className="text-xl font-bold text-slate-800 dark:text-slate-100">
+              <Card variant="bordered" padding="sm" className="flex flex-col items-center text-center gap-1 col-span-2">
+                <p className="text-xs text-text-muted font-medium">Proporção</p>
+                <p className="text-xl font-bold text-text-primary">
                   {perdas.total > 0
                     ? `${((consumo.total / perdas.total) * 100).toFixed(1)}%`
                     : '\u2014'}
                 </p>
-                <p className="text-xs text-slate-400 dark:text-slate-500">consumo em relação a perdas</p>
+                <p className="text-xs text-text-muted">consumo em relação a perdas</p>
               </Card>
             </div>
           )}
 
-          <div className="flex gap-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-1 w-fit">
+          <div className="flex gap-1 bg-bg-card border border-border rounded-xl shadow-sm p-1 w-fit">
             {(['perdas', 'consumo'] as Aba[]).map((a) => (
               <button
                 key={a}

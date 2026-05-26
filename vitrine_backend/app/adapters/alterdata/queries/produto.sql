@@ -5,7 +5,8 @@ SELECT
     d.dsdetalhe         as nome,
     d.vlprecovenda      as preco_venda,
     d.vlprecocusto      as preco_custo,
-    SUM(e.qtestoque)    as estoque
+    SUM(e.qtestoque)    as estoque,
+    COALESCE(d.stdetalheativo, true) as ativo
 
 FROM wshop.detalhe d
 LEFT JOIN wshop.familia f   ON d.idfamilia = f.idfamilia
@@ -25,4 +26,5 @@ GROUP BY
     f.dsfamilia,
     d.dsdetalhe,
     d.vlprecovenda,
-    d.vlprecocusto;
+    d.vlprecocusto,
+    d.stdetalheativo;

@@ -8,6 +8,7 @@ import EmptyState from '../../components/ui/EmptyState'
 import ErrorBanner from '../../components/ui/ErrorBanner'
 import Card from '../../components/ui/Card'
 import SectionHeader from '../../components/ui/SectionHeader'
+import DataTable from '../../components/ui/DataTable'
 import KpiCard from '../../components/bi/KpiCard'
 import { fetchTrocas, exportarExcelBI } from '../../api/bi'
 import { baixarCSVdeArray } from '../../utils/csv'
@@ -117,35 +118,22 @@ export default function Trocas() {
 
           <Card variant="bordered">
             <SectionHeader>
-              Por produto <span className="text-slate-400 dark:text-slate-500 font-normal">({dados.por_produto.length})</span>
+              Por produto <span className="text-text-muted font-normal">({dados.por_produto.length})</span>
             </SectionHeader>
             {dados.por_produto.length === 0 ? (
-              <p className="text-sm text-slate-400 dark:text-slate-500">Nenhuma troca no período.</p>
+              <p className="text-sm text-text-muted">Nenhuma troca no período.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm table-fixed">
-                  <thead>
-                    <tr className="border-b dark:border-slate-700 text-left">
-                      <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium w-28">Código</th>
-                      <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium w-full">Produto</th>
-                      <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium text-right w-28">Valor</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                      {dados.por_produto.map((item, i) => (
-                        <tr
-                          key={i}
-                          onClick={() => navigate(`/bi/sku?codigo=${item.codigo}`)}
-                          className="border-b dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer"
-                        >
-                          <td className="py-2 text-slate-400 dark:text-slate-500 font-mono truncate" title={item.codigo}>{item.codigo}</td>
-                          <td className="py-2 text-slate-700 dark:text-slate-300 truncate" title={item.produto}>{item.produto}</td>
-                          <td className="py-2 text-right font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(item.receita)}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                data={dados.por_produto}
+                columns={[
+                  { key: 'codigo', label: 'Código', mono: true, render: (item) => <span className="truncate block font-mono text-text-muted" title={item.codigo}>{item.codigo}</span> },
+                  { key: 'produto', label: 'Produto', render: (item) => <span className="truncate block" title={item.produto}>{item.produto}</span> },
+                  { key: 'receita', label: 'Valor', align: 'right', mono: true, render: (item) => <span className="font-semibold">{formatCurrency(item.receita)}</span> },
+                ]}
+                rowKey={(item) => item.codigo}
+                onRowClick={(item) => navigate(`/bi/sku?codigo=${item.codigo}`)}
+                density="sm"
+              />
             )}
           </Card>
         </>

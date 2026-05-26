@@ -1,22 +1,31 @@
 import type { ReactNode } from 'react'
-import { BarChart3 } from 'lucide-react'
+import { Inbox } from 'lucide-react'
 
 interface Props {
-  icon?: ReactNode
   title: string
   description?: string
+  icon?: ReactNode
   action?: ReactNode
+  className?: string
 }
 
-export default function EmptyState({ icon, title, description, action }: Props) {
+export default function EmptyState({
+  title, description, icon, action, className = '',
+}: Props) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-      <div className="w-20 h-20 rounded-2xl bg-primary/5 dark:bg-primary/10 flex items-center justify-center mb-5">
-        {icon ?? <BarChart3 size={32} className="text-primary/40" />}
+    <div className={`card-base p-8 sm:p-10 ${className}`}>
+      <div className="flex flex-col items-center text-center gap-3">
+        <div className="w-12 h-12 rounded-2xl bg-bg-hover flex items-center justify-center text-text-muted">
+          {icon ?? <Inbox size={24} />}
+        </div>
+        <div>
+          <p className="text-base font-semibold text-text-primary">{title}</p>
+          {description && (
+            <p className="text-sm text-text-muted mt-1 max-w-sm">{description}</p>
+          )}
+        </div>
+        {action && <div className="mt-2">{action}</div>}
       </div>
-      <h3 className="text-base font-semibold text-slate-700 dark:text-slate-300 mb-1">{title}</h3>
-      {description && <p className="text-sm text-slate-400 dark:text-slate-500 max-w-sm leading-relaxed">{description}</p>}
-      {action && <div className="mt-5">{action}</div>}
     </div>
   )
 }

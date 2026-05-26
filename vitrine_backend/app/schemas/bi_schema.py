@@ -44,6 +44,7 @@ class ItemRankingDTO(BaseModel):
     codigo: str
     produto: str
     valor: float
+    quantidade: float = 0
 
 class ItemMovimentoDTO(BaseModel):
     codigo: str
@@ -83,3 +84,38 @@ class SkuDTO(BaseModel):
     ranking_dias: list[PontoDiarioDTO]
     distribuicao_hora: list[PontoHoraDTO]
     distribuicao_dia_semana: list[PontoDiaSemanaDTO]
+
+
+class ProdutoTabelaResponse(BaseModel):
+    codigo_chamada: str
+    nome: str
+    grupo: str
+    familia: str
+    preco_venda: float
+    preco_custo: float
+    markup: float
+    margem: float
+    estoque: float
+    model_config = {"from_attributes": True}
+
+
+class FiltrosDisponiveis(BaseModel):
+    grupos: list[str]
+    familias: list[str]
+
+
+class PontoDiarioComparativoDTO(BaseModel):
+    data: str                    # data do último dia do período
+    valor: float                 # valor atual (cortado na hora se parcial)
+    valor_offset: float | None   # valor do offset day (cortado na mesma hora)
+    offset_data: str | None      # data do offset day
+    parcial_ate: str | None      # "HH:MM" se hoje for parcial
+    rotulo: str                  # "vs semana passada" | "vs ano anterior"
+
+
+class TabelaProdutosResponse(BaseModel):
+    items: list[ProdutoTabelaResponse]
+    total: int
+    limit: int
+    offset: int
+    filtros_disponiveis: FiltrosDisponiveis

@@ -17,8 +17,8 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
-      localStorage.removeItem('role')
-      window.location.href = '/login'
+      // Emite evento para o React Router escutar (evita full page reload)
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'))
     }
     return Promise.reject(error)
   }

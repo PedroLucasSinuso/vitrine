@@ -73,28 +73,28 @@ export default function ListaContatosWhatsApp() {
   }
 
   if (loading) {
-    return <p className="text-xs text-slate-400 dark:text-slate-500">Carregando contatos...</p>
+    return <p className="text-xs text-text-muted">Carregando contatos...</p>
   }
 
   return (
     <div className="flex flex-col gap-2">
       {/* Column headers */}
       <div className="hidden sm:grid sm:grid-cols-[1fr_1.5fr_auto] gap-2 px-1">
-        <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nome</span>
-        <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Número</span>
+        <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Nome</span>
+        <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Número</span>
         <span className="w-7" />
       </div>
 
       {contatos.map((contato) => (
         <div key={contato.id} className="flex flex-col sm:grid sm:grid-cols-[1fr_1.5fr_auto] gap-2 items-center">
           <input
-            className="w-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent transition"
+            className="form-input-base"
             value={contato.nome}
             onChange={(e) => handleUpdate(contato.id, 'nome', e.target.value)}
             placeholder="Nome do contato"
           />
           <input
-            className="w-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent transition font-mono"
+            className="form-input-base font-mono"
             value={contato.numero}
             onChange={(e) => handleUpdate(contato.id, 'numero', e.target.value)}
             placeholder="5522999999999"
@@ -106,7 +106,7 @@ export default function ListaContatosWhatsApp() {
           ) : (
             <button
               onClick={() => handleRemover(contato.id)}
-              className="text-slate-300 hover:text-red-500 dark:hover:text-red-400 transition p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 self-end sm:self-center"
+              className="text-text-muted hover:text-danger transition p-1 rounded-md hover:bg-danger-light self-end sm:self-center"
               title="Remover contato"
             >
               <X size={14} />

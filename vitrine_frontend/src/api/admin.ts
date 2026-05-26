@@ -9,12 +9,12 @@
 import api from './client'
 import type { SyncJob, SyncHistory } from '../types'
 
-export async function triggerSync(): Promise<{ job_id: number }> {
+export async function triggerSync(): Promise<{ job_id: string }> {
   const response = await api.post('/admin/sync')
   return response.data
 }
 
-export async function getSyncStatus(jobId: number, signal?: AbortSignal): Promise<SyncJob> {
+export async function getSyncStatus(jobId: string, signal?: AbortSignal): Promise<SyncJob> {
   const response = await api.get(`/admin/sync/${jobId}`, { signal })
   return response.data
 }
@@ -156,6 +156,10 @@ function _triggerDownload(blob: Blob, filename: string): void {
 
 function _filenameFromHeaders(headers: Record<string, unknown>): string | null {
   const disposition = String(headers['content-disposition'] ?? '')
+  // Tenta filename* (RFC 5987) primeiro: filename*=UTF-8''nome.xlsx
+  const starMatch = disposition.match(/filename\*=(?:UTF-8'')?([^;\n]+)/)
+  if (starMatch) return decodeURIComponent(starMatch[1])
+  // Fallback para filename simples: filename="nome.xlsx" ou filename=nome.xlsx
   const match = disposition.match(/filename="?([^";\n]+)"?/)
   return match ? match[1] : null
 }

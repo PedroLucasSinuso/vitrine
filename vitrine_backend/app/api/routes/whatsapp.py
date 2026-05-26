@@ -76,6 +76,6 @@ def remover_contato(
 def testar_whatsapp(
     _admin: Usuario = Depends(require_admin),
 ):
-    from app.application.notifications.scheduler_notifications import _enviar_relatorio
-    _enviar_relatorio()
+    from app.application.notifications.scheduler_notifications import _enviar_relatorio_whatsapp
+    _enviar_relatorio_whatsapp()
     return {"ok": True, "mensagem": "Relatório de teste enviado"}

@@ -3,6 +3,7 @@ import { getConfiguracoes } from '../api/admin'
 interface ConfigCache {
   marketName: string
   marketLogoUrl: string
+  meta_faturamento_mensal?: string
 }
 
 const CACHE_TTL_MS = 30_000
@@ -35,6 +36,7 @@ export async function getConfigsCache(): Promise<ConfigCache> {
       _cache = {
         marketName: c.market_name ?? '',
         marketLogoUrl: c.logo_url ?? '',
+        meta_faturamento_mensal: c.meta_faturamento_mensal ?? undefined,
       }
       _cacheTimestamp = Date.now()
       localStorage.setItem('vitrine_config', JSON.stringify(_cache))

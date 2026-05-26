@@ -1,5 +1,5 @@
 export type Dimensao = 'produto' | 'grupo' | 'familia'
-export type Metrica = 'receita_produto' | 'qtd_item'
+export type Metrica = 'receita_produto' | 'qtd_item' | 'qtd_tickets' | 'ticket_medio'
 export type CurvaAbc = 'A' | 'B' | 'C'
 
 export interface KpisDTO {
@@ -28,7 +28,7 @@ export interface KpisComparativoDTO {
 }
 
 export interface ItemDimensaoDTO {
-  codigo?: string
+  codigo: string
   grupo: string
   familia?: string | null
   produto?: string | null
@@ -50,6 +50,7 @@ export interface ItemRankingDTO {
   codigo: string
   produto: string
   valor: number
+  quantidade: number
 }
 
 export interface ItemMovimentoDTO {
@@ -79,6 +80,15 @@ export interface PontoHoraDTO {
   valor: number
 }
 
+export interface DiarioComparativoDTO {
+  data: string
+  valor: number
+  valor_offset: number | null
+  offset_data: string | null
+  parcial_ate: string | null
+  rotulo: string
+}
+
 export interface PontoDiaSemanaDTO {
   dia_semana: string
   valor: number
@@ -101,4 +111,27 @@ export interface SkuDTO {
 export interface PeriodoBi {
   data_inicio: string
   data_fim: string
+}
+
+export interface ProdutoTabelaResponse {
+  codigo_chamada: string
+  nome: string
+  grupo: string
+  familia: string
+  preco_venda: number
+  preco_custo: number
+  markup: number
+  margem: number
+  estoque: number
+}
+
+export interface TabelaProdutosResponse {
+  items: ProdutoTabelaResponse[]
+  total: number
+  limit: number
+  offset: number
+  filtros_disponiveis: {
+    grupos: string[]
+    familias: string[]
+  }
 }

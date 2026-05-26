@@ -17,6 +17,8 @@ import { useBiCache } from '../../stores/biCache'
 import { useToast } from '../../hooks/useToast'
 import { PieChart as PieChartIcon } from 'lucide-react'
 import Skeleton from '../../components/ui/Skeleton'
+import DataTable from '../../components/ui/DataTable'
+import type { Column } from '../../components/ui/DataTable'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 
 const PRESETS_CURVA: Preset[] = [
@@ -34,9 +36,9 @@ function periodoInicial(): PeriodoBi {
 }
 
 const CURVA_BADGE: Record<CurvaAbc, string> = {
-  A: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
-  B: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
-  C: 'bg-slate-100 text-slate-700 dark:bg-slate-600 dark:text-slate-200',
+  A: 'bg-abc-a-light text-abc-a',
+  B: 'bg-abc-b-light text-abc-b',
+  C: 'bg-abc-c-light text-abc-c',
 }
 
 export default function CurvaAbc() {
@@ -107,15 +109,47 @@ export default function CurvaAbc() {
     value: s.receita,
   }))
 
+  function buildColumns(): Column<ItemCurvaAbcDTO>[] {
+    const cols: Column<ItemCurvaAbcDTO>[] = [
+      { key: 'grupo', label: 'Grupo', width: '20%', render: (item) => <span className="truncate block" title={item.grupo}>{item.grupo}</span> },
+    ]
+    if (dimensao !== 'grupo') {
+      cols.push({
+        key: 'familia', label: 'Família', width: '20%',
+        render: (item) => <span className="truncate block text-text-muted" title={item.familia ?? ''}>{item.familia ?? '\u2014'}</span>,
+      })
+    }
+    if (dimensao === 'produto') {
+      cols.push({
+        key: 'produto', label: 'Produto', width: '20%',
+        render: (item) => <span className="truncate block" title={item.produto ?? ''}>{item.produto ?? '\u2014'}</span>,
+      })
+    }
+    cols.push(
+      { key: 'receita', label: 'Receita', sortable: true, align: 'right', width: '120px', mono: true, render: (item) => <span className="font-semibold">{formatCurrency(item.receita)}</span> },
+      { key: 'participacao_pct', label: 'Part. %', sortable: true, align: 'right', width: '100px', mono: true, render: (item) => <span className="text-text-secondary">{item.participacao_pct.toFixed(2)}%</span> },
+      { key: 'participacao_acumulada', label: 'Acum. %', sortable: true, align: 'right', width: '100px', mono: true, render: (item) => <span className="text-text-secondary">{item.participacao_acumulada.toFixed(2)}%</span> },
+      {
+        key: 'curva', label: 'Curva', align: 'center', width: '80px',
+        render: (item) => (
+          <span className={`text-xs font-semibold px-2 py-1 rounded-full ${CURVA_BADGE[item.curva]}`}>
+            {item.curva}
+          </span>
+        ),
+      },
+    )
+    return cols
+  }
+
   return (
     <BiPageLayout titulo="Curva ABC" breadcrumb={[{ label: 'BI', path: '/bi' }, { label: 'Curva ABC' }]}>
       <Card variant="bordered">
         <div className="flex flex-col gap-4">
           <PeriodoForm value={periodo} onChange={setPeriodo} onBuscar={handleBuscar} loading={loading} presets={PRESETS_CURVA} />
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-slate-500 dark:text-slate-400">Dimensão</label>
+            <label className="text-xs text-text-muted">Dimensão</label>
             <select
-              className="border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-40"
+              className="form-input-base w-40"
               value={dimensao}
               onChange={(e) => { const val = e.target.value as Dimensao; setDimensao(val); syncParams(val) }}
             >
@@ -147,14 +181,14 @@ export default function CurvaAbc() {
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {statsPorCurva.map(({ curva, qtd, receita, pctReceita }) => (
-              <Card key={curva} variant="bordered" className="flex flex-col items-center text-center gap-1 p-4">
+              <Card key={curva} variant="bordered" padding="sm" className="flex flex-col items-center text-center gap-1">
                 <span className={`text-xs font-semibold px-2 py-1 rounded-full ${CURVA_BADGE[curva]}`}>
                   Curva {curva}
                 </span>
-                <p className="text-xl font-bold text-slate-800 dark:text-slate-100 break-words">{qtd}</p>
-                <p className="text-xs text-slate-400 dark:text-slate-500">itens</p>
-                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-1">{formatCurrency(receita)}</p>
-                <p className="text-xs text-slate-400 dark:text-slate-500">{pctReceita.toFixed(1)}% da receita</p>
+                <p className="text-xl font-bold text-text-primary break-words">{qtd}</p>
+                <p className="text-xs text-text-muted">itens</p>
+                <p className="text-sm font-semibold text-text-primary mt-1">{formatCurrency(receita)}</p>
+                <p className="text-xs text-text-muted">{pctReceita.toFixed(1)}% da receita</p>
               </Card>
             ))}
           </div>
@@ -179,12 +213,12 @@ export default function CurvaAbc() {
                       <Cell key={idx} fill={CURVA_CORES[statsPorCurva[idx].curva]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v) => formatCurrency(Number(v))} />
+                  <Tooltip formatter={(v) => formatCurrency(Number(v))} cursor={{ fill: 'rgba(100,100,100,0.06)' }} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex justify-center gap-4 mt-2">
                 {statsPorCurva.map(({ curva, pctReceita }) => (
-                  <div key={curva} className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                  <div key={curva} className="flex items-center gap-1.5 text-xs text-text-muted">
                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CURVA_CORES[curva] }} />
                     {curva} · {pctReceita.toFixed(1)}%
                   </div>
@@ -193,21 +227,21 @@ export default function CurvaAbc() {
             </Card>
 
             <Card variant="bordered">
-              <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">Concentração Acumulada</h2>
-              <p className="text-3xl font-bold text-slate-800 dark:text-slate-100">
+              <h2 className="text-sm font-semibold text-text-primary mb-4">Concentração Acumulada</h2>
+              <p className="text-3xl font-bold text-text-primary">
                 {statsPorCurva[0]?.pctReceita.toFixed(1) ?? 0}%
               </p>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
+              <p className="text-sm text-text-secondary">
                 da receita está em {statsPorCurva[0]?.qtd ?? 0} itens da Curva A
               </p>
               {/* Visual gauge */}
-              <div className="mt-4 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+              <div className="mt-4 h-2 bg-bg-hover rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-primary to-primary-light rounded-full transition-all duration-700"
                   style={{ width: `${statsPorCurva[0]?.pctReceita ?? 0}%` }}
                 />
               </div>
-              <div className="mt-3 flex flex-col gap-1 text-sm text-slate-600 dark:text-slate-400">
+              <div className="mt-3 flex flex-col gap-1 text-sm text-text-secondary">
                 <p>· Curva A: {statsPorCurva[0]?.qtd ?? 0} itens · {statsPorCurva[0]?.pctReceita.toFixed(1) ?? 0}% receita</p>
                 <p>· Curva B: {statsPorCurva[1]?.qtd ?? 0} itens · {statsPorCurva[1]?.pctReceita.toFixed(1) ?? 0}% receita</p>
                 <p>· Curva C: {statsPorCurva[2]?.qtd ?? 0} itens · {statsPorCurva[2]?.pctReceita.toFixed(1) ?? 0}% receita</p>
@@ -217,46 +251,17 @@ export default function CurvaAbc() {
 
           <Card variant="bordered">
             <SectionHeader>
-              Classificação completa <span className="text-slate-400 dark:text-slate-500 font-normal">({dados.length})</span>
+              Classificação completa <span className="text-text-muted font-normal">({dados.length})</span>
             </SectionHeader>
-            <div className="overflow-x-auto max-h-96 overflow-y-auto border border-slate-200 dark:border-slate-700/50 rounded-lg">
-              <table className="w-full text-sm table-fixed">
-                <thead>
-                  <tr className="border-b dark:border-slate-700 text-left sticky top-0 bg-white dark:bg-slate-800 z-10">
-                    <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium w-8">#</th>
-                    <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium">Grupo</th>
-                    {dimensao !== 'grupo' && <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium">Família</th>}
-                    {dimensao === 'produto' && <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium">Produto</th>}
-                    <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium text-right w-24">Receita</th>
-                    <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium text-right w-20">Part. %</th>
-                    <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium text-right w-20">Acum. %</th>
-                    <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium text-center w-16">Curva</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dados.map((item, i) => (
-                    <tr
-                      key={i}
-                      onClick={() => item.codigo && navigate(`/bi/sku?codigo=${item.codigo}`)}
-                      className={`border-b dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700 ${item.codigo ? 'cursor-pointer' : ''}`}
-                    >
-                      <td className="py-2 text-slate-400 dark:text-slate-500">{i + 1}</td>
-                      <td className="py-2 text-slate-700 dark:text-slate-300 truncate" title={item.grupo}>{item.grupo}</td>
-                      {dimensao !== 'grupo' && <td className="py-2 text-slate-500 dark:text-slate-400 truncate" title={item.familia ?? ''}>{item.familia ?? '\u2014'}</td>}
-                      {dimensao === 'produto' && <td className="py-2 text-slate-700 dark:text-slate-300 truncate" title={item.produto ?? ''}>{item.produto ?? '\u2014'}</td>}
-                      <td className="py-2 text-right font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(item.receita)}</td>
-                      <td className="py-2 text-right text-slate-600 dark:text-slate-400">{item.participacao_pct.toFixed(2)}%</td>
-                      <td className="py-2 text-right text-slate-600 dark:text-slate-400">{item.participacao_acumulada.toFixed(2)}%</td>
-                      <td className="py-2 text-center">
-                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${CURVA_BADGE[item.curva]}`}>
-                          {item.curva}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              data={dados}
+              columns={buildColumns()}
+              rowKey={(item) => `${item.grupo}-${item.familia ?? ''}-${item.produto ?? ''}`}
+              onRowClick={(item) => item.codigo && navigate(`/bi/sku?codigo=${item.codigo}`)}
+              density="sm"
+              stickyHeader
+              rowNumbers
+            />
           </Card>
         </>
       )}

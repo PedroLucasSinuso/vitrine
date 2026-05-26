@@ -9,6 +9,7 @@ import EmptyState from '../../components/ui/EmptyState'
 import ErrorBanner from '../../components/ui/ErrorBanner'
 import Card from '../../components/ui/Card'
 import SectionHeader from '../../components/ui/SectionHeader'
+import DataTable from '../../components/ui/DataTable'
 import KpiCard from '../../components/bi/KpiCard'
 import { fetchSku, exportarExcelBI } from '../../api/bi'
 import { buscarProdutosPorNome } from '../../api/produtos'
@@ -99,15 +100,20 @@ export default function Sku() {
     }
   }, [periodo, cache])
 
-  // React to URL ?codigo= changes — enables navigation between SKUs
+  // Auto-search on mount if codigo present in URL — enables direct /bi/sku?codigo=XXX
+  // Also reacts to URL param changes for navigation between SKUs
+  // ?force=1 bypasses cache (used from header search bar)
   useEffect(() => {
     const codigoParam = searchParams.get('codigo')
+    const forceParam = searchParams.get('force') === '1'
     if (codigoParam && codigoParam !== codigoRef.current) {
       setCodigo(codigoParam)
-      buscar(codigoParam)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only react to URL param changes
-  }, [searchParams.get('codigo')])
+    if (codigoParam) {
+      buscar(codigoParam, undefined, forceParam)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get('codigo'), searchParams.get('force')])
 
   function handleBuscar(periodoOverride?: PeriodoBi) {
     const valor = codigoRef.current.trim()
@@ -122,16 +128,16 @@ export default function Sku() {
           <PeriodoForm value={periodo} onChange={setPeriodo} onBuscar={handleBuscar} loading={loading} presets={PRESETS_SKU} />
           <div>
             <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
               <input
-                className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="form-input-base !pl-9"
                 placeholder="Buscar produto por nome..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             {searchResults.length > 0 && (
-              <div className="mt-1 bg-white dark:bg-slate-800 rounded-lg shadow-md border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700 max-h-48 overflow-y-auto absolute left-0 right-0 z-20">
+              <div className="mt-1 bg-bg-card rounded-lg shadow-md border border-border divide-y divide-border max-h-48 overflow-y-auto absolute left-0 right-0 z-20">
                 {searchResults.map((p) => (
                   <button
                     key={p.codigo_chamada}
@@ -143,10 +149,10 @@ export default function Sku() {
                       setSearchParams({ codigo: p.codigo_chamada })
                       buscar(p.codigo_chamada)
                     }}
-                    className="w-full text-left px-3 py-2 hover:bg-primary-lighter dark:hover:bg-slate-700 transition text-sm flex justify-between items-center"
+                    className="w-full text-left px-3 py-2 hover:bg-bg-hover transition text-sm flex justify-between items-center"
                   >
-                    <span className="font-medium text-slate-800 dark:text-slate-100">{p.nome}</span>
-                    <span className="text-slate-400 dark:text-slate-500 text-xs">{p.codigo_chamada}</span>
+                    <span className="font-medium text-text-primary">{p.nome}</span>
+                    <span className="text-text-muted text-xs">{p.codigo_chamada}</span>
                   </button>
                 ))}
               </div>
@@ -157,7 +163,7 @@ export default function Sku() {
           </div>
           <div className="flex gap-2">
             <input
-              className="flex-1 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="form-input-base flex-1"
               placeholder="Código do produto (EAN ou PLU)"
               value={codigo}
               onChange={(e) => setCodigo(e.target.value)}
@@ -210,9 +216,9 @@ export default function Sku() {
         <>
           <div className="flex flex-col gap-3">
           <Card variant="bordered">
-            <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mb-1">{dados.grupo} · {dados.familia}</p>
-            <p className="text-xl font-bold text-slate-800 dark:text-slate-100">{dados.produto}</p>
-            <p className="text-sm text-slate-400 dark:text-slate-500 font-mono mt-1">{dados.codigo}</p>
+            <p className="text-xs text-text-muted font-medium mb-1">{dados.grupo} · {dados.familia}</p>
+            <p className="text-xl font-bold text-text-primary">{dados.produto}</p>
+            <p className="text-sm text-text-muted font-mono mt-1">{dados.codigo}</p>
           </Card>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -238,10 +244,10 @@ export default function Sku() {
                       <stop offset="100%" stopColor={CHART.green} stopOpacity={0.02} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                  <XAxis dataKey="data" tick={{ fontSize: 10, fill: '#9ca3af' }} tickFormatter={(v) => v.slice(5)} interval="preserveStartEnd" />
-                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={36} />
-                  <Tooltip content={<BiTooltip />} labelFormatter={(l) => `Data: ${l}`} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
+                  <XAxis dataKey="data" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} tickFormatter={(v) => v.slice(5)} interval="preserveStartEnd" axisLine={{ stroke: 'var(--color-border)' }} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={36} axisLine={false} tickLine={false} />
+                  <Tooltip content={<BiTooltip />} cursor={{ fill: 'rgba(100,100,100,0.06)' }} labelFormatter={(l) => `Data: ${l}`} />
                   <Area type="monotone" dataKey="valor" stroke={CHART.green} strokeWidth={2} fill="url(#areaGradientSku)" animationBegin={0} animationDuration={600} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -261,10 +267,10 @@ export default function Sku() {
                       <stop offset="100%" stopColor={CHART.green} stopOpacity={0.25} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} />
-                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={36} />
-                  <Tooltip content={<BiTooltip />} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
+                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={{ stroke: 'var(--color-border)' }} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={36} axisLine={false} tickLine={false} />
+                  <Tooltip content={<BiTooltip />} cursor={{ fill: 'rgba(100,100,100,0.06)' }} />
                   <Bar dataKey="valor" fill="url(#barGradientSkuHora)" radius={[4, 4, 0, 0]} animationBegin={0} animationDuration={600} />
                 </BarChart>
               </ResponsiveContainer>
@@ -287,10 +293,10 @@ export default function Sku() {
                       <stop offset="100%" stopColor={CHART.green} stopOpacity={0.25} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} />
-                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={36} />
-                  <Tooltip content={<BiTooltip />} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
+                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={{ stroke: 'var(--color-border)' }} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={36} axisLine={false} tickLine={false} />
+                  <Tooltip content={<BiTooltip />} cursor={{ fill: 'rgba(100,100,100,0.06)' }} />
                   <Bar dataKey="valor" fill="url(#barGradientSkuDia)" radius={[4, 4, 0, 0]} animationBegin={0} animationDuration={600} />
                 </BarChart>
               </ResponsiveContainer>
@@ -300,26 +306,16 @@ export default function Sku() {
 
           <Card variant="bordered">
             <SectionHeader icon={Crown}>Top dias de venda</SectionHeader>
-            <div className="overflow-x-auto max-h-64 overflow-y-auto">
-              <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b dark:border-slate-700 text-left">
-                  <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium">#</th>
-                  <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium">Data</th>
-                  <th className="pb-2 text-xs text-slate-400 dark:text-slate-500 font-medium text-right">Receita</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dados.ranking_dias.map((item, i) => (
-                  <tr key={i} className="border-b dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700">
-                    <td className="py-2 text-slate-400 dark:text-slate-500">{i + 1}</td>
-                    <td className="py-2 text-slate-700 dark:text-slate-300">{formatDateWithWeekday(item.data)}</td>
-                    <td className="py-2 text-right font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(item.valor)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
+            <DataTable
+              data={dados.ranking_dias}
+              columns={[
+                { key: 'data', label: 'Data', render: (item) => formatDateWithWeekday(item.data) },
+                { key: 'valor', label: 'Receita', align: 'right', mono: true, render: (item) => <span className="font-semibold">{formatCurrency(item.valor)}</span> },
+              ]}
+              rowKey={(item) => item.data}
+              density="sm"
+              rowNumbers
+            />
           </Card>
         </>
       )}

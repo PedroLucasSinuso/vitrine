@@ -16,7 +16,7 @@ from app.schemas.sync_schema import (
 from app.domain.models.sync_job import SyncJob
 from app.domain.models.usuario import Usuario
 from app.application.sync_service import SyncService, SyncResult
-from app.core.error_handler import sanitizar_erro
+from app.core.error_handler import sanitizar_erro, logar_erro_interno
 from app.application.scheduler_manager import listar_jobs
 
 logger = logging.getLogger(__name__)
@@ -35,6 +35,7 @@ def _run_sync_background(job_id: str):
 
     init_db()
     session = SqliteSession()
+    engine = None
 
     try:
         job = session.query(SyncJob).filter(SyncJob.job_id == job_id).first()
@@ -46,9 +47,11 @@ def _run_sync_background(job_id: str):
         session.commit()
         logger.info("Sync job %s iniciado em background", job_id)
 
-        source = AlterdataProductSource(get_alterdata_engine(session))
+        engine = get_alterdata_engine(session, pool_size=1)  # C2: pool mínimo p/ sync
+        source = AlterdataProductSource(engine)
         service = SyncService(source, session)
-        result: SyncResult = service.sync()
+        # C6: passa job_id para evitar race condition na query interna
+        result: SyncResult = service.sync(job_id=job_id)
 
         # Invalida cache de transações (equivalente ao antigo limpar_cache_bi())
         invalidar_cache_transacoes()
@@ -78,6 +81,8 @@ def _run_sync_background(job_id: str):
             pass
     finally:
         session.close()
+        if engine is not None:
+            engine.dispose()  # C5: evita vazamento de conexão PostgreSQL
 
 
 @router.post("/sync", response_model=SyncTriggerResponse, status_code=201)

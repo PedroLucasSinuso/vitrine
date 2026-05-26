@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useTheme } from '../themes/useTheme'
 import { getConfigsCache } from '../stores/configStore'
 import { RefreshCw, Tags, ClipboardList, Users, Settings, Search, BarChart3, Sun, Moon, ArrowLeft, ChevronRight, LogOut } from 'lucide-react'
 import NotificationCenter from './NotificationCenter'
@@ -42,19 +43,14 @@ const COMMON_LINKS: Link[] = [
 export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, onLogout }: Props) {
   const navigate = useNavigate()
   const { logout, getRole, getNomeExibicao, getExpiresInMs } = useAuth()
+  const { setTheme, isDark } = useTheme()
   const role = getRole()
 
-  const [dark, setDark] = useState(() => localStorage.getItem('app_darkMode') === 'true')
   const [menuOpen, setMenuOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const logoUrl = localStorage.getItem('app_marketLogoUrl')
   const marketName = localStorage.getItem('app_marketName')
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark)
-    localStorage.setItem('app_darkMode', String(dark))
-  }, [dark])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -108,13 +104,13 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
     <div className="w-full max-w-5xl relative">
       {/* Breadcrumb */}
       {breadcrumb && breadcrumb.length > 0 && (
-        <nav className="text-xs text-slate-400 dark:text-slate-400 mb-2 flex items-center gap-0.5 flex-wrap" aria-label="Breadcrumb">
+        <nav className="text-xs text-text-muted mb-2 flex items-center gap-0.5 flex-wrap" aria-label="Breadcrumb">
           {breadcrumb.map((b, i) => (
             <span key={i} className="flex items-center gap-0.5">
               {i > 0 && <ChevronRight size={10} className="opacity-40" />}
               {b.path
                 ? <button onClick={() => navigate(b.path!)} className="hover:text-primary dark:hover:text-primary-light transition font-medium">{b.label}</button>
-                : <span className="text-slate-600 dark:text-slate-300 font-medium">{b.label}</span>
+                : <span className="text-text-secondary font-medium">{b.label}</span>
               }
             </span>
           ))}
@@ -128,7 +124,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
           {hideNav && (
             <button
               onClick={() => setMenuOpen((prev) => !prev)}
-              className="flex items-center gap-1 text-xs font-semibold text-primary dark:text-primary-light bg-white dark:bg-slate-800 rounded-xl px-3 py-2 shadow-sm hover:bg-primary-lighter dark:hover:bg-slate-700 transition whitespace-nowrap shrink-0"
+              className="flex items-center gap-1 text-xs font-semibold text-primary dark:text-primary-light bg-bg-card rounded-xl px-3 py-2 shadow-sm hover:bg-primary-lighter transition whitespace-nowrap shrink-0"
               aria-label="Abrir navegação admin"
             >
               <ArrowLeft size={14} /> Admin
@@ -145,14 +141,14 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
           )}
           <div className="min-w-0">
             {marketName && (
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate leading-tight">{marketName}</p>
+              <p className="text-sm font-semibold text-text-primary truncate leading-tight">{marketName}</p>
             )}
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{titulo}</p>
+            <p className="text-xs text-text-muted truncate">{titulo}</p>
           </div>
         </div>
 
         {/* Right: user actions */}
-        <div className="flex items-center gap-2 shrink-0 sm:pl-3 sm:border-l sm:border-slate-200 sm:dark:border-slate-700">
+        <div className="flex items-center gap-2 shrink-0 sm:pl-3 sm:border-l sm:border-border">
           {expiringBadge && (
             <span className="hidden sm:inline-flex text-[10px] bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-medium px-2 py-1 rounded-full border border-amber-200 dark:border-amber-800">
               Expira em {expiringMin}min
@@ -160,29 +156,29 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
           )}
           <NotificationCenter />
           <button
-            onClick={() => setDark((prev) => !prev)}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+            onClick={() => setTheme(isDark ? 'vitrine' : 'flagship')}
+            className="text-text-muted hover:text-text-primary transition p-1.5 rounded-lg hover:bg-bg-hover"
             aria-label="Alternar tema"
-            title={dark ? 'Modo claro' : 'Modo escuro'}
+            title={isDark ? 'Modo claro' : 'Modo escuro'}
           >
-            {dark ? <Sun size={15} /> : <Moon size={15} />}
+            {isDark ? <Sun size={15} /> : <Moon size={15} />}
           </button>
           {/* User info + role — hidden on mobile */}
           <div className="hidden sm:flex items-center gap-1.5">
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <span className="text-xs text-text-muted font-medium">
               {getNomeExibicao()}
             </span>
             <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
               role === 'admin' ? 'bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'
               : role === 'supervisor' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
-              : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+              : 'bg-bg-hover text-text-muted'
             }`}>
               {role === 'admin' ? 'Admin' : role === 'supervisor' ? 'Sup.' : 'Op.'}
             </span>
           </div>
           <button
             onClick={handleLogout}
-            className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+            className="text-text-muted hover:text-danger transition p-1.5 rounded-lg hover:bg-danger-light"
             aria-label="Sair"
             title="Sair"
           >
@@ -208,7 +204,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
               className={`rounded-xl py-2 px-1 text-xs font-semibold transition flex flex-col items-center gap-0.5 truncate ${
                 ativo
                   ? 'bg-primary text-white shadow-sm'
-                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-primary-lighter dark:hover:bg-slate-700 hover:text-primary shadow-sm'
+                  : 'bg-bg-card text-text-secondary hover:bg-primary-lighter hover:text-primary shadow-sm'
               }`}
             >
               <Icon size={16} />
@@ -221,10 +217,10 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
       {/* Mobile dropdown menu */}
       {hideNav && menuOpen && (
         <div ref={dropdownRef} className="absolute left-0 top-full z-50 w-full mt-2 animate-fade-in-up">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-3 flex flex-col gap-1">
+          <div className="bg-bg-card rounded-xl shadow-lg border border-border p-3 flex flex-col gap-1">
             {(isAdmin || supervisorAdminLinks.length > 0) && (
               <>
-                <div className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide px-2 py-1">
+                <div className="text-xs font-semibold text-text-muted uppercase tracking-wide px-2 py-1">
                   Administração
                 </div>
                 <div className="grid grid-cols-2 gap-1">
@@ -237,7 +233,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
                         className={`rounded-xl py-2 px-2 text-xs font-semibold transition flex items-center gap-2 ${
                           ativo
                             ? 'bg-primary text-white shadow-sm'
-                            : 'text-slate-600 dark:text-slate-300 hover:bg-primary-lighter dark:hover:bg-slate-700 hover:text-primary'
+                            : 'text-text-secondary hover:bg-primary-lighter hover:text-primary'
                         }`}
                       >
                         <Icon size={16} />
@@ -246,10 +242,10 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
                     )
                   })}
                 </div>
-                <div className="border-t border-slate-200 dark:border-slate-700 my-1" />
+                <div className="border-t border-border my-1" />
               </>
             )}
-            <div className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide px-2 py-1">
+            <div className="text-xs font-semibold text-text-muted uppercase tracking-wide px-2 py-1">
               Geral
             </div>
             <div className="grid grid-cols-2 gap-1">
@@ -262,7 +258,7 @@ export default function AdminHeader({ titulo, paginaAtual, breadcrumb, hideNav, 
                     className={`rounded-xl py-2 px-2 text-xs font-semibold transition flex items-center gap-2 ${
                       ativo
                         ? 'bg-primary text-white shadow-sm'
-                        : 'text-slate-600 dark:text-slate-300 hover:bg-primary-lighter dark:hover:bg-slate-700 hover:text-primary'
+                        : 'text-text-secondary hover:bg-primary-lighter hover:text-primary'
                     }`}
                   >
                     <Icon size={16} />

@@ -1,4 +1,5 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react'
+import { AlertCircle, RefreshCw } from 'lucide-react'
 
 interface Props {
   children: ReactNode
@@ -28,13 +29,21 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return this.props.fallback ?? (
-        <div className="flex flex-col items-center justify-center min-h-[60vh] text-gray-500">
-          <p className="text-lg mb-2">Erro ao carregar página</p>
-          <p className="text-sm mb-4 text-gray-400">{this.state.error?.message}</p>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-4">
+          <div className="w-12 h-12 rounded-2xl bg-danger-light flex items-center justify-center">
+            <AlertCircle size={24} className="text-danger" />
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-semibold text-text-primary">Erro ao carregar página</p>
+            <p className="text-sm text-text-muted mt-1 max-w-sm">
+              {this.state.error?.message || 'Ocorreu um erro inesperado.'}
+            </p>
+          </div>
           <button
             onClick={this.handleRetry}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition active:scale-[0.97]"
           >
+            <RefreshCw size={14} />
             Tentar novamente
           </button>
         </div>

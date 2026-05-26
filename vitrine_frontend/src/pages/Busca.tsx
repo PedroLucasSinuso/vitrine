@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Sun, Moon, Camera, Loader2, Search as SearchIcon, BarChart3 } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Camera, Loader2, Search as SearchIcon, BarChart3 } from 'lucide-react'
 import { formatCurrency } from '../utils/formatters'
 import { buscarProduto, buscarProdutosPorNome, registrarNaoEncontrado } from '../api/produtos'
 import type { ProdutoBasico, ProdutoCompleto } from '../types'
 import { useAuth } from '../hooks/useAuth'
 import LeitorCodigo from '../components/LeitorCodigo'
-import AdminHeader from '../components/AdminHeader'
+import PageContainer from '../components/layout/PageContainer'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
+import Badge from '../components/ui/Badge'
 import Modal from '../components/ui/Modal'
 import EmptyState from '../components/ui/EmptyState'
 
@@ -17,14 +18,7 @@ function isCompleto(p: ProdutoBasico | ProdutoCompleto): p is ProdutoCompleto {
 }
 
 export default function Busca() {
-  const navigate = useNavigate()
-  const { logout, getRole, getNomeExibicao } = useAuth()
-  const [dark, setDark] = useState(() => localStorage.getItem('app_darkMode') === 'true')
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark)
-    localStorage.setItem('app_darkMode', String(dark))
-  }, [dark])
+  const { getRole } = useAuth()
 
   const [codigo, setCodigo] = useState('')
   const [produto, setProduto] = useState<ProdutoBasico | ProdutoCompleto | null>(null)
@@ -100,8 +94,8 @@ export default function Busca() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-auto">
-
+    <PageContainer maxWidth="full">
+      <div className="flex flex-col items-center px-4 py-4">
       {cameras && (
         <LeitorCodigo onLeitura={handleLeitura} onFechar={() => setCameras(false)} />
       )}
@@ -122,9 +116,9 @@ export default function Busca() {
           </>
         }
       >
-        <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">Código: {codigoNaoEncontrado}</p>
+        <p className="text-xs text-text-muted mb-3">Código: {codigoNaoEncontrado}</p>
         <textarea
-          className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+          className="form-input-base resize-none"
           placeholder="Observação (ex: Coca Cola lata 250ml)"
           rows={3}
           value={observacao}
@@ -133,42 +127,11 @@ export default function Busca() {
         />
       </Modal>
 
-      {/* Header */}
-      {role !== 'operador' ? (
-        <AdminHeader titulo="Busca" paginaAtual="busca" />
-      ) : (
-        <div className="w-full max-w-md flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <img src="/vitrine_logo.svg" alt="Vitrine" className="h-6 w-auto shrink-0 dark:invert" />
-            <div>
-              <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Vitrine</h1>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{getNomeExibicao()}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setDark((prev) => !prev)}
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-              aria-label="Alternar tema"
-            >
-              {dark ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
-            <button
-              onClick={() => { logout(); navigate('/login') }}
-              className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
-              aria-label="Sair"
-            >
-              Sair
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Input de busca */}
+      {/* Input de busca EAN/PLU */}
       <div className="w-full max-w-md flex gap-2 mb-6">
         <input
           aria-label="Código EAN ou PLU"
-          className="flex-1 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary"
+          className="form-input-base flex-1 rounded-xl"
           placeholder="Digite o código EAN ou PLU"
           value={codigo}
           onChange={(e) => setCodigo(e.target.value)}
@@ -177,7 +140,7 @@ export default function Busca() {
         />
         <button
           onClick={() => setCameras(true)}
-          className="md:hidden bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 px-3 py-2 rounded-xl transition"
+          className="md:hidden bg-bg-input border border-border-input hover:bg-bg-hover text-text-secondary px-3 py-2 rounded-xl transition"
           aria-label="Ler código de barras"
         >
           <Camera size={18} />
@@ -188,23 +151,23 @@ export default function Busca() {
       </div>
 
       {/* Busca por nome */}
-      <div className="w-full max-w-md mb-6">
+      <div className="w-full max-w-md mb-6 relative">
         <div className="relative">
           <input
             aria-label="Buscar produto por nome"
-            className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-xl px-4 py-2.5 pr-10 focus:outline-none focus:ring-2 focus:ring-primary"
+            className="form-input-base rounded-xl pr-10"
             placeholder="Buscar produto por nome..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           {searching && (
             <span className="absolute right-3 top-1/2 -translate-y-1/2">
-              <Loader2 size={14} className="animate-spin text-slate-400" />
+              <Loader2 size={14} className="animate-spin text-text-muted" />
             </span>
           )}
         </div>
         {searchResults.length > 0 && (
-          <div className="mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700 max-h-60 overflow-y-auto absolute left-0 right-0 z-20">
+          <div className="mt-2 bg-bg-card rounded-xl shadow-modal border border-border divide-y divide-border overflow-y-auto max-h-60 absolute left-0 right-0 z-20">
             {searchResults.map((p) => (
               <button
                 key={p.codigo_chamada}
@@ -214,10 +177,10 @@ export default function Busca() {
                   setSearchQuery('')
                   setSearchResults([])
                 }}
-                className="w-full text-left px-4 py-3 hover:bg-primary-lighter dark:hover:bg-slate-700 transition flex justify-between items-center"
+                className="w-full text-left px-4 py-3 hover:bg-primary-lighter transition flex justify-between items-center"
               >
-                <span className="text-sm font-medium text-slate-800 dark:text-slate-100">{p.nome}</span>
-                <span className="text-xs text-slate-400 dark:text-slate-500">{p.codigo_chamada}</span>
+                <span className="text-sm font-medium text-text-primary">{p.nome}</span>
+                <span className="text-xs text-text-muted">{p.codigo_chamada}</span>
               </button>
             ))}
           </div>
@@ -227,59 +190,53 @@ export default function Busca() {
         )}
       </div>
 
-      {erro && <p className="text-red-500 text-sm mb-4" role="alert">{erro}</p>}
+      {erro && <p className="text-danger text-sm mb-4" role="alert">{erro}</p>}
 
       {produto && (
         <>
-        <Card variant="elevated" className="w-full max-w-md">
+        <Card variant="elevated" padding="md" className="w-full max-w-md">
           <div>
-            <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wide">Produto</p>
-            <p className="text-base md:text-lg font-bold text-slate-800 dark:text-slate-100 break-words">{produto.nome}</p>
+            <p className="text-xs text-text-muted uppercase tracking-wider font-medium">Produto</p>
+            <p className="text-base md:text-lg font-bold text-text-primary break-words">{produto.nome}</p>
           </div>
 
-          <div className="flex gap-4 mt-3">
-            <div>
-              <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wide">Grupo</p>
-              <p className="text-sm text-slate-700 dark:text-slate-300">{produto.grupo}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wide">Família</p>
-              <p className="text-sm text-slate-700 dark:text-slate-300">{produto.familia}</p>
-            </div>
+          <div className="flex gap-3 mt-3 flex-wrap">
+            <Badge variant="info">{produto.grupo}</Badge>
+            <Badge variant="default">{produto.familia}</Badge>
           </div>
 
-          <div className="border-t border-slate-200 dark:border-slate-700 pt-3 mt-3">
-            <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wide">Preço de Venda</p>
-            <p className="text-xl md:text-3xl font-bold text-primary dark:text-primary-light break-words animate-pulse-glow">
+          <div className="border-t border-border pt-3 mt-3">
+            <p className="text-xs text-text-muted uppercase tracking-wider font-medium">Preço de Venda</p>
+            <p className="text-xl md:text-3xl font-bold text-primary break-words animate-pulse-glow">
               {formatCurrency(produto.preco_venda)}
             </p>
           </div>
 
-          <div className="border-t border-slate-200 dark:border-slate-700 pt-3 mt-3">
-            <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wide">Estoque</p>
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{produto.estoque} un.</p>
+          <div className="border-t border-border pt-3 mt-3">
+            <p className="text-xs text-text-muted uppercase tracking-wider font-medium">Estoque</p>
+            <p className="text-sm font-semibold text-text-primary">{produto.estoque} un.</p>
           </div>
 
           {isCompleto(produto) && (
             <>
-              <div className="flex gap-4 border-t border-slate-200 dark:border-slate-700 pt-3 mt-3">
+              <div className="flex gap-4 border-t border-border pt-3 mt-3">
                 <div>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wide">Preço de Custo</p>
-                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  <p className="text-xs text-text-muted uppercase tracking-wider font-medium">Preço de Custo</p>
+                  <p className="text-sm font-semibold text-text-primary">
                     {formatCurrency(produto.preco_custo)}
                   </p>
                 </div>
               </div>
               <div className="flex gap-4 mt-2">
                 <div>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wide">Markup</p>
-                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  <p className="text-xs text-text-muted uppercase tracking-wider font-medium">Markup</p>
+                  <p className="text-sm font-semibold text-text-primary">
                     {(produto.markup * 100).toFixed(2)}%
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wide">Margem</p>
-                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  <p className="text-xs text-text-muted uppercase tracking-wider font-medium">Margem</p>
+                  <p className="text-sm font-semibold text-text-primary">
                     {(produto.margem * 100).toFixed(2)}%
                   </p>
                 </div>
@@ -290,8 +247,8 @@ export default function Busca() {
 
         {(role === 'supervisor' || role === 'admin') && (
           <Link
-            to={`/bi/sku?codigo=${produto.codigo_chamada ?? ''}`}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors mt-4 w-full max-w-md"
+            to={`/bi/sku?codigo=${produto.codigo_chamada ?? ''}&force=1`}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-hover transition-colors mt-4 w-full max-w-md"
           >
             <BarChart3 size={16} />
             Análise de Vendas
@@ -306,6 +263,7 @@ export default function Busca() {
           description="Digite o código EAN/PLU, use a câmera ou busque por nome"
         />
       )}
-    </div>
+      </div>
+    </PageContainer>
   )
 }

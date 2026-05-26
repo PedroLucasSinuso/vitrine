@@ -5,6 +5,7 @@ export type {
   KpisDTO, KpisComparativoDTO, VariacaoKpi,
   ItemDimensaoDTO, ItemCurvaAbcDTO, ItemRankingDTO,
   ItemMovimentoDTO, TrocasDTO, MovimentoDTO, PontoDiarioDTO,
-  PontoHoraDTO, PontoDiaSemanaDTO, SkuDTO, PeriodoBi,
+  PontoHoraDTO, PontoDiaSemanaDTO, DiarioComparativoDTO, SkuDTO, PeriodoBi,
   Dimensao, Metrica, CurvaAbc,
+  ProdutoTabelaResponse, TabelaProdutosResponse,
 } from './bi'

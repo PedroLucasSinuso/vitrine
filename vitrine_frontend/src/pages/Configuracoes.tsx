@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import AdminHeader from '../components/AdminHeader'
+import Card from '../components/ui/Card'
 import ListaContatosWhatsApp from '../components/ListaContatosWhatsApp'
 import ListaContatosEmail from '../components/ListaContatosEmail'
 import PasswordConfigInput from '../components/PasswordConfigInput'
@@ -21,7 +21,9 @@ import {
   Check, Loader2, Database, Mail, MessageSquare, Brain, Settings, Store,
   Activity, RefreshCw, Eye, EyeOff, MapPin, Building2, Clock,
   Key, Globe, Hash, Lock, Send, Calendar, FileText, Upload, Image as ImageIcon,
+  Target, DollarSign,
 } from 'lucide-react'
+import PageContainer from '../components/layout/PageContainer'
 
 const REPORT_DAYS = [
   { value: 'monday', label: 'Segunda' },
@@ -59,6 +61,7 @@ const TABS = [
 ]
 
 interface ConfigForm {
+  [key: string]: string | undefined
   nome_estabelecimento?: string
   logo_url?: string
   endereco_rua?: string
@@ -90,22 +93,23 @@ interface ConfigForm {
   anthropic_api_key?: string
   openai_api_key?: string
   relatorio_dias_retroativos?: string
+  meta_faturamento_mensal?: string
 }
 
 const TEST_WARNING = 'Testa a configuração salva no servidor, não as alterações pendentes'
 
 /* ── Reusable compact input ── */
 function CompactInput({
-  label, icon: Icon, ...inputProps
+  label, icon: Icon, className, ...inputProps
 }: { label: string; icon?: React.ElementType } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
-        {Icon && <Icon size={11} className="text-slate-400 dark:text-slate-500" />}
+      <label className="form-label flex items-center gap-1">
+        {Icon && <Icon size={11} className="text-text-muted" />}
         {label}
       </label>
       <input
-        className="w-full border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary transition placeholder:text-slate-300 dark:placeholder:text-slate-600"
+        className={`form-input-base${className ? ` ${className}` : ''}`}
         {...inputProps}
       />
     </div>
@@ -117,12 +121,12 @@ function CompactSelect({
 }: { label: string; icon?: React.ElementType; children: React.ReactNode } & React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
-        {Icon && <Icon size={11} className="text-slate-400 dark:text-slate-500" />}
+      <label className="form-label flex items-center gap-1">
+        {Icon && <Icon size={11} className="text-text-muted" />}
         {label}
       </label>
       <select
-        className="w-full border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary transition"
+        className="form-input-base"
         {...selectProps}
       >
         {children}
@@ -134,12 +138,12 @@ function CompactSelect({
 function SectionHeader({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description?: string }) {
   return (
     <div className="flex items-start gap-2.5 mb-3">
-      <div className="mt-0.5 p-1.5 rounded-lg bg-primary/10 dark:bg-primary/15 text-primary">
+      <div className="mt-0.5 p-1.5 rounded-lg bg-primary-light text-primary">
         <Icon size={14} />
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{title}</h3>
-        {description && <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{description}</p>}
+        <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
+        {description && <p className="text-[11px] text-text-muted mt-0.5">{description}</p>}
       </div>
     </div>
   )
@@ -186,7 +190,7 @@ export default function Configuracoes() {
     setSaving(true)
     setSaved(false)
     try {
-      const resp = await atualizarConfiguracoes(form)
+      const resp = await atualizarConfiguracoes(form as Record<string, string>)
       const c = resp.configuracoes
       invalidateConfigCache()
       if (c.logo_url) setLogoPreview(c.logo_url)
@@ -240,9 +244,8 @@ export default function Configuracoes() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-auto">
-        <AdminHeader titulo="Configurações" paginaAtual="configuracoes" />
-        <div className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500 mt-8">
+      <div className="flex flex-col items-center px-4 py-6">
+        <div className="flex items-center gap-2 text-sm text-text-muted mt-8">
           <Loader2 size={16} className="animate-spin" /> Carregando...
         </div>
       </div>
@@ -250,13 +253,11 @@ export default function Configuracoes() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center px-4 py-6 overflow-x-auto">
-      <AdminHeader titulo="Configurações" paginaAtual="configuracoes" />
-
-      <div className="w-full max-w-3xl flex flex-col gap-4">
+    <PageContainer maxWidth="md">
+      <div className="flex flex-col gap-4">
 
         {/* Tab bar */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm p-1">
+        <Card variant="default" className="p-1">
           <div className="flex gap-0.5 overflow-x-auto">
             {TABS.map(({ id, label, icon: Icon }) => (
               <button
@@ -265,7 +266,7 @@ export default function Configuracoes() {
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap shrink-0 ${
                   activeTab === id
                     ? 'bg-primary text-white shadow-sm'
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 hover:text-slate-700 dark:hover:text-slate-200'
+                    : 'text-text-muted hover:bg-bg-hover hover:text-text-primary'
                 }`}
               >
                 <Icon size={13} />
@@ -273,28 +274,28 @@ export default function Configuracoes() {
               </button>
             ))}
           </div>
-        </div>
+        </Card>
 
         {/* Tab content */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm">
+        <Card variant="default" padding="none">
 
           {/* ════════════════════════════════════════════ */}
           {/* ── GERAL ── */}
           {/* ════════════════════════════════════════════ */}
           {activeTab === 'geral' && (
-            <div className="p-5 flex flex-col gap-6">
+            <div className="p-5 flex flex-col">
 
               {/* Branding section */}
-              <div>
+              <div className="mb-10">
                 <SectionHeader icon={Building2} title="Identidade da loja" description="Nome e logo exibidos no sistema" />
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 ml-9">
+                <div className="ml-9 flex flex-col items-start gap-3">
                   {/* Logo preview — larger and prominent */}
                   <div className="relative group">
-                    <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center overflow-hidden">
+                    <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-border bg-bg-hover/50 flex items-center justify-center overflow-hidden">
                       {logoPreview ? (
                         <img src={logoPreview} alt="Logo" className="w-full h-full object-contain rounded-2xl" />
                       ) : (
-                        <ImageIcon size={28} className="text-slate-300 dark:text-slate-600" />
+                        <ImageIcon size={28} className="text-text-muted" />
                       )}
                     </div>
                     <button
@@ -319,22 +320,21 @@ export default function Configuracoes() {
                   {/* Store name */}
                   <div className="flex-1 w-full">
                     <input
-                      className="w-full text-lg font-bold text-slate-800 dark:text-slate-100 border-b-2 border-slate-200 dark:border-slate-600 bg-transparent px-1 py-1.5 focus:outline-none focus:border-primary transition placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                      className="w-full text-lg font-bold text-text-primary border-b-2 border-border-input bg-transparent px-1 py-1.5 focus:outline-none focus:border-primary transition placeholder:text-slate-300 dark:placeholder:text-slate-600"
                       value={form.nome_estabelecimento ?? ''}
                       onChange={(e) => updateField('nome_estabelecimento', e.target.value)}
                       placeholder="Nome da sua loja"
                     />
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 ml-1">
+                    <p className="text-[11px] text-text-muted mt-1 ml-1">
                       Exibido no cabeçalho e nos relatórios
                     </p>
-                  </div>
                 </div>
               </div>
 
               {/* Address section */}
-              <div>
+              <div className="mb-10 pt-6 border-t border-border/20">
                 <SectionHeader icon={MapPin} title="Endereço" description="Informações de localização do estabelecimento" />
-                <div className="ml-9 flex flex-col gap-3">
+                <div className="ml-9 flex flex-col gap-3 max-w-md">
                   {/* Rua + Número */}
                   <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
                     <CompactInput
@@ -356,7 +356,7 @@ export default function Configuracoes() {
                   </div>
 
                   {/* Complemento + Bairro */}
-                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr] gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
                     <CompactInput
                       label="Complemento"
                       value={form.endereco_complemento ?? ''}
@@ -401,6 +401,26 @@ export default function Configuracoes() {
                   </div>
                 </div>
               </div>
+
+              {/* Metas section */}
+              <div className="pt-6 border-t border-border/20">
+                <SectionHeader icon={Target} title="Metas" description="Metas de faturamento para projeção no dashboard" />
+                <div className="ml-9 flex flex-col gap-3">
+                  <CompactInput
+                    label="Meta de Faturamento Mensal (R$)"
+                    icon={DollarSign}
+                    type="number"
+                    value={form.meta_faturamento_mensal ?? ''}
+                    onChange={(e) => updateField('meta_faturamento_mensal', e.target.value)}
+                    placeholder="100000"
+                    className="max-w-[160px]"
+                  />
+                  <p className="text-[11px] text-text-muted ml-1">
+                    Usada para calcular o percentual atingido e a projeção de receita no Dashboard
+                  </p>
+                </div>
+              </div>
+            </div>
             </div>
           )}
 
@@ -408,7 +428,7 @@ export default function Configuracoes() {
           {/* ── ERP / SYNC ── */}
           {/* ════════════════════════════════════════════ */}
           {activeTab === 'erp' && (
-            <div className="p-5 flex flex-col gap-5">
+            <div className="p-5 flex flex-col gap-8">
 
               {/* Connection — collapsible */}
               <div>
@@ -416,7 +436,7 @@ export default function Configuracoes() {
                   <SectionHeader icon={Database} title="Conexão ERP" description="Credenciais do banco de dados PostgreSQL" />
                   <button
                     onClick={() => setErpRevealed((p) => !p)}
-                    className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700/50 shrink-0"
+                    className="inline-flex items-center gap-1.5 text-[11px] font-medium text-text-muted hover:text-primary dark:hover:text-primary transition px-2 py-1 rounded-md hover:bg-bg-hover/50 shrink-0"
                   >
                     {erpRevealed ? <EyeOff size={12} /> : <Eye size={12} />}
                     {erpRevealed ? 'Ocultar' : 'Mostrar'}
@@ -472,7 +492,7 @@ export default function Configuracoes() {
                 )}
 
                 {!erpRevealed && (
-                  <div className="ml-9 text-[11px] text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-700/30 rounded-lg px-3 py-2 flex items-center gap-1.5">
+                  <div className="ml-9 text-[11px] text-text-muted bg-bg-hover/30 rounded-lg px-3 py-2 flex items-center gap-1.5">
                     <Lock size={11} />
                     Dados de conexão ocultos — clique em "Mostrar" para editar
                   </div>
@@ -480,7 +500,7 @@ export default function Configuracoes() {
               </div>
 
               {/* Sync settings — always visible */}
-              <div className="border-t border-slate-100 dark:border-slate-700/50 pt-4">
+              <div className="border-t border-border/50 pt-4">
                 <SectionHeader icon={Clock} title="Agendamento" description="Intervalos de sincronização e cache" />
                 <div className="ml-9 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <CompactSelect
@@ -509,7 +529,7 @@ export default function Configuracoes() {
           {/* ── WHATSAPP ── */}
           {/* ════════════════════════════════════════════ */}
           {activeTab === 'whatsapp' && (
-            <div className="p-5 flex flex-col gap-5">
+            <div className="p-5 flex flex-col gap-8">
 
               {/* Twilio credentials */}
               <div>
@@ -540,7 +560,7 @@ export default function Configuracoes() {
               </div>
 
               {/* Weekly report */}
-              <div className="border-t border-slate-100 dark:border-slate-700/50 pt-4">
+              <div className="border-t border-border/50 pt-4">
                 <SectionHeader icon={FileText} title="Relatório semanal" description="Dia, horário e contatos para envio" />
                 <div className="ml-9 flex flex-col gap-3">
                   <div className="flex gap-3 flex-wrap">
@@ -563,7 +583,7 @@ export default function Configuracoes() {
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Contatos</label>
+                    <label className="text-[11px] font-medium text-text-muted">Contatos</label>
                     <ListaContatosWhatsApp />
                   </div>
                 </div>
@@ -575,7 +595,7 @@ export default function Configuracoes() {
           {/* ── E-MAIL ── */}
           {/* ════════════════════════════════════════════ */}
           {activeTab === 'email' && (
-            <div className="p-5 flex flex-col gap-5">
+            <div className="p-5 flex flex-col gap-8">
 
               {/* SMTP */}
               <div>
@@ -628,7 +648,7 @@ export default function Configuracoes() {
               </div>
 
               {/* Weekly report */}
-              <div className="border-t border-slate-100 dark:border-slate-700/50 pt-4">
+              <div className="border-t border-border/50 pt-4">
                 <SectionHeader icon={FileText} title="Relatório semanal" description="Dia, horário e contatos para envio" />
                 <div className="ml-9 flex flex-col gap-3">
                   <div className="flex gap-3 flex-wrap">
@@ -651,7 +671,7 @@ export default function Configuracoes() {
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Contatos</label>
+                    <label className="text-[11px] font-medium text-text-muted">Contatos</label>
                     <ListaContatosEmail />
                   </div>
                 </div>
@@ -683,7 +703,7 @@ export default function Configuracoes() {
                 </div>
               </div>
 
-              <div className="border-t border-slate-100 dark:border-slate-700/50 pt-4">
+              <div className="border-t border-border/50 pt-4">
                 <SectionHeader icon={Clock} title="Relatório" description="Período de análise dos dados" />
                 <div className="ml-9">
                   <CompactInput
@@ -695,7 +715,7 @@ export default function Configuracoes() {
                     placeholder="30"
                     className="max-w-[120px]"
                   />
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Quantos dias de dados o relatório de inteligência analisa</p>
+                  <p className="text-[11px] text-text-muted mt-1">Quantos dias de dados o relatório de inteligência analisa</p>
                 </div>
               </div>
 
@@ -713,14 +733,14 @@ export default function Configuracoes() {
                 <SectionHeader icon={Activity} title="Status do sistema" description="Informações de sincronização e cache" />
                 <div className="ml-9 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Last ETL sync */}
-                  <div className="rounded-xl border border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-700/30 p-4">
+                  <div className="rounded-xl border border-border/50 bg-bg-hover/30 p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-500">
                         <Activity size={12} />
                       </div>
-                      <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Última sincronia ETL</span>
+                      <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wide">Última sincronia ETL</span>
                     </div>
-                    <p className="text-sm font-mono text-slate-700 dark:text-slate-200">
+                    <p className="text-sm font-mono text-text-primary">
                       {statusLastUpdated
                         ? new Date(statusLastUpdated).toLocaleString('pt-BR', {
                             day: '2-digit', month: '2-digit', year: 'numeric',
@@ -731,36 +751,36 @@ export default function Configuracoes() {
                   </div>
 
                   {/* Cache info — dados reais do backend */}
-                  <div className="rounded-xl border border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-700/30 p-4">
+                  <div className="rounded-xl border border-border/50 bg-bg-hover/30 p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <div className={`p-1 rounded-md ${cacheInfo?.produtos_cached ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
                         <Database size={12} />
                       </div>
-                      <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Cache</span>
+                      <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wide">Cache</span>
                     </div>
                     {cacheInfo ? (
-                      <div className="text-xs text-slate-600 dark:text-slate-300 space-y-1">
+                      <div className="text-xs text-text-secondary space-y-1">
                         <p>
-                          <span className="text-slate-400">Status: </span>
-                          <span className={cacheInfo.produtos_cached ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}>
+                          <span className="text-text-muted">Status: </span>
+                          <span className={cacheInfo.produtos_cached ? 'text-success' : 'text-amber-600 dark:text-amber-400'}>
                             {cacheInfo.produtos_cached ? 'Ativo' : 'Vazio'}
                           </span>
                         </p>
                         {cacheInfo.last_refresh && (
                           <p>
-                            <span className="text-slate-400">Última atualização: </span>
+                            <span className="text-text-muted">Última atualização: </span>
                             {new Date(cacheInfo.last_refresh).toLocaleString('pt-BR')}
                           </p>
                         )}
                         {cacheInfo.ttl_seconds != null && (
                           <p>
-                            <span className="text-slate-400">TTL: </span>
+                            <span className="text-text-muted">TTL: </span>
                             {cacheInfo.ttl_seconds}s
                           </p>
                         )}
                       </div>
                     ) : (
-                      <p className="text-xs text-slate-400">—</p>
+                      <p className="text-xs text-text-muted">—</p>
                     )}
                   </div>
                 </div>
@@ -776,7 +796,7 @@ export default function Configuracoes() {
               </button>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Save bar */}
         <div className="flex items-center justify-center gap-3 py-2">
@@ -795,6 +815,6 @@ export default function Configuracoes() {
         </div>
 
       </div>
-    </div>
+    </PageContainer>
   )
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { ArrowUp } from 'lucide-react'
 
 export default function ScrollToTop() {
   const [visible, setVisible] = useState(false)
@@ -17,7 +18,7 @@ export default function ScrollToTop() {
       className="fixed bottom-6 right-6 w-10 h-10 bg-primary hover:bg-primary-hover text-white rounded-full shadow-lg transition z-50 flex items-center justify-center text-lg"
       aria-label="Voltar ao topo"
     >
-      ↑
+      <ArrowUp size={20} />
     </button>
   )
 }

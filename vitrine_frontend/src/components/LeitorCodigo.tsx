@@ -6,10 +6,9 @@ import Button from './ui/Button'
 interface Props {
   onLeitura: (codigo: string) => void
   onFechar: () => void
-  continuo?: boolean
 }
 
-export default function LeitorCodigo({ onLeitura, onFechar, continuo = false }: Props) {
+export default function LeitorCodigo({ onLeitura, onFechar }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [erro, setErro] = useState('')
   const [flash, setFlash] = useState(false)
@@ -50,22 +49,20 @@ export default function LeitorCodigo({ onLeitura, onFechar, continuo = false }: 
 
     reader.decodeFromVideoDevice(undefined, videoRef.current!, (result) => {
       if (stoppedRef.current) return
-      if (result && (continuo || !hasReadRef.current)) {
-        if (!continuo) hasReadRef.current = true
+      if (result && !hasReadRef.current) {
+        hasReadRef.current = true
         navigator.vibrate?.(20)
         onLeituraRef.current(result.getText())
-        if (!continuo) {
-          cleanup()
-          // Defer close to next tick so state updates propagate first
-          setTimeout(() => onFechar(), 50)
-        }
+        cleanup()
+        // Defer close to next tick so state updates propagate first
+        setTimeout(() => onFechar(), 50)
       }
     })
       .then(controls => { controlsRef.current = controls })
       .catch(() => setErro('Não foi possível acessar a câmera. Verifique as permissões.'))
 
     return cleanup
-  }, [continuo, cleanup, onFechar])
+  }, [cleanup, onFechar])
 
   return (
     <div className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center px-4">
@@ -104,7 +101,7 @@ export default function LeitorCodigo({ onLeitura, onFechar, continuo = false }: 
 
       <div className="w-full max-w-sm mt-4 flex items-center justify-between">
         <p className="text-slate-500 text-xs">
-          {continuo ? 'Escaneio contínuo — aponte para o código' : 'Aponte para o código de barras'}
+          Aponte para o código de barras
         </p>
         <button
           onClick={() => { cleanup(); onFechar() }}

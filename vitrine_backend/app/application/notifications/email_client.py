@@ -25,20 +25,22 @@ def _enviar(
         return False
 
     try:
+        msg = MIMEMultipart("alternative")
+        msg.attach(MIMEText(html, "html", "utf-8"))
+
         if imagens:
-            msg = MIMEMultipart("related")
+            related = MIMEMultipart("related")
+            related.attach(msg)
             for cid, data, mime in imagens:
                 img = MIMEImage(data, _subtype=mime.split("/")[-1])
                 img.add_header("Content-ID", f"<{cid}>")
                 img.add_header("Content-Disposition", "inline", filename=cid)
-                msg.attach(img)
-        else:
-            msg = MIMEMultipart("alternative")
+                related.attach(img)
+            msg = related
 
         msg["From"] = email_from
         msg["To"] = para
         msg["Subject"] = assunto
-        msg.attach(MIMEText(html, "html", "utf-8"))
 
         with smtplib.SMTP(smtp_host, smtp_port) as server:
             server.starttls()

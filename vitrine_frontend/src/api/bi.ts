@@ -2,7 +2,8 @@ import api from './client'
 import type {
   KpisDTO, KpisComparativoDTO, ItemDimensaoDTO, ItemCurvaAbcDTO, ItemRankingDTO,
   TrocasDTO, MovimentoDTO, PontoDiarioDTO, PontoHoraDTO,
-  PontoDiaSemanaDTO, SkuDTO, Dimensao, Metrica, PeriodoBi,
+  PontoDiaSemanaDTO, SkuDTO, DiarioComparativoDTO, Dimensao, Metrica, PeriodoBi,
+  TabelaProdutosResponse,
 } from '../types'
 
 const MAX_BI_DAYS = 180
@@ -74,6 +75,11 @@ export async function fetchDiario(periodo: PeriodoBi, metrica: Metrica): Promise
   return r.data
 }
 
+export async function fetchDiarioComparativo(periodo: PeriodoBi, metrica: Metrica): Promise<DiarioComparativoDTO> {
+  const r = await api.get('/bi/diario/comparativo', { params: params(periodo, { metrica }) })
+  return r.data
+}
+
 export async function fetchDiarioProduto(periodo: PeriodoBi, codigo: string, metrica: Metrica): Promise<PontoDiarioDTO[]> {
   const r = await api.get('/bi/diario/produto', { params: params(periodo, { codigo, metrica }) })
   return r.data
@@ -91,6 +97,19 @@ export async function fetchTemporalDiaSemana(periodo: PeriodoBi, metrica: Metric
 
 export async function fetchSku(periodo: PeriodoBi, codigo: string): Promise<SkuDTO> {
   const r = await api.get('/bi/sku', { params: params(periodo, { codigo }) })
+  return r.data
+}
+
+export async function fetchTabelaProdutos(params: {
+  grupo?: string
+  familia?: string
+  search?: string
+  sort_by?: string
+  sort_order?: string
+  limit?: number
+  offset?: number
+}): Promise<TabelaProdutosResponse> {
+  const r = await api.get('/bi/tabela-produtos', { params })
   return r.data
 }
 
