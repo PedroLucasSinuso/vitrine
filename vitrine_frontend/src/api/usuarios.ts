@@ -1,12 +1,8 @@
 import api from './client'
-import type { Role } from '../types'
+import type { Role, UsuarioResponse } from '../types'
 
-export interface Usuario {
-  id: number
-  username: string
-  nome_exibicao: string
-  role: Role
-}
+export type { UsuarioResponse }
+export type Usuario = UsuarioResponse
 
 export interface UsuarioCreate {
   username: string
@@ -20,17 +16,17 @@ export interface UsuarioPatch {
   role?: Role
 }
 
-export async function listarUsuarios(): Promise<Usuario[]> {
+export async function listarUsuarios(): Promise<UsuarioResponse[]> {
   const response = await api.get('/auth/usuarios')
   return response.data
 }
 
-export async function criarUsuario(dados: UsuarioCreate): Promise<Usuario> {
+export async function criarUsuario(dados: UsuarioCreate): Promise<UsuarioResponse> {
   const response = await api.post('/auth/register', dados)
   return response.data
 }
 
-export async function atualizarUsuario(id: number, dados: UsuarioPatch): Promise<Usuario> {
+export async function atualizarUsuario(id: number, dados: UsuarioPatch): Promise<UsuarioResponse> {
   const response = await api.patch(`/auth/usuarios/${id}`, dados)
   return response.data
 }

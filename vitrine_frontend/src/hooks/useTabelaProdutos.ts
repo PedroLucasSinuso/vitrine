@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { fetchTabelaProdutos } from '../api/bi'
-import type { ProdutoTabelaResponse } from '../types'
+import type { ProdutoTabelaResponse, SortByProduto } from '../types'
 
 export function useTabelaProdutos() {
   const [items, setItems] = useState<ProdutoTabelaResponse[]>([])
@@ -12,7 +12,7 @@ export function useTabelaProdutos() {
   const [grupo, setGrupo] = useState('')
   const [familia, setFamilia] = useState('')
 
-  const [sortBy, setSortBy] = useState('nome')
+  const [sortBy, setSortBy] = useState<SortByProduto>('nome')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
 
   const [page, setPage] = useState(0)

@@ -2,6 +2,7 @@ export type Role = 'operador' | 'supervisor' | 'admin'
 
 export interface AuthToken {
   access_token: string
+  refresh_token?: string
   token_type: string
 }
 

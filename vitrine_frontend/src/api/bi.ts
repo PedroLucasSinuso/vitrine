@@ -3,7 +3,7 @@ import type {
   KpisDTO, KpisComparativoDTO, ItemDimensaoDTO, ItemCurvaAbcDTO, ItemRankingDTO,
   TrocasDTO, MovimentoDTO, PontoDiarioDTO, PontoHoraDTO,
   PontoDiaSemanaDTO, SkuDTO, DiarioComparativoDTO, Dimensao, Metrica, PeriodoBi,
-  TabelaProdutosResponse,
+  TabelaProdutosResponse, SortByProduto,
 } from '../types'
 
 const MAX_BI_DAYS = 180
@@ -104,7 +104,7 @@ export async function fetchTabelaProdutos(params: {
   grupo?: string
   familia?: string
   search?: string
-  sort_by?: string
+  sort_by?: SortByProduto
   sort_order?: string
   limit?: number
   offset?: number
@@ -122,6 +122,21 @@ export async function exportarExcelBI(
     params: { ...params(periodo), relatorio, ...extra },
     responseType: 'blob',
   })
+
+  // ── Verifica se a resposta é JSON de erro (ex: 500 com corpo JSON) ──
+  const rawContentType = r.headers['content-type']
+  const contentType = typeof rawContentType === 'string' ? rawContentType : ''
+  if (contentType.includes('application/json')) {
+    // Resposta inesperada: tenta ler o JSON para extrair mensagem de erro
+    const text = await r.data.text()
+    try {
+      const err = JSON.parse(text)
+      throw new Error(err.detail ?? err.message ?? 'Erro ao exportar Excel')
+    } catch {
+      throw new Error('Erro ao exportar Excel')
+    }
+  }
+
   const url = URL.createObjectURL(r.data)
   const link = document.createElement('a')
   link.href = url

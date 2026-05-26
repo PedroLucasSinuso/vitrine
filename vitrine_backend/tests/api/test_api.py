@@ -313,6 +313,43 @@ class TestAdminSync:
         assert "total" in data
         assert data["total"] >= 1
 
+    def test_sync_list_total_deve_ser_count_real(self, client, token_admin, db_session):
+        """total deve refletir o número real de registros, não o limit (T6)."""
+        from app.domain.models.sync_job import SyncJob
+        from datetime import datetime, timezone
+
+        # Cria 15 jobs (mais que o default limit=10)
+        for i in range(15):
+            db_session.add(SyncJob(
+                job_id=f"job-{i:03d}",
+                status="sucesso",
+                started_at=datetime.now(timezone.utc),
+            ))
+        db_session.commit()
+
+        # Chama sem limit explícito (default=10)
+        response = client.get(
+            "/admin/sync",
+            headers={"Authorization": f"Bearer {token_admin}"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+
+        # jobs deve ter no máximo 10 (limit default)
+        assert len(data["jobs"]) == 10
+        # total deve ser 15 (número real no banco)
+        assert data["total"] == 15
+
+        # Com limit=5, jobs=5 mas total=15
+        response = client.get(
+            "/admin/sync?limit=5",
+            headers={"Authorization": f"Bearer {token_admin}"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["jobs"]) == 5
+        assert data["total"] == 15
+
 
 class TestAdminCacheStatus:
     def test_cache_status_como_admin_sem_registro(self, client, token_admin):

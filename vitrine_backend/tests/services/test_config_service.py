@@ -1,5 +1,6 @@
 """Testes do ConfigService (app.application.config_service)."""
 
+from unittest.mock import patch
 import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
@@ -19,6 +20,7 @@ from app.application.config_service import (
     _CHAVES_SOMENTE_ENV,
 )
 from app.core.config import settings
+from cryptography.fernet import Fernet
 
 
 # ── Engine e sessão compartilhados ─────────────────────────────────────────
@@ -294,3 +296,94 @@ class TestChavesSomenteEnv:
         result = get(db, "jwt_secret")
         assert result == settings.jwt_secret
         assert result != "valor_malicioso_no_db"
+
+
+# ── Criptografia Fernet ─────────────────────────────────────────────────
+
+
+class TestCriptografia:
+    """Testes de criptografia para chaves sensíveis (erp_password)."""
+
+    def test_sem_chave_salva_em_texto_plano(self, db):
+        """Sem ERPS_ENCRYPTION_KEY, senha salva em texto plano no banco."""
+        from app.application.config_crypto import _cipher
+
+        # Salva com cipher = None (simula ambiente sem chave)
+        with patch("app.application.config_crypto._cipher", None):
+            ignoradas = set_many(db, {"erp_password": "minha_senha"})
+            assert "erp_password" not in ignoradas
+
+        # Lê direto do banco — deve estar em texto plano
+        row = db.execute(
+            select(Configuracao).where(Configuracao.chave == "erp_password")
+        ).scalar_one()
+        assert row.valor == "minha_senha"
+
+    def test_com_chave_salva_criptografada(self, db):
+        """Com chave Fernet, senha salva criptografada no banco."""
+        from app.application.config_crypto import _cipher, CHAVES_CRIPTOGRAFADAS
+
+        # Usa a chave já configurada no .env
+        ignoradas = set_many(db, {"erp_password": "senha_secreta"})
+        assert "erp_password" not in ignoradas
+
+        # Lê direto do banco — deve estar criptografada (não é texto plano)
+        row = db.execute(
+            select(Configuracao).where(Configuracao.chave == "erp_password")
+        ).scalar_one()
+        assert row.valor != "senha_secreta"
+        assert not row.valor.startswith("senha")  # não é texto plano
+
+        # Deve ser decryptable
+        decrypted = _cipher.decrypt(row.valor.encode()).decode()
+        assert decrypted == "senha_secreta"
+
+    def test_get_decrypted_descriptografa(self, db):
+        """get_decrypted retorna valor descriptografado."""
+        from app.application.config_service import get_decrypted
+
+        set_many(db, {"erp_password": "outra_senha"})
+
+        valor = get_decrypted(db, "erp_password")
+        assert valor == "outra_senha"
+
+    def test_get_sem_decrypt_retorna_criptografado(self, db):
+        """get() sem decrypt retorna o valor criptografado (não o original)."""
+        from app.application.config_crypto import _cipher
+
+        set_many(db, {"erp_password": "senha_oculta"})
+
+        valor = get(db, "erp_password")
+        assert valor != "senha_oculta"  # está criptografado
+        # O valor retornado por get() deve ser criptografado
+        assert _cipher is not None
+        decrypted = _cipher.decrypt(valor.encode()).decode()
+        assert decrypted == "senha_oculta"
+
+    def test_chave_nao_criptografada_retorna_literal(self, db):
+        """Chave não criptografada retorna o valor literal."""
+        set_many(db, {"nome_estabelecimento": "Minha Loja"})
+        from app.application.config_service import get_decrypted
+
+        valor = get_decrypted(db, "nome_estabelecimento")
+        assert valor == "Minha Loja"
+
+    def test_jwt_secret_somente_env_mantido(self, db):
+        """jwt_secret NÃO pode ser lido do banco (só .env) — mesmo
+        se for inserido via SQL direto."""
+        # 1. Inserir jwt_secret malicioso no banco
+        db.execute(
+            Configuracao.__table__.insert().values(
+                chave="jwt_secret", valor="valor_falso"
+            )
+        )
+        db.commit()
+
+        # 2. get() deve ignorar e retornar do .env
+        result = get(db, "jwt_secret")
+        assert result == settings.jwt_secret
+        assert result != "valor_falso"
+
+        # 3. set_many com jwt_secret é ignorado
+        ignoradas = set_many(db, {"jwt_secret": "tentativa_hack"})
+        assert "jwt_secret" in ignoradas

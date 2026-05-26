@@ -50,7 +50,6 @@ export interface ItemRankingDTO {
   codigo: string
   produto: string
   valor: number
-  quantidade: number
 }
 
 export interface ItemMovimentoDTO {
@@ -112,6 +111,8 @@ export interface PeriodoBi {
   data_inicio: string
   data_fim: string
 }
+
+export type SortByProduto = 'codigo_chamada' | 'nome' | 'grupo' | 'familia' | 'preco_custo' | 'preco_venda' | 'estoque'
 
 export interface ProdutoTabelaResponse {
   codigo_chamada: string

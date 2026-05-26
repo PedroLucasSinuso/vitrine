@@ -29,8 +29,8 @@ def _run_migrations():
             conn.execute(text("ALTER TABLE itens_inventario ADD COLUMN observacao TEXT"))
             conn.commit()
             logger.info("Migration: coluna 'observacao' adicionada a itens_inventario")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Migration (esperado se já existe): coluna 'observacao' — %s", e)
 
     # Migration: coluna 'token_version' em usuarios (JWT revogação)
     try:
@@ -38,8 +38,8 @@ def _run_migrations():
             conn.execute(text("ALTER TABLE usuarios ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0"))
             conn.commit()
             logger.info("Migration: coluna 'token_version' adicionada a usuarios")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Migration (esperado se já existe): coluna 'token_version' — %s", e)
 
     # Migration: limpar jwt_secret do banco (agora é somente .env)
     try:
@@ -47,8 +47,8 @@ def _run_migrations():
             conn.execute(text("DELETE FROM configuracoes WHERE chave = 'jwt_secret'"))
             conn.commit()
             logger.info("Migration: jwt_secret removido da tabela configuracoes")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Migration (esperado se já existe): jwt_secret — %s", e)
 
     # Migration: cleanup de tokens expirados na blacklist (+30 dias)
     try:
@@ -56,8 +56,8 @@ def _run_migrations():
             conn.execute(text("DELETE FROM token_blacklist WHERE expires_at < datetime('now', '-30 days')"))
             conn.commit()
             logger.info("Migration: token_blacklist limpa (entradas >30 dias)")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Migration (esperado se já existe): token_blacklist cleanup — %s", e)
 
     # Migration: índice composto para historico_precos
     try:
@@ -67,8 +67,9 @@ def _run_migrations():
                 "ON historico_precos(codigo_chamada, data_coleta)"
             ))
             conn.commit()
-    except Exception:
-        pass
+            logger.info("Migration: índice idx_hp_codigo_data criado")
+    except Exception as e:
+        logger.warning("Migration (esperado se já existe): índice idx_hp_codigo_data — %s", e)
 
     # Migration: coluna 'ativo' em produtos
     try:
@@ -76,8 +77,8 @@ def _run_migrations():
             conn.execute(text("ALTER TABLE produtos ADD COLUMN ativo BOOLEAN NOT NULL DEFAULT 1"))
             conn.commit()
             logger.info("Migration: coluna 'ativo' adicionada a produtos")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Migration (esperado se já existe): coluna 'ativo' — %s", e)
 
 
 def init_db():
@@ -89,13 +90,13 @@ def init_db():
         Base.metadata.create_all(bind=sqlite_engine)
         _run_migrations()
 
-        # Migração de chaves criptografadas (config_service)
+        # Migração de chaves criptografadas (config_crypto / config_service)
         try:
-            from app.application.config_service import _migrar_chaves_criptografia
+            from app.application.config_crypto import migrar_chaves_criptografia
             from app.infrastructure.db.session import SqliteSession
             session = SqliteSession()
             try:
-                _migrar_chaves_criptografia(session)
+                migrar_chaves_criptografia(session)
             finally:
                 session.close()
         except Exception:

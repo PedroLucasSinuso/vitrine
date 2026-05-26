@@ -6,8 +6,9 @@ class DatabaseType(str, Enum):
     POSTGRES = "postgres"
     SQLITE = "sqlite"
 
-# Constante: 7 dias (não configurável via .env)
-ACCESS_TOKEN_EXPIRE_MINUTES = 10080
+# Constante: 8h para access token, 7 dias para refresh token (não configurável via .env)
+ACCESS_TOKEN_EXPIRE_MINUTES = 480
+REFRESH_TOKEN_EXPIRE_MINUTES = 10080
 
 class Settings(BaseSettings):
     # ── Conexão direta ao ERP (legado, usado pelo ETL interno) ──────────────

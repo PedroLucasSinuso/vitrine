@@ -12,3 +12,14 @@ export interface SyncHistory {
   jobs: SyncJob[]
   total: number
 }
+
+export interface SchedulerJobsResponse {
+  jobs: unknown[]
+}
+
+export interface UsuarioResponse {
+  id: number
+  username: string
+  nome_exibicao: string
+  role: 'operador' | 'supervisor' | 'admin'
+}

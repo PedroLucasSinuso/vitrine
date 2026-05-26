@@ -100,6 +100,36 @@ from app.application.config_service import get as get_config
 _ADAPTER_CACHE: dict[str, ProductSource | TransactionSource] = {}
 _ADAPTER_LOCK = threading.Lock()
 
+# ── Adapter Registry ──────────────────────────────────────────────────
+# Permite registrar múltiplos adapters de ERP sem modificar este arquivo.
+# Basta chamar register_adapter() com o nome e as classes do adapter.
+# Uso:
+#   register_adapter("protheus", ProtheusProductSource, ProtheusTransactionSource)
+_ADAPTER_REGISTRY: dict[str, tuple[type[ProductSource], type[TransactionSource]]] = {}
+
+
+def register_adapter(
+    name: str,
+    product_source_cls: type[ProductSource],
+    transaction_source_cls: type[TransactionSource],
+) -> None:
+    """Registra um par de classes de adapter para um nome de ERP.
+
+    Args:
+        name: Nome do ERP (ex: "alterdata", "protheus").
+        product_source_cls: Classe que implementa ``ProductSource``.
+        transaction_source_cls: Classe que implementa ``TransactionSource``.
+    """
+    _ADAPTER_REGISTRY[name] = (product_source_cls, transaction_source_cls)
+    import logging
+    logging.getLogger(__name__).info("Adapter registrado | erp=%s source=%s tx=%s", name, product_source_cls.__name__, transaction_source_cls.__name__)
+
+
+# Registro do adapter Alterdata (nativo)
+from app.adapters.alterdata.product_source import AlterdataProductSource
+from app.adapters.alterdata.transaction_source import AlterdataTransactionSource
+register_adapter("alterdata", AlterdataProductSource, AlterdataTransactionSource)
+
 
 def _get_erp_adapter_name(db) -> str:
     """Lê o nome do adapter configurado (ex: 'alterdata')."""
@@ -113,26 +143,44 @@ def get_produto_service(produto_repo=Depends(get_produto_repository)):
 
 
 def get_product_source(db=Depends(get_db)) -> ProductSource:
-    """Retorna a fonte de produtos conforme o ERP configurado."""
+    """Retorna a fonte de produtos conforme o ERP configurado.
+
+    Consulta o ``_ADAPTER_REGISTRY`` pelo nome do ERP configurado.
+    Se o adapter não estiver registrado, levanta ``ValueError``.
+    """
     erp = _get_erp_adapter_name(db)
-    if erp != "alterdata":
-        raise ValueError(f"Adapter não implementado: {erp}")
+    if erp not in _ADAPTER_REGISTRY:
+        disponiveis = ", ".join(_ADAPTER_REGISTRY.keys()) or "nenhum"
+        raise ValueError(
+            f"Adapter não registrado: {erp!r}. "
+            f"Adapters disponíveis: {disponiveis}. "
+            f"Use register_adapter() para registrar novos adapters."
+        )
     with _ADAPTER_LOCK:
-        if "product_source" not in _ADAPTER_CACHE:
-            from app.adapters.alterdata.product_source import AlterdataProductSource
-            from app.adapters.alterdata.db import get_alterdata_engine
-            _ADAPTER_CACHE["product_source"] = AlterdataProductSource(get_alterdata_engine(db))
-        return _ADAPTER_CACHE["product_source"]
+        cache_key = f"product_source:{erp}"
+        if cache_key not in _ADAPTER_CACHE:
+            from app.application.erp_factory import create_product_source
+            _ADAPTER_CACHE[cache_key] = create_product_source(db)
+        return _ADAPTER_CACHE[cache_key]  # type: ignore[return-value]
 
 
 def get_transaction_source(db=Depends(get_db)) -> TransactionSource:
-    """Retorna a fonte de transações conforme o ERP configurado."""
+    """Retorna a fonte de transações conforme o ERP configurado.
+
+    Consulta o ``_ADAPTER_REGISTRY`` pelo nome do ERP configurado.
+    Se o adapter não estiver registrado, levanta ``ValueError``.
+    """
     erp = _get_erp_adapter_name(db)
-    if erp != "alterdata":
-        raise ValueError(f"Adapter não implementado: {erp}")
+    if erp not in _ADAPTER_REGISTRY:
+        disponiveis = ", ".join(_ADAPTER_REGISTRY.keys()) or "nenhum"
+        raise ValueError(
+            f"Adapter não registrado: {erp!r}. "
+            f"Adapters disponíveis: {disponiveis}. "
+            f"Use register_adapter() para registrar novos adapters."
+        )
     with _ADAPTER_LOCK:
-        if "transaction_source" not in _ADAPTER_CACHE:
-            from app.adapters.alterdata.transaction_source import AlterdataTransactionSource
-            from app.adapters.alterdata.db import get_alterdata_engine
-            _ADAPTER_CACHE["transaction_source"] = AlterdataTransactionSource(get_alterdata_engine(db))
-        return _ADAPTER_CACHE["transaction_source"]
+        cache_key = f"transaction_source:{erp}"
+        if cache_key not in _ADAPTER_CACHE:
+            from app.application.erp_factory import create_transaction_source
+            _ADAPTER_CACHE[cache_key] = create_transaction_source(db)
+        return _ADAPTER_CACHE[cache_key]  # type: ignore[return-value]

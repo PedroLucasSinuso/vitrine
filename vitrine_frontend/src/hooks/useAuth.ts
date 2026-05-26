@@ -45,7 +45,7 @@ export function useAuth() {
     const token = getToken()
     if (!token) return false
     if (isTokenExpired(token)) {
-      localStorage.removeItem('token')
+      // Não remove o token aqui — o interceptor do client.ts tentará refresh
       return false
     }
     return true
@@ -78,6 +78,9 @@ export function useAuth() {
     const data = await apiLogin(username, password)
     const decoded = jwtDecode<JwtPayload>(data.access_token)
     localStorage.setItem('token', data.access_token)
+    if (data.refresh_token) {
+      localStorage.setItem('refresh_token', data.refresh_token)
+    }
     return decoded.role as Role
   }, [])
 
@@ -89,14 +92,15 @@ export function useAuth() {
     } catch (err) {
       console.warn(
         '[Auth] Não foi possível revogar o token no servidor. ' +
-        'O token expirará em até 7 dias.',
+        'O token expirará em até 8 horas.',
         err
       )
     }
     localStorage.removeItem('token')
+    localStorage.removeItem('refresh_token')
     if (!revoked) {
       console.warn(
-        '[Auth] Token ainda pode ser válido por até 7 dias. ' +
+        '[Auth] Token ainda pode ser válido por até 8 horas. ' +
         'Para revogá-lo manualmente, use "Logout em todos os dispositivos" no painel admin.'
       )
     }

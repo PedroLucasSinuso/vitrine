@@ -129,28 +129,20 @@ class SyncService:
 
 def run_sync_scheduled():
     """Função para ser chamada pelo scheduler (sem argumentos).
-    Cria seu próprio engine e sessão, executa o sync e invalida cache.
-    O engine é disposto ao final para evitar vazamento de conexões PostgreSQL.
+    Cria sua própria sessão, executa o sync via run_sync_common e invalida cache.
+    O engine é gerenciado internamente por run_sync_common.
     """
     from app.infrastructure.db.bootstrap import init_db
     from app.infrastructure.db.session import SqliteSession
-    from app.adapters.alterdata.product_source import AlterdataProductSource
-    from app.adapters.alterdata.db import get_alterdata_engine
-    from app.adapters.alterdata.transaction_source import invalidar_cache_transacoes
+    from app.application.erp_factory import run_sync_common
 
     init_db()
     session = SqliteSession()
-    engine = None
     try:
-        engine = get_alterdata_engine(session, pool_size=1)  # C2: pool mínimo p/ sync
-        source = AlterdataProductSource(engine)
-        result = SyncService(source, session).sync()
-        invalidar_cache_transacoes()
+        result = run_sync_common(session, pool_size=1)
         logger.info("Sync agendado concluido | produtos=%s codigos=%s",
                      result.produtos_count, result.codigos_count)
     except Exception as e:
         logger.error("Sync agendado falhou: %s", sanitizar_erro(e))
     finally:
         session.close()
-        if engine is not None:
-            engine.dispose()

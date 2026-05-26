@@ -7,7 +7,7 @@ from app.api.deps import get_db, require_supervisor, get_transaction_source, get
 from app.domain.models.usuario import Usuario
 from app.core.interfaces.source import TransactionSource
 from sqlalchemy.orm import Session
-from app.application.bi.factory import criar_dominio, criar_dominio_comparativo, obter_comparativo_diario
+from app.application.bi.factory import calcular_kpis_rapido, criar_dominio, criar_dominio_comparativo, obter_comparativo_diario
 from app.application.bi.domain.perdas import Perdas
 from app.application.bi.domain.consumo import Consumo
 from app.application.bi.reporting.relatorio import Relatorio, comparar_kpis
@@ -63,6 +63,14 @@ def kpis(
     """Calcula e retorna os KPIs de vendas e trocas para o período informado."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | kpis periodo=%s..%s", data_inicio, data_fim)
+
+    # Fast path: tenta calcular KPIs via SQL agregado (sem carregar linhas)
+    kpis_rapido = calcular_kpis_rapido(source, data_inicio, data_fim)
+    if kpis_rapido is not None:
+        logger.info("BI kpis | fast path (agregado SQL) | %s", kpis_rapido)
+        return kpis_rapido
+
+    # Fallback: full load (adapter sem suporte a agregados)
     dominio = criar_dominio(source, data_inicio, data_fim, tipo="kpis")
     return Relatorio(dominio.vendas, dominio.trocas).kpis()
 
