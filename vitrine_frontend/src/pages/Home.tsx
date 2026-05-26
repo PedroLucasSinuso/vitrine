@@ -19,7 +19,7 @@ export default function Home() {
 
   useEffect(() => {
     if (role === 'admin') navigate('/admin', { replace: true })
-    else if (role === 'supervisor') navigate('/bi/dashboard-consolidado', { replace: true })
+    else if (role === 'supervisor') navigate('/bi', { replace: true })
     else navigate('/inventario', { replace: true })
   }, [role, navigate])
 

@@ -11,7 +11,6 @@ interface Tab {
 
 const TABS: Tab[] = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/bi' },
-  { label: 'Consolidado', icon: LayoutDashboard, path: '/bi/dashboard-consolidado' },
   { label: 'Receita', icon: TrendingUp, path: '/bi/receita' },
   { label: 'Ranking', icon: BarChart3, path: '/bi/ranking' },
   { label: 'Curva ABC', icon: PieChart, path: '/bi/curva-abc' },

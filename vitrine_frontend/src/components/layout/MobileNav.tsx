@@ -11,7 +11,7 @@ interface MobileTab {
 }
 
 const tabs: MobileTab[] = [
-  { label: 'Resumo',   path: '/bi/dashboard-consolidado', icon: <LayoutDashboard size={22} />, roles: ['supervisor', 'admin'] },
+  { label: 'Resumo',   path: '/bi', icon: <LayoutDashboard size={22} />, roles: ['supervisor', 'admin'] },
   { label: 'Busca',    path: '/busca',                    icon: <Search size={22} />,          roles: ['operador', 'supervisor', 'admin'] },
   { label: 'Produtos', path: '/produtos',                 icon: <Package size={22} />,         roles: ['supervisor', 'admin'] },
   { label: 'Admin',    path: '/admin',                    icon: <ShieldAlert size={22} />,     roles: ['admin'] },
@@ -27,7 +27,7 @@ export default function MobileNav() {
   const visibleTabs = tabs.filter(tab => role && tab.roles.includes(role))
 
   const isActive = (path: string) => {
-    if (path === '/bi/dashboard-consolidado') return location.pathname.startsWith('/bi')
+    if (path === '/bi') return location.pathname.startsWith('/bi')
     return location.pathname === path
   }
 
