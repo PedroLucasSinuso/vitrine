@@ -2,7 +2,7 @@
 
 > Audit stage: **Completa. 31 issues da Revisão Adversarial corrigidas. 227 testes passando.**
 > Data da auditoria: **2026-05-27**
-> Status: **Sprints 1-8 concluídos. 31/31 issues do correction-plan corrigidos. 3 bugs corrigidos nesta sessão (Invalid time value, sync regression, log spam).**
+> Status: **Sprints 1-8 + 6 refinamentos concluídos. 31/31 issues do correction-plan corrigidos.**
 
 ---
 
@@ -193,6 +193,15 @@
     - `ef41cb3` — Meta input: 160px
     - `4c3894b` — Separadores explícitos entre blocos no Geral
     - `89b36a5..4c3894b` — 5 ajustes iterativos baseados em feedback
+
+### Refinamentos Dashboard Performance + Backup (2026-05-27)
+
+105. **F1: Dashboard loading feedback** — `loadingDiario`/`loadingHora` inicializados como `true` (skeleton visível desde o primeiro render). Single-day period early return seta ambos pra `false` (evita skeleton eterno).
+106. **F2: Log de fallback de aggregates** — Warning logs em `/diario`, `/receita`, `/quantidade`, `/kpis` quando aggregate SQL retorna `None` (diagnóstico rápido se as queries do Alterdata estão funcionando).
+107. **F3: Fast path SQL para `/temporal/hora`** — Antes chamava `criar_dominio()` carregando todos os itens do período. Agora usa `get_hora_aggregates()` com `GROUP BY EXTRACT(HOUR)` direto no PostgreSQL. Principal gargalo do Dashboard eliminado. Interface `TransactionSource` + implementação `AlterdataTransactionSource` + rota com fallback. (~30 min)
+108. **React.memo no Dashboard** — 4 componentes (DashboardHero, DashboardSecondaryKpis, DashboardCharts, CurvaAbcPreview) envoltos em `memo()`. Props são estado (`useState`) com referências estáveis entre renders — reduz trabalho do reconciler. (~20 min)
+109. **Backup automático SQLite** — Script `app/tasks/backup_db.py` que copia `price_checker.db` com timestamp, poda backups antigos (keep=7). Uso: `uv run python -m app.tasks.backup_db`. Recomendado agendar 03:00 no Windows Task Scheduler. (~30 min)
+110. **Tipos SchedulerJobsResponse** — `SchedulerJob` interface exportada (`id`, `trigger`, `next_run`). `jobs: unknown[]` → `jobs: SchedulerJob[]`. (~5 min)
 
 ## Descobertas Principais
 

@@ -378,6 +378,41 @@ A senha do ERP (`erp_password`) é criptografada em repouso usando a chave defin
 
 ---
 
+## Backup do Banco de Dados
+
+O SQLite `price_checker.db` contém todas as configurações, cache, histórico de inventário e sincronia. A pasta `data/` fica em `vitrine_backend/data/`.
+
+### Backup manual
+
+```powershell
+cd vitrine_backend
+uv run python -m app.tasks.backup_db
+```
+
+Cria um arquivo `data/backups/price_checker_YYYYMMDD_HHMMSS.db` e mantém os 7 mais recentes (podagem automática).
+
+### Agendamento automático (Windows Task Scheduler)
+
+1. Abra **Task Scheduler**
+2. "Create Basic Task..."
+3. Nome: "Vitrine Backup DB"
+4. Trigger: **Daily** às **03:00**
+5. Action: **Start a program**
+   - Program/script: `C:\Users\luizp\AppData\Local\uv\uv.exe` (ajuste o path)
+   - Arguments: `run python -m app.tasks.backup_db`
+   - Start in: `C:\caminho\para\vitrine\vitrine_backend`
+
+### Opções
+
+| Flag | Padrão | Descrição |
+|---|---|---|
+| `--keep N` | `7` | Máximo de backups a manter |
+| `--backup-dir DIR` | `data/backups/` | Diretório de destino |
+
+Também é possível usar `--backup-dir D:\backups` para salvar em outro disco.
+
+---
+
 ## Licença
 
 Distribuído sob licença **MIT**. Veja [`LICENSE`](LICENSE) para mais informações.

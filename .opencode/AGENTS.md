@@ -32,6 +32,8 @@
 | Run tests with coverage | `uv run pytest --cov` |
 | Create admin user | `uv run create-admin admin "Nome" minha_senha` (ou `uv run python -m app.cli`) |
 | Sync products from ERP | `uv run python -m app.etl.run_etl` |
+| Backup SQLite DB | `uv run python -m app.tasks.backup_db` |
+| Backup with custom dir | `uv run python -m app.tasks.backup_db --keep 7 --backup-dir D:\backups` |
 | OpenAPI docs | `http://localhost:8000/docs` |
 
 **Test note:** Tests use SQLite `:memory:` with `StaticPool` (see `tests/api/conftest.py`). `RATE_LIMIT_ENABLED=0` is set before import in conftest. Fixtures create 3 user roles (`usuario_operador`, `usuario_supervisor`, `usuario_admin`) with token helpers. `httpx` is available for test client usage. Tests live under: `tests/api/`, `tests/services/`, `tests/models/`, `tests/schemas/`, `tests/etl/`, `tests/repositories/`, `tests/value_objects/`, `tests/utils/`.
@@ -138,7 +140,7 @@ utils/ (formatters, colors)
 - Fernet key missing → ERP passwords stored in plain text in SQLite.
 - Fernet key lost → encrypted passwords unreadable.
 - SQLite used as primary app DB — no concurrent write support, no PITR.
-- No backup strategy for `price_checker.db`.
+- ~~No backup strategy for `price_checker.db`.~~ ✅ Mitigado — Script `app/tasks/backup_db.py` disponível para agendamento (Windows Task Scheduler). Sem backup automático integrado ao scheduler do app.
 
 ---
 
