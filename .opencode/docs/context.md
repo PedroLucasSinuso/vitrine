@@ -203,6 +203,9 @@
 109. **Backup automático SQLite** — Script `app/tasks/backup_db.py` que copia `price_checker.db` com timestamp, poda backups antigos (keep=7). Uso: `uv run python -m app.tasks.backup_db`. Recomendado agendar 03:00 no Windows Task Scheduler. (~30 min)
 110. **Tipos SchedulerJobsResponse** — `SchedulerJob` interface exportada (`id`, `trigger`, `next_run`). `jobs: unknown[]` → `jobs: SchedulerJob[]`. (~5 min)
 111. **F4: Fast path SQL para `/diario/comparativo`** — `obter_comparativo_diario()` agora tenta `get_comparativo_aggregate()` via SQL direto antes de cair no full load. Query busca apenas 2 dias (último + offset YoY) em vez de varrer o período inteiro. Suporte a 4 métricas (receita, quantidade, qtd_tickets, ticket_medio) + filtro de hora para dias parciais. Interface `TransactionSource` + implementação `AlterdataTransactionSource`. Fallback preservado. Dashboard agora faz **zero full loads** durante carregamento inicial. (~1h)
+112. **Correção de dados: gráficos de tendência** — `get_diario_aggregates()` só tratava `receita` e `quantidade`. `ticket_medio` e `qtd_tickets` usavam `SUM(doc.qtitem)` — valor errado. Rota `/bi/diario` mapeava tudo exceto RECEITA para `"quantidade"`. Corrigido com mapeamento explícito das 4 métricas no adapter e na rota. (~15 min)
+113. **Layout DashboardCharts sequencial** — Antes: grid 3-colunas (Tendências 2/3, Hora 1/3) com 388px de espaço morto. Agora: Tendências lado a lado, Hora full-width abaixo. Altura do hora chart: 420px → 280px. Mobile inalterado (tudo empilhado). (~20 min)
+114. **CurvaAbcPreview: "Ver mais" → link** — Botão antes era toggle local (quebrado). Agora navega para `/bi/curva-abc`. (~5 min)
 
 ## Descobertas Principais
 
@@ -233,10 +236,10 @@
 | 🔴 P1 | Domain models acoplados ao SQLAlchemy ORM | `domain/models/*.py` | **ProdutoPuro criado**, rotas HTTP pendentes de migração |
 | 🔴 P1 | Caches globais em memória do processo | `deps.py`, `config_service.py`, `transaction_source.py` | Pendente (multi-worker) — mitigado por single-worker |
 | 🔴 P3 | BI carrega tudo em RAM | `factory.py`, `fluxo.py` | Mitigado (180d limit + aggregates SQL) — root cause permanece |
-| 🔴 N1 | Console logs não aparecem no uvicorn | `logging_config.py` | StreamHandler configurado mas sem saída |
+| 🔴 N1 | ~~Console logs não aparecem no uvicorn~~ | ✅ Corrigido | ✅ |
 | 🟡 P2 | Config management com 4+ fontes de verdade | `config_service.py`, `configStore.ts` | Parcial — configStore sync melhorou |
-| 🟢 m3 | Frontend: React.memo ausente | Dashboard (6 cards + charts) | Pendente |
-| 🟢 N2 | SchedulerJobsResponse com unknown[] | `types/admin.ts` | Pendente — tipar como SchedulerJob[] |
+| 🟢 m3 | ~~React.memo no Dashboard~~ | ✅ Corrigido | ✅ |
+| 🟢 N2 | ~~SchedulerJobsResponse unknown[]~~ | ✅ Corrigido | ✅ |
 
 ### Notas Pós-Revisão (Sprint 1 — Resíduos)
 
@@ -280,7 +283,7 @@
 - **UX audit:** 6 páginas ajustadas (Etiquetas, Inventário, Produtos, Configurações, Usuarios, Admin).
 - **Issues abertos (2026-05-21 — Revisão Adversarial):** 27 issues — **26 corrigidos** em 6 sprints (2026-05-26). Apenas P3 (BI RAM) permanece como resíduo real.
 - **Issues abertos (2026-05-25 — Auditoria Debug):** Nenhum — todos os 23 corrigidos em 6 sprints.
-- **Issues abertos (2026-05-27 — Sessão Atual):** P3 (BI RAM), m3 (React.memo), N1 (console logs silenciosos), N2 (SchedulerJobsResponse unknown[]), N3 (ProdutoPuro não plugado), + backup SQLite.
+- **Issues abertos (2026-05-27 — Sessão Atual):** P3 (BI RAM — mitigado), P2 (Config 4 fontes), ProdutoPuro não plugado. N1, m3, N2, backup SQLite — todos **corrigidos na sessão**.
 - **Regressões corrigidas:** 2 fixes (M1+M2 `job_id: string` e Bônus `logar_erro_interno`) aplicados novamente em `cdb135c`.
 - **Resíduos pós-revisão Sprint 1:** 1 médio (segundo async gap em handleCodigo, linhas 283 e 303) — não bloqueante.
 - **Tipo de app:** Sistema interno de vitrine/PDV para loja física com BI, inventário, sincronização ERP (Alterdata).
