@@ -36,6 +36,11 @@ setup_logging()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Re-apply logging config after uvicorn's own logging setup.
+    # Without this, uvicorn's configure_logging() (called in the reload
+    # subprocess via _subprocess.subprocess_started) can overwrite our
+    # module-level dictConfig, causing console output to disappear.
+    setup_logging()
     init_db()
 
     # Scheduler lock: apenas um worker por vez agenda jobs.

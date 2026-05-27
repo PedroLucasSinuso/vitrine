@@ -62,6 +62,23 @@ def setup_logging():
                 "handlers": ["console", "file_nao_encontrado"],
                 "propagate": False,
             },
+            # Preserve uvicorn loggers so they keep working after our
+            # dictConfig replaces uvicorn's default configuration.
+            # Without these, uvicorn.error/.access lose their handlers
+            # and level when we call dictConfig during lifespan startup.
+            "uvicorn": {
+                "handlers": ["console"],
+                "level": "INFO",
+                "propagate": False,
+            },
+            "uvicorn.error": {
+                "level": "INFO",
+            },
+            "uvicorn.access": {
+                "handlers": ["console"],
+                "level": "INFO",
+                "propagate": False,
+            },
         },
 
         "root": {
