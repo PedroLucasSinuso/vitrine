@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { DollarSign } from 'lucide-react'
 import Card from '../ui/Card'
 import Badge from '../ui/Badge'
@@ -48,7 +48,7 @@ const columns: Column<ItemCurvaAbcDTO>[] = [
   },
 ]
 
-export default function CurvaAbcPreview({ data, loading }: CurvaAbcPreviewProps) {
+export default memo(function CurvaAbcPreview({ data, loading }: CurvaAbcPreviewProps) {
   const [mostrarTudo, setMostrarTudo] = useState(false)
 
   return (
@@ -99,4 +99,4 @@ export default function CurvaAbcPreview({ data, loading }: CurvaAbcPreviewProps)
       )}
     </Card>
   )
-}
+})

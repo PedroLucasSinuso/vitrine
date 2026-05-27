@@ -13,8 +13,14 @@ export interface SyncHistory {
   total: number
 }
 
+export interface SchedulerJob {
+  id: string
+  trigger: string
+  next_run: string | null
+}
+
 export interface SchedulerJobsResponse {
-  jobs: unknown[]
+  jobs: SchedulerJob[]
 }
 
 export interface UsuarioResponse {

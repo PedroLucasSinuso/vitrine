@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import KpiCard from './KpiCard'
 import Skeleton from '../ui/Skeleton'
 import type { VariacaoInfo } from '../../pages/bi/dashboardHelpers'
@@ -16,7 +17,7 @@ interface DashboardSecondaryKpisProps {
   visible: boolean
 }
 
-export default function DashboardSecondaryKpis({ items, loading, visible }: DashboardSecondaryKpisProps) {
+export default memo(function DashboardSecondaryKpis({ items, loading, visible }: DashboardSecondaryKpisProps) {
   if (visible) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -45,4 +46,4 @@ export default function DashboardSecondaryKpis({ items, loading, visible }: Dash
   }
 
   return null
-}
+})

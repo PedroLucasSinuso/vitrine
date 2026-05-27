@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { BarChart3, ArrowRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import HeroKpiCard from './HeroKpiCard'
@@ -26,7 +27,7 @@ interface DashboardHeroProps {
   kpisAtivos: boolean
 }
 
-export default function DashboardHero({
+export default memo(function DashboardHero({
   fatBruto, pulseKey, fatBrutoVariacao, fatBrutoAnterior,
   pctMeta, loadingMeta, receitaMesAtual, metaMensal,
   projecao, projecaoVsMeta, diasCorridos, ultimoDiaMes,
@@ -133,4 +134,4 @@ export default function DashboardHero({
       )}
     </>
   )
-}
+})

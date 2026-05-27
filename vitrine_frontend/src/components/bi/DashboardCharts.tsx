@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { format } from 'date-fns'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -23,7 +24,7 @@ function formatDateTick(value: string): string {
   return format(d, 'dd/MM')
 }
 
-export default function DashboardCharts({
+export default memo(function DashboardCharts({
   diarioTicketMedio, diarioTickets, dadosHora,
   loadingDiario, loadingHora,
 }: DashboardChartsProps) {
@@ -148,4 +149,4 @@ export default function DashboardCharts({
       </div>
     </div>
   )
-}
+})
