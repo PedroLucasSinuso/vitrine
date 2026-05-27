@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { CalendarDays, Clock } from 'lucide-react'
 import Card from '../ui/Card'
+import { getConfigsCache } from '../../stores/configStore'
 import type { PontoDiarioDTO, DiarioComparativoDTO } from '../../types'
 import { formatCurrency, formatDateWithWeekday } from '../../utils/formatters'
 
@@ -53,6 +55,14 @@ interface ResumoDiaProps {
 }
 
 export default function ResumoDia({ receita, tickets, ticketMedio, comparar: compAtivo, comparativo }: ResumoDiaProps) {
+  const [marketName, setMarketName] = useState<string | null>(null)
+
+  useEffect(() => {
+    getConfigsCache().then((c) => {
+      if (c.marketName) setMarketName(c.marketName)
+    }).catch(() => {})
+  }, [])
+
   const sorted = [...receita].sort((a, b) => b.data.localeCompare(a.data))
   const ultimo = sorted[0]
   if (!ultimo) return null
@@ -74,15 +84,18 @@ export default function ResumoDia({ receita, tickets, ticketMedio, comparar: com
 
   return (
     <Card variant="elevated" padding="md">
-      <div className="flex items-center gap-3 pb-4 border-b border-border mb-4">
-        <div className="p-2 rounded-xl bg-primary-light text-primary shrink-0">
-          <CalendarDays size={16} />
+      <div className="flex flex-col items-center gap-1 pb-4 border-b border-border mb-4">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-primary-light text-primary">
+            <CalendarDays size={14} />
+          </div>
+          <span className="text-sm font-semibold text-text-primary text-center">
+            {marketName ? `${marketName} — ` : ''}Hoje
+          </span>
         </div>
-        <div className="flex-1 min-w-0">
-          <span className="text-xs font-semibold text-text-primary">{formatDateWithWeekday(ultimo.data)}</span>
-        </div>
+        <span className="text-[11px] text-text-muted">{formatDateWithWeekday(ultimo.data)}</span>
         {ultimoEParcial && parcialAte && (
-          <span className="text-[10px] text-warning bg-warning-light px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1 shrink-0">
+          <span className="text-[10px] text-warning bg-warning-light px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1">
             <Clock size={10} /> Parcial até {parcialAte}
           </span>
         )}

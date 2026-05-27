@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { format } from 'date-fns'
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
 import { TrendingUp, Clock4 } from 'lucide-react'
 import Card from '../ui/Card'
@@ -115,23 +115,32 @@ export default memo(function DashboardCharts({
         <Card variant="bordered" padding="md">
           <SectionHeader icon={Clock4}>Receita por Hora</SectionHeader>
           <div className="mt-3">
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart
-                data={dadosHora}
-                layout="vertical"
-                margin={{ top: 2, right: 16, left: 28, bottom: 2 }}
-                barCategoryGap={2}
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--color-border)" />
-                <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`} axisLine={false} tickLine={false} />
-                <YAxis dataKey="hora" type="category" tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} width={28} />
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={dadosHora} margin={CHART_THEME.margin}>
+                <defs>
+                  <linearGradient id="gradHora" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.2} />
+                    <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                <XAxis dataKey="hora" tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} />
+                <YAxis {...CHART_THEME.yAxis} tickFormatter={formatChartCurrency} />
                 <Tooltip
-                  cursor={{ fill: 'rgba(100,100,100,0.06)' }}
+                  cursor={CHART_THEME.tooltip.cursor}
                   contentStyle={CHART_THEME.tooltip.contentStyle}
                   formatter={((v: number) => formatCurrency(v)) as never}
+                  labelFormatter={((l: string) => `${l}h`)}
                 />
-                <Bar dataKey="valor" fill="var(--color-primary)" radius={[0, 4, 4, 0]} maxBarSize={14} />
-              </BarChart>
+                <Area
+                  type="monotone"
+                  dataKey="valor"
+                  stroke="var(--color-primary)"
+                  fill="url(#gradHora)"
+                  strokeWidth={CHART_THEME.area.strokeWidth}
+                  fillOpacity={CHART_THEME.area.fillOpacity}
+                />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </Card>
