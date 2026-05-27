@@ -178,6 +178,34 @@ class AlterdataTransactionSource(TransactionSource):
     def get_curva_abc_aggregates(self, start: date, end: date, dimensao: str) -> list[dict] | None:
         return self.get_dimensao_aggregates(start, end, dimensao, "receita")
 
+    def get_hora_aggregates(self, start: date, end: date, metrica: str) -> list[dict] | None:
+        """Retorna distribuição de vendas por hora via SQL agregado."""
+        col = "doc.vlmovimento" if metrica == "receita" else "doc.qtitem"
+        sql = text(f"""
+            SELECT
+                LPAD(EXTRACT(HOUR FROM d.hrreferencia)::int::text, 2, '0') AS hora,
+                SUM({col}) AS valor
+            FROM wshop.documen d
+            JOIN wshop.docitem doc ON doc.iddocumento = d.iddocumento
+            WHERE d.dtemissao >= :data_inicio
+              AND d.dtemissao <= :data_fim
+              AND d.tpoperacao = 'V'
+              AND COALESCE(d.stdocumentocancelado, '') != '*'
+              AND d.hrreferencia IS NOT NULL
+            GROUP BY EXTRACT(HOUR FROM d.hrreferencia)
+            ORDER BY hora
+        """)
+        try:
+            with self._engine.connect() as conn:
+                rows = conn.execute(sql, {
+                    "data_inicio": start.isoformat(),
+                    "data_fim": end.isoformat(),
+                }).mappings().fetchall()
+            return [{"hora": r["hora"], "valor": float(r["valor"])} for r in rows]
+        except Exception:
+            logger.exception("BI hora aggregates | erro na query agregada, fallback para full load")
+            return None
+
     def _to_item(self, row: dict) -> TransactionItem:
         operacao_raw = row["operacao"]
         devolucao_raw = row.get("tipo_devolucao") or None

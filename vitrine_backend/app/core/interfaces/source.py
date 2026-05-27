@@ -65,3 +65,9 @@ class TransactionSource(ABC):
         """Opcional: retorna dados para curva ABC (receita por dimensão).
         Retorna None se não suportado."""
         return None
+
+    def get_hora_aggregates(self, start: date, end: date, metrica: str) -> list[dict] | None:
+        """Opcional: retorna agregados por hora do dia.
+        metrica: 'receita' ou 'quantidade'.
+        Retorna None se não suportado."""
+        return None

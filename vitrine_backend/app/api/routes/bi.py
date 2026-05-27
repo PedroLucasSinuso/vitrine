@@ -359,6 +359,11 @@ def distribuicao_hora(
     """Retorna a distribuição de vendas por hora do dia no período informado."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | temporal/hora periodo=%s..%s metrica=%s", data_inicio, data_fim, metrica.value)
+    metrica_str = "receita" if metrica == Metrica.RECEITA else "quantidade"
+    dados = source.get_hora_aggregates(data_inicio, data_fim, metrica_str)
+    if dados is not None:
+        return [PontoHoraDTO(hora=r["hora"], valor=round(float(r["valor"]), 2)) for r in dados]
+    logger.warning("BI | hora aggregate retornou None — fallback para full load | periodo=%s..%s", data_inicio, data_fim)
     dominio = criar_dominio(source, data_inicio, data_fim)
     return RelatorioTemporal(dominio.vendas).por_hora(metrica)
 
