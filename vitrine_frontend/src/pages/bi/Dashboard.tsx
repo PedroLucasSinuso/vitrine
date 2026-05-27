@@ -53,7 +53,7 @@ export default function Dashboard() {
   const [kpisComp, setKpisComp] = useState<KpisComparativoDTO | null>(null)
   const [topProdutos, setTopProdutos] = useState<ItemRankingDTO[]>([])
   const [curvaAbc, setCurvaAbc] = useState<ItemCurvaAbcDTO[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
   const [pulseKey, setPulseKey] = useState(0)
 

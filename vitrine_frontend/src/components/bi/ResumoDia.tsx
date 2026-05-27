@@ -57,13 +57,17 @@ export default function ResumoDia({ receita, tickets, ticketMedio, comparar: com
   const ultimo = sorted[0]
   if (!ultimo) return null
 
-  const valorReceita = receita.find((t) => t.data === ultimo.data)?.valor ?? 0
-  const valorTickets = tickets.find((t) => t.data === ultimo.data)?.valor ?? 0
-  const valorTicketMedio = ticketMedio.find((t) => t.data === ultimo.data)?.valor ?? 0
-
   const compReceita = compAtivo ? comparativo?.receita ?? null : null
   const compTickets = compAtivo ? comparativo?.tickets ?? null : null
   const compTicketMedio = compAtivo ? comparativo?.ticketMedio ?? null : null
+
+  // Usa o valor do endpoint /diario/comparativo quando disponível.
+  // Esse endpoint já aplica _filtrar_hora() para dias parciais (hoje),
+  // garantindo consistência entre o valor exibido e o badge de variação.
+  // Fallback para a série diária bruta quando não há comparativo.
+  const valorReceita = compReceita?.valor ?? receita.find((t) => t.data === ultimo.data)?.valor ?? 0
+  const valorTickets = compTickets?.valor ?? tickets.find((t) => t.data === ultimo.data)?.valor ?? 0
+  const valorTicketMedio = compTicketMedio?.valor ?? ticketMedio.find((t) => t.data === ultimo.data)?.valor ?? 0
 
   const ultimoEParcial = !!compReceita?.parcial_ate
   const parcialAte = compReceita?.parcial_ate ?? null
