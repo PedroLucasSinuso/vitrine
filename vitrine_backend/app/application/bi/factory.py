@@ -250,16 +250,6 @@ def obter_comparativo_diario(
     is_partial = data_fim == hoje
     hora_atual = datetime.now().hour if is_partial else None
 
-    # ── Carrega período atual ──────────────────────────────────────────
-    items_raw = source.get_items(data_inicio, data_fim)
-    vendas_items = Vendas(items_raw).items
-
-    if is_partial:
-        items_filtrados = _filtrar_hora(vendas_items, data_fim, hora_atual)
-        valor = _calcular_metrica_diaria(items_filtrados, data_fim, metrica)
-    else:
-        valor = _calcular_metrica_diaria(vendas_items, data_fim, metrica)
-
     # ── Determina offset (sempre YoY — mesmo weekday do ano anterior) ──
     try:
         offset_data = _ajustar_mesmo_dia_semana(
@@ -271,20 +261,61 @@ def obter_comparativo_diario(
         )
     rotulo = "vs ano anterior"
 
-    # ── Carrega período de offset ──────────────────────────────────────
-    try:
-        items_offset_raw = source.get_items(offset_data, offset_data)
-        vendas_offset_items = Vendas(items_offset_raw).items
-
-        if is_partial:
-            items_offset = _filtrar_hora(vendas_offset_items, offset_data, hora_atual)
-        else:
-            items_offset = vendas_offset_items
-
-        valor_offset = _calcular_metrica_diaria(items_offset, offset_data, metrica)
-    except Exception:
+    # ── Fast path: tenta via SQL agregado (sem carregar itens) ─────────
+    valor = source.get_comparativo_aggregate(
+        data_fim, metrica.value,
+        hora_limite=hora_atual if is_partial else None,
+    )
+    if offset_data is not None:
+        valor_offset = source.get_comparativo_aggregate(
+            offset_data, metrica.value,
+            hora_limite=hora_atual if is_partial else None,
+        )
+    else:
         valor_offset = None
-        offset_data = None  # sinaliza que não foi possível carregar
+
+    # Se ambos os aggregates funcionaram, retorna sem fazer full load
+    if valor is not None and valor_offset is not None:
+        return {
+            "data": str(data_fim),
+            "valor": valor,
+            "valor_offset": valor_offset,
+            "offset_data": str(offset_data) if offset_data is not None else None,
+            "parcial_ate": f"{hora_atual:02d}:{datetime.now().minute:02d}" if is_partial else None,
+            "rotulo": rotulo,
+        }
+
+    # ── Fallback: full load (adapter sem suporte a agregados ou erro) ──
+    logger.warning(
+        "BI comparativo | aggregate retornou None — fallback para full load | "
+        "periodo=%s..%s metrica=%s valor=%s offset=%s",
+        data_inicio, data_fim, metrica.value, valor, valor_offset,
+    )
+    items_raw = source.get_items(data_inicio, data_fim)
+    vendas_items = Vendas(items_raw).items
+
+    if is_partial:
+        items_filtrados = _filtrar_hora(vendas_items, data_fim, hora_atual)
+        valor = _calcular_metrica_diaria(items_filtrados, data_fim, metrica)
+    else:
+        valor = _calcular_metrica_diaria(vendas_items, data_fim, metrica)
+
+    if offset_data is not None:
+        try:
+            items_offset_raw = source.get_items(offset_data, offset_data)
+            vendas_offset_items = Vendas(items_offset_raw).items
+
+            if is_partial:
+                items_offset = _filtrar_hora(vendas_offset_items, offset_data, hora_atual)
+            else:
+                items_offset = vendas_offset_items
+
+            valor_offset = _calcular_metrica_diaria(items_offset, offset_data, metrica)
+        except Exception:
+            valor_offset = None
+            offset_data = None
+    else:
+        valor_offset = None
 
     return {
         "data": str(data_fim),

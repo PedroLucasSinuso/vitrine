@@ -50,6 +50,10 @@ class MockTransactionSource:
                 result.extend(items)
         return result
 
+    def get_comparativo_aggregate(self, data: date, metrica: str, hora_limite: int | None = None) -> float | None:
+        """Mock retorna None para forçar fallback (comportamento pré-F4)."""
+        return None
+
 
 def _setup_mock(items_por_data: dict[date, list[TransactionItem]]):
     """Configura o mock do TransactionSource e retorna o contexto."""

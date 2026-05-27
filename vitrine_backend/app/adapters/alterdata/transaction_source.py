@@ -175,8 +175,45 @@ class AlterdataTransactionSource(TransactionSource):
             logger.exception("BI diario aggregates | erro na query agregada")
             return None
 
+    _COMPARATIVO_COL = {
+        "receita_produto": "SUM(doc.vlmovimento)",
+        "qtd_item": "SUM(doc.qtitem)",
+        "qtd_tickets": "COUNT(DISTINCT d.iddocumento)",
+        "ticket_medio": "SUM(doc.vlmovimento) / NULLIF(COUNT(DISTINCT d.iddocumento), 0)",
+    }
+
     def get_curva_abc_aggregates(self, start: date, end: date, dimensao: str) -> list[dict] | None:
         return self.get_dimensao_aggregates(start, end, dimensao, "receita")
+
+    def get_comparativo_aggregate(self, data: date, metrica: str, hora_limite: int | None = None) -> float | None:
+        """Retorna valor agregado para um dia específico via SQL direto."""
+        col = self._COMPARATIVO_COL.get(metrica)
+        if col is None:
+            return None
+
+        hora_filter = ""
+        if hora_limite is not None:
+            hora_filter = "AND CAST(EXTRACT(HOUR FROM d.hrreferencia) AS int) <= :hora_limite"
+
+        sql = text(f"""
+            SELECT {col} AS valor
+            FROM wshop.documen d
+            JOIN wshop.docitem doc ON doc.iddocumento = d.iddocumento
+            WHERE d.dtemissao = :data
+              AND d.tpoperacao = 'V'
+              AND COALESCE(d.stdocumentocancelado, '') != '*'
+              {hora_filter}
+        """)
+        try:
+            params: dict = {"data": data.isoformat()}
+            if hora_limite is not None:
+                params["hora_limite"] = hora_limite
+            with self._engine.connect() as conn:
+                row = conn.execute(sql, params).mappings().one()
+            return float(row["valor"])
+        except Exception:
+            logger.exception("BI comparativo aggregate | erro na query para %s metrica=%s", data, metrica)
+            return None
 
     def get_hora_aggregates(self, start: date, end: date, metrica: str) -> list[dict] | None:
         """Retorna distribuição de vendas por hora via SQL agregado."""

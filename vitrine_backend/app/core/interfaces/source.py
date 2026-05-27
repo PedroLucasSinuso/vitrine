@@ -71,3 +71,17 @@ class TransactionSource(ABC):
         metrica: 'receita' ou 'quantidade'.
         Retorna None se não suportado."""
         return None
+
+    def get_comparativo_aggregate(self, data: date, metrica: str, hora_limite: int | None = None) -> float | None:
+        """Opcional: retorna valor agregado para um dia específico.
+
+        Usado pelo endpoint /diario/comparativo para substituir o full load
+        de todos os itens do período por uma consulta SQL direta.
+
+        metrica: 'receita_produto', 'qtd_item', 'qtd_tickets', 'ticket_medio'.
+        hora_limite: se fornecido, filtra apenas registros com hora <= hora_limite
+                     (para dias parciais — hoje em andamento).
+
+        Retorna None se não suportado ou em caso de erro.
+        """
+        return None
