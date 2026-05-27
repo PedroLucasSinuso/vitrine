@@ -202,6 +202,7 @@
 108. **React.memo no Dashboard** — 4 componentes (DashboardHero, DashboardSecondaryKpis, DashboardCharts, CurvaAbcPreview) envoltos em `memo()`. Props são estado (`useState`) com referências estáveis entre renders — reduz trabalho do reconciler. (~20 min)
 109. **Backup automático SQLite** — Script `app/tasks/backup_db.py` que copia `price_checker.db` com timestamp, poda backups antigos (keep=7). Uso: `uv run python -m app.tasks.backup_db`. Recomendado agendar 03:00 no Windows Task Scheduler. (~30 min)
 110. **Tipos SchedulerJobsResponse** — `SchedulerJob` interface exportada (`id`, `trigger`, `next_run`). `jobs: unknown[]` → `jobs: SchedulerJob[]`. (~5 min)
+111. **F4: Fast path SQL para `/diario/comparativo`** — `obter_comparativo_diario()` agora tenta `get_comparativo_aggregate()` via SQL direto antes de cair no full load. Query busca apenas 2 dias (último + offset YoY) em vez de varrer o período inteiro. Suporte a 4 métricas (receita, quantidade, qtd_tickets, ticket_medio) + filtro de hora para dias parciais. Interface `TransactionSource` + implementação `AlterdataTransactionSource`. Fallback preservado. Dashboard agora faz **zero full loads** durante carregamento inicial. (~1h)
 
 ## Descobertas Principais
 
@@ -231,7 +232,7 @@
 |---|---|---|---|---|
 | 🔴 P1 | Domain models acoplados ao SQLAlchemy ORM | `domain/models/*.py` | **ProdutoPuro criado**, rotas HTTP pendentes de migração |
 | 🔴 P1 | Caches globais em memória do processo | `deps.py`, `config_service.py`, `transaction_source.py` | Pendente (multi-worker) — mitigado por single-worker |
-| 🔴 P3 | BI carrega tudo em RAM | `factory.py`, `fluxo.py` | Mitigado (180d limit) — root cause permanece |
+| 🔴 P3 | BI carrega tudo em RAM | `factory.py`, `fluxo.py` | Mitigado (180d limit + aggregates SQL) — root cause permanece |
 | 🔴 N1 | Console logs não aparecem no uvicorn | `logging_config.py` | StreamHandler configurado mas sem saída |
 | 🟡 P2 | Config management com 4+ fontes de verdade | `config_service.py`, `configStore.ts` | Parcial — configStore sync melhorou |
 | 🟢 m3 | Frontend: React.memo ausente | Dashboard (6 cards + charts) | Pendente |

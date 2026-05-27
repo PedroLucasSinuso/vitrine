@@ -154,7 +154,13 @@ class AlterdataTransactionSource(TransactionSource):
             return None
 
     def get_diario_aggregates(self, start: date, end: date, metrica: str) -> list[dict] | None:
-        col_metrica = "SUM(doc.vlmovimento) AS valor" if metrica == "receita" else "SUM(doc.qtitem) AS valor"
+        col_map = {
+            "receita": "SUM(doc.vlmovimento) AS valor",
+            "quantidade": "SUM(doc.qtitem) AS valor",
+            "qtd_tickets": "COUNT(DISTINCT d.iddocumento)::int AS valor",
+            "ticket_medio": "SUM(doc.vlmovimento) / NULLIF(COUNT(DISTINCT d.iddocumento), 0) AS valor",
+        }
+        col_metrica = col_map.get(metrica, col_map["receita"])
         sql = text(f"""
             SELECT d.dtemissao AS data,
                    {col_metrica}

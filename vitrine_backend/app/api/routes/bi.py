@@ -288,7 +288,16 @@ def serie_diaria(
     """Retorna a série temporal diária de vendas para o período informado."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | diario periodo=%s..%s metrica=%s", data_inicio, data_fim, metrica.value)
-    metrica_str = "receita" if metrica == Metrica.RECEITA else "quantidade"
+    if metrica == Metrica.RECEITA:
+        metrica_str = "receita"
+    elif metrica == Metrica.QUANTIDADE:
+        metrica_str = "quantidade"
+    elif metrica == Metrica.QTD_TICKETS:
+        metrica_str = "qtd_tickets"
+    elif metrica == Metrica.TICKET_MEDIO:
+        metrica_str = "ticket_medio"
+    else:
+        metrica_str = "receita"
     dados = source.get_diario_aggregates(data_inicio, data_fim, metrica_str)
     if dados is not None:
         return [PontoDiarioDTO(data=str(d["data"]), valor=round(float(d["valor"]), 2)) for d in dados]

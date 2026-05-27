@@ -1,5 +1,6 @@
-import { useState, memo } from 'react'
-import { DollarSign } from 'lucide-react'
+import { memo } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { DollarSign, ArrowRight } from 'lucide-react'
 import Card from '../ui/Card'
 import Badge from '../ui/Badge'
 import DataTable from '../ui/DataTable'
@@ -49,7 +50,7 @@ const columns: Column<ItemCurvaAbcDTO>[] = [
 ]
 
 export default memo(function CurvaAbcPreview({ data, loading }: CurvaAbcPreviewProps) {
-  const [mostrarTudo, setMostrarTudo] = useState(false)
+  const navigate = useNavigate()
 
   return (
     <Card variant="default" className="p-5">
@@ -62,20 +63,15 @@ export default memo(function CurvaAbcPreview({ data, loading }: CurvaAbcPreviewP
         <>
           <DataTable
             columns={columns}
-            data={mostrarTudo ? data : data.slice(0, LIMITE_ABC)}
+            data={data.slice(0, LIMITE_ABC)}
             rowKey={(r) => r.produto ?? r.grupo ?? ''}
           />
-          {data.length > LIMITE_ABC && (
-            <button
-              onClick={() => setMostrarTudo(!mostrarTudo)}
-              className="mt-3 text-xs font-semibold text-primary hover:text-primary/80 transition mx-auto block"
-            >
-              {mostrarTudo
-                ? 'Mostrar menos'
-                : `Ver mais ${data.length - LIMITE_ABC} itens`
-              }
-            </button>
-          )}
+          <button
+            onClick={() => navigate('/bi/curva-abc')}
+            className="mt-3 text-xs font-semibold text-primary hover:text-primary/80 transition mx-auto flex items-center gap-1"
+          >
+            Ver análise completa <ArrowRight size={12} />
+          </button>
         </>
       ) : (
         <div className="h-[120px]">
