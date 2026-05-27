@@ -66,11 +66,11 @@ export default function Dashboard() {
   const [diarioReceita, setDiarioReceita] = useState<PontoDiarioDTO[]>([])
   const [diarioTicketMedio, setDiarioTicketMedio] = useState<PontoDiarioDTO[]>([])
   const [diarioTickets, setDiarioTickets] = useState<PontoDiarioDTO[]>([])
-  const [loadingDiario, setLoadingDiario] = useState(false)
+  const [loadingDiario, setLoadingDiario] = useState(true)
 
   // ── Gráfico de receita por hora ──
   const [dadosHora, setDadosHora] = useState<PontoHoraDTO[]>([])
-  const [loadingHora, setLoadingHora] = useState(false)
+  const [loadingHora, setLoadingHora] = useState(true)
 
   // ── Comparativo do último dia (backed by /diario/comparativo) ──
   const [diarioComparativo, setDiarioComparativo] = useState<{
@@ -152,6 +152,8 @@ export default function Dashboard() {
       setDiarioTickets([])
       setDadosHora([])
       setDiarioComparativo({ receita: null, tickets: null, ticketMedio: null })
+      setLoadingDiario(false)
+      setLoadingHora(false)
       return
     }
     setLoadingDiario(true)

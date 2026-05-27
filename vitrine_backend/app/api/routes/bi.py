@@ -71,6 +71,7 @@ def kpis(
         return kpis_rapido
 
     # Fallback: full load (adapter sem suporte a agregados)
+    logger.warning("BI kpis | aggregate retornou None — fallback para full load | periodo=%s..%s", data_inicio, data_fim)
     dominio = criar_dominio(source, data_inicio, data_fim, tipo="kpis")
     return Relatorio(dominio.vendas, dominio.trocas).kpis()
 
@@ -124,6 +125,7 @@ def receita_por_dimensao(
                 valor=round(float(d["valor"]), 2),
             ) for d in dados
         ]
+    logger.warning("BI | receita aggregate retornou None — fallback para full load | periodo=%s..%s dimensao=%s", data_inicio, data_fim, dimensao.value)
     dominio = criar_dominio(source, data_inicio, data_fim)
     return Relatorio(dominio.vendas, dominio.trocas).por_dimensao(dimensao, Metrica.RECEITA)
 
@@ -152,6 +154,7 @@ def quantidade_por_dimensao(
                 valor=round(float(d["valor"]), 2),
             ) for d in dados
         ]
+    logger.warning("BI | quantidade aggregate retornou None — fallback para full load | periodo=%s..%s dimensao=%s", data_inicio, data_fim, dimensao.value)
     dominio = criar_dominio(source, data_inicio, data_fim)
     return Relatorio(dominio.vendas, dominio.trocas).por_dimensao(dimensao, Metrica.QUANTIDADE)
 
@@ -289,6 +292,7 @@ def serie_diaria(
     dados = source.get_diario_aggregates(data_inicio, data_fim, metrica_str)
     if dados is not None:
         return [PontoDiarioDTO(data=str(d["data"]), valor=round(float(d["valor"]), 2)) for d in dados]
+    logger.warning("BI | diario aggregate retornou None — fallback para full load | periodo=%s..%s metrica=%s", data_inicio, data_fim, metrica_str)
     dominio = criar_dominio(source, data_inicio, data_fim)
     return RelatorioDiario(dominio.vendas).serie_temporal(metrica)
 
