@@ -1,0 +1,75 @@
+"""Vitrine Intelligence — endpoints de análise semanal com IA."""
+import logging
+from datetime import date, datetime
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy.orm import Session
+from app.limiter import limiter
+from app.api.deps import get_db, require_supervisor, get_transaction_source
+from app.core.interfaces.source import TransactionSource
+from app.domain.models.usuario import Usuario
+from app.application.intelligence.service import solicitar_analise, consultar_job
+from app.application.intelligence.dismiss import dismiss_insight as dismiss_service
+from app.schemas.intelligence_schema import IntelligenceResponse, IntelligenceJobStatus
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/bi", tags=["Intelligence"])
+
+
+@router.get("/intelligence", response_model=IntelligenceResponse | dict)
+@limiter.limit("3/hour")
+def get_intelligence(
+    request: Request,
+    data_inicio: date = Query(...),
+    data_fim: date = Query(...),
+    db: Session = Depends(get_db),
+    source: TransactionSource = Depends(get_transaction_source),
+    _usuario: Usuario = Depends(require_supervisor),
+):
+    """Retorna análise se cache hit, ou cria job e retorna job_id."""
+    resultado, is_cached, job_id = solicitar_analise(db, source)
+
+    if is_cached and resultado:
+        return resultado
+
+    if job_id:
+        from app.application.intelligence.service import _executar_analise
+        import asyncio
+        # Dispara em background com run_in_executor para não travar event loop
+        loop = asyncio.get_event_loop()
+        loop.run_in_executor(None, _executar_analise, db, source, job_id, data_inicio, data_fim)
+        return {"status": "processing", "job_id": job_id}
+
+    # Bucket cheio — fallback já foi executado e retornou resultado
+    if resultado:
+        return resultado
+
+    raise HTTPException(status_code=500, detail="Erro ao iniciar análise")
+
+
+@router.get("/intelligence/status/{job_id}", response_model=IntelligenceJobStatus)
+@limiter.limit("30/minute")
+def get_intelligence_status(
+    request: Request,
+    job_id: str,
+    db: Session = Depends(get_db),
+    _usuario: Usuario = Depends(require_supervisor),
+):
+    """Polling de status do job."""
+    status = consultar_job(db, job_id)
+    if not status:
+        raise HTTPException(status_code=404, detail="Job não encontrado")
+    return status
+
+
+@router.post("/intelligence/{hash}/dismiss")
+@limiter.limit("10/minute")
+def dismiss_intelligence_insight(
+    request: Request,
+    hash: str,
+    db: Session = Depends(get_db),
+    _usuario: Usuario = Depends(require_supervisor),
+):
+    """Marca um insight como ignorado."""
+    dismiss_service(db, hash)
+    return {"status": "ok"}

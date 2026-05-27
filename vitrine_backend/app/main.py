@@ -86,6 +86,10 @@ app.include_router(inventario.router)
 app.include_router(whatsapp.router)
 app.include_router(email_routes.router)
 
+if settings.intelligence_enabled:
+    from app.api.routes import intelligence as intelligence_router
+    app.include_router(intelligence_router.router)
+
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 os.makedirs(static_dir, exist_ok=True)
 app.mount("/static", StaticFiles(directory=static_dir), name="static")

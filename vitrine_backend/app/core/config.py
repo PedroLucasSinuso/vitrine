@@ -52,6 +52,15 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     email_from: str = ""
 
+    # ── Vitrine Intelligence (premium) ──
+    intelligence_enabled: bool = False
+    intelligence_max_calls_per_month: int = 10
+
+    # ── Dados macroeconômicos (hardcoded, atualizar trimestralmente) ──
+    ipca_alimentacao_12m: float = 7.8
+    ipca_geral_12m: float = 4.5
+    selic: float = 14.75
+
     # Chave Fernet para criptografar senhas sensíveis no banco (ex: erp_password)
     # Gere com: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     erps_encryption_key: str = ""
