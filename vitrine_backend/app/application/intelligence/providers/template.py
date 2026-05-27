@@ -1,5 +1,6 @@
 """Fallback determinístico — gera resposta sem IA usando templates Jinja2."""
-from datetime import datetime, timezone
+from datetime import datetime
+from app.application.intelligence._utils import utcnow
 from app.schemas.intelligence_schema import IntelligenceResponse, Insight, InsightMetricas
 
 
@@ -41,5 +42,5 @@ class TemplateProvider:
             resumo_executivo=resumo,
             insights=insights,
             fonte="deterministico",
-            gerado_em=datetime.now(timezone.utc),
+            gerado_em=utcnow(),
         )

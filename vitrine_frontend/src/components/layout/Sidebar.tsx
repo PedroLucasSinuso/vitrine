@@ -6,6 +6,7 @@ import type { Role } from '../../types'
 import {
   BarChart3, Search, Package, ClipboardList, Users, Settings,
   Tags, ShieldAlert, HelpCircle, LogOut, ChevronLeft, PanelRightClose,
+  Sparkles,
 } from 'lucide-react'
 
 interface NavItem {
@@ -20,12 +21,15 @@ interface NavGroup {
   items: NavItem[]
 }
 
+const intelligenceEnabled = import.meta.env.VITE_INTELLIGENCE_ENABLED === 'true'
+
 const navGroups: NavGroup[] = [
   {
     label: 'Análises',
     items: [
       { label: 'BI',        path: '/bi',             icon: <BarChart3 size={20} />,    roles: ['supervisor', 'admin'] },
       { label: 'Produtos',  path: '/produtos',       icon: <Package size={20} />,      roles: ['supervisor', 'admin'] },
+      ...(intelligenceEnabled ? [{ label: 'Intelligence', path: '/bi/intelligence', icon: <Sparkles size={20} />, roles: ['supervisor', 'admin'] as Role[] }] : []),
     ],
   },
   {
@@ -59,7 +63,8 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
   const displayName = getNomeExibicao()
 
   const isActive = (path: string) => {
-    if (path === '/bi') return location.pathname === '/bi' || location.pathname.startsWith('/bi/')
+    if (path === '/bi') return location.pathname === '/bi' || (location.pathname.startsWith('/bi/') && !location.pathname.startsWith('/bi/intelligence'))
+    if (path === '/bi/intelligence') return location.pathname.startsWith('/bi/intelligence')
     if (path === '/admin') return location.pathname === '/admin' || (location.pathname.startsWith('/admin/') && !location.pathname.startsWith('/admin/usuarios') && !location.pathname.startsWith('/admin/configuracoes') && !location.pathname.startsWith('/admin/etiquetas'))
     if (path === '/admin/usuarios') return location.pathname.startsWith('/admin/usuario')
     if (path === '/admin/configuracoes') return location.pathname.startsWith('/admin/configuracoes')

@@ -1,5 +1,6 @@
 """Gestão de insights ignorados pelo usuário."""
-from datetime import datetime, timezone
+from datetime import datetime
+from app.application.intelligence._utils import utcnow
 from sqlalchemy.orm import Session
 from app.domain.models.intelligence_dismissed import InsightsDismissed
 
@@ -9,7 +10,7 @@ def dismiss_insight(db: Session, hash: str, tenant_id: str = "default") -> None:
     row = InsightsDismissed(
         hash=hash,
         tenant_id=tenant_id,
-        dismissido_em=datetime.now(timezone.utc),
+        dismissido_em=utcnow(),
     )
     db.merge(row)
     db.commit()

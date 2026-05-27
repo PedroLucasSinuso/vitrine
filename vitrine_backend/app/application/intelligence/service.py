@@ -2,7 +2,8 @@
 import json
 import uuid
 import logging
-from datetime import date, datetime, timezone
+from datetime import date, datetime
+from app.application.intelligence._utils import utcnow
 from sqlalchemy.orm import Session
 from app.core.interfaces.source import TransactionSource
 from app.application.intelligence.cache import obter_cache, salvar_cache
@@ -32,7 +33,7 @@ def solicitar_analise(
 
     # 2. Cria job (sempre — mesmo sem IA, o service executa)
     job_id = str(uuid.uuid4())
-    agora = datetime.now(timezone.utc)
+    agora = utcnow()
     job = IntelligenceJob(
         id=job_id,
         status="processing",
@@ -89,7 +90,7 @@ def _executar_analise(
         job = db.query(IntelligenceJob).filter(IntelligenceJob.id == job_id).first()
         if job:
             job.status = "ready"
-            job.concluido_em = datetime.now(timezone.utc)
+            job.concluido_em = utcnow()
             db.commit()
 
     except Exception as e:
@@ -98,7 +99,7 @@ def _executar_analise(
         if job:
             job.status = "error"
             job.erro = str(e)
-            job.concluido_em = datetime.now(timezone.utc)
+            job.concluido_em = utcnow()
             db.commit()
 
 

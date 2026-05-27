@@ -9,3 +9,7 @@ export type {
   Dimensao, Metrica, CurvaAbc,
   ProdutoTabelaResponse, TabelaProdutosResponse, SortByProduto,
 } from './bi'
+export type {
+  InsightMetricas, Insight, InsightTipo, Impacto, Confianca, Fonte,
+  IntelligenceStatus, IntelligenceResponse, IntelligenceJobStatus,
+} from './intelligence'

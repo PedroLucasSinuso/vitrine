@@ -1,5 +1,6 @@
 """Controle de custo mensal — bucket de chamadas de IA por tenant."""
-from datetime import datetime, timezone
+from datetime import datetime
+from app.application.intelligence._utils import utcnow
 from sqlalchemy.orm import Session
 from app.domain.models.intelligence_usage import IntelligenceUsage
 
@@ -7,11 +8,13 @@ MAX_CHAMADAS_POR_MES = 10  # configurável via settings
 
 
 def _mes_ano() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m")
+    return utcnow().strftime("%Y-%m")
 
 
 def pode_solicitar(db: Session, tenant_id: str = "default", max_calls: int = MAX_CHAMADAS_POR_MES) -> bool:
     """Verifica se o tenant ainda pode fazer chamadas este mês."""
+    if max_calls <= 0:
+        return False
     mes = _mes_ano()
     row: IntelligenceUsage | None = (
         db.query(IntelligenceUsage)
@@ -29,7 +32,7 @@ def pode_solicitar(db: Session, tenant_id: str = "default", max_calls: int = MAX
 def registrar_chamada(db: Session, tenant_id: str = "default") -> None:
     """Incrementa contador de chamadas do mês."""
     mes = _mes_ano()
-    agora = datetime.now(timezone.utc)
+    agora = utcnow()
     row: IntelligenceUsage | None = (
         db.query(IntelligenceUsage)
         .filter(

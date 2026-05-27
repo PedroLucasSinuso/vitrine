@@ -15,4 +15,4 @@ class IntelligenceCache(Base):
     resultado_json: Mapped[str] = mapped_column()
     fonte: Mapped[str] = mapped_column()  # "claude" | "gpt4o_mini" | "deterministico"
     gerado_em: Mapped[datetime] = mapped_column()
-    expira_em: Mapped[datetime] = mapped_column()
+    expira_em: Mapped[datetime | None] = mapped_column(nullable=True)

@@ -1,5 +1,6 @@
 """Cache SQLite para resultados do Intelligence com TTL de 7 dias."""
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
+from app.application.intelligence._utils import utcnow
 from sqlalchemy.orm import Session
 from app.domain.models.intelligence_cache import IntelligenceCache
 
@@ -8,7 +9,7 @@ TTL_DIAS = 7
 
 def obter_cache(db: Session, tenant_id: str = "default") -> dict | None:
     """Retorna cache se existir e não expirado."""
-    agora = datetime.now(timezone.utc)
+    agora = utcnow()
     row: IntelligenceCache | None = (
         db.query(IntelligenceCache)
         .filter(
@@ -31,7 +32,7 @@ def salvar_cache(
 ) -> None:
     """Salva ou substitui cache."""
     import json
-    agora = datetime.now(timezone.utc)
+    agora = utcnow()
     expira = agora + timedelta(days=TTL_DIAS)
 
     row = IntelligenceCache(
@@ -48,7 +49,7 @@ def salvar_cache(
 
 def limpar_expirados(db: Session) -> int:
     """Remove caches expirados. Retorna qtd removida."""
-    agora = datetime.now(timezone.utc)
+    agora = utcnow()
     removidos = (
         db.query(IntelligenceCache)
         .filter(IntelligenceCache.expira_em <= agora)
