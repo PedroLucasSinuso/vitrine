@@ -113,6 +113,17 @@ def receita_por_dimensao(
     """Retorna a receita agregada por dimensão (produto, grupo, família) no período."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | receita periodo=%s..%s dimensao=%s", data_inicio, data_fim, dimensao.value)
+    dados = source.get_dimensao_aggregates(data_inicio, data_fim, dimensao.value, "receita")
+    if dados is not None:
+        return [
+            ItemDimensaoDTO(
+                codigo=str(d.get("codigo", "")),
+                produto=d.get("produto"),
+                grupo=d.get("grupo", d.get("dimensao", "")),
+                familia=d.get("familia"),
+                valor=round(float(d["valor"]), 2),
+            ) for d in dados
+        ]
     dominio = criar_dominio(source, data_inicio, data_fim)
     return Relatorio(dominio.vendas, dominio.trocas).por_dimensao(dimensao, Metrica.RECEITA)
 
@@ -130,6 +141,17 @@ def quantidade_por_dimensao(
     """Retorna a quantidade vendida agregada por dimensão no período."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | quantidade periodo=%s..%s dimensao=%s", data_inicio, data_fim, dimensao.value)
+    dados = source.get_dimensao_aggregates(data_inicio, data_fim, dimensao.value, "quantidade")
+    if dados is not None:
+        return [
+            ItemDimensaoDTO(
+                codigo=str(d.get("codigo", "")),
+                produto=d.get("produto"),
+                grupo=d.get("grupo", d.get("dimensao", "")),
+                familia=d.get("familia"),
+                valor=round(float(d["valor"]), 2),
+            ) for d in dados
+        ]
     dominio = criar_dominio(source, data_inicio, data_fim)
     return Relatorio(dominio.vendas, dominio.trocas).por_dimensao(dimensao, Metrica.QUANTIDADE)
 
@@ -147,6 +169,26 @@ def curva_abc(
     """Gera a curva ABC de produtos baseada na receita no período informado."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | curva-abc periodo=%s..%s dimensao=%s", data_inicio, data_fim, dimensao.value)
+    dados = source.get_curva_abc_aggregates(data_inicio, data_fim, dimensao.value)
+    if dados is not None:
+        total = sum(float(d["valor"]) for d in dados) if dados else 0
+        acum = 0.0
+        result = []
+        for d in dados:
+            pct = (float(d["valor"]) / total * 100) if total > 0 else 0
+            acum += pct
+            curva = "A" if acum <= 80 else ("B" if acum <= 95 else "C")
+            result.append(ItemCurvaAbcDTO(
+                codigo=str(d.get("codigo", "")),
+                produto=d.get("produto"),
+                grupo=d.get("grupo", d.get("dimensao", "")),
+                familia=d.get("familia"),
+                receita=round(float(d["valor"]), 2),
+                participacao_pct=round(pct, 2),
+                participacao_acumulada=round(acum, 2),
+                curva=curva,
+            ))
+        return result
     dominio = criar_dominio(source, data_inicio, data_fim)
     return Relatorio(dominio.vendas, dominio.trocas).curva_abc(dimensao)
 
@@ -165,6 +207,15 @@ def ranking(
     """Retorna o ranking de produtos por métrica (receita ou quantidade) no período."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | ranking periodo=%s..%s metrica=%s top=%s", data_inicio, data_fim, metrica.value, top)
+    metrica_str = "receita" if metrica == Metrica.RECEITA else "quantidade"
+    dados = source.get_dimensao_aggregates(data_inicio, data_fim, "produto", metrica_str)
+    if dados is not None:
+        dados_sorted = sorted(dados, key=lambda x: float(x["valor"]), reverse=True)[:top]
+        return [ItemRankingDTO(
+            codigo=str(d.get("codigo", "")),
+            produto=d.get("produto", ""),
+            valor=round(float(d["valor"]), 2),
+        ) for d in dados_sorted]
     dominio = criar_dominio(source, data_inicio, data_fim)
     return Relatorio(dominio.vendas, dominio.trocas).ranking(metrica, top)
 
@@ -234,6 +285,10 @@ def serie_diaria(
     """Retorna a série temporal diária de vendas para o período informado."""
     data_inicio, data_fim = _periodo(data_inicio, data_fim)
     logger.info("BI Request | diario periodo=%s..%s metrica=%s", data_inicio, data_fim, metrica.value)
+    metrica_str = "receita" if metrica == Metrica.RECEITA else "quantidade"
+    dados = source.get_diario_aggregates(data_inicio, data_fim, metrica_str)
+    if dados is not None:
+        return [PontoDiarioDTO(data=str(d["data"]), valor=round(float(d["valor"]), 2)) for d in dados]
     dominio = criar_dominio(source, data_inicio, data_fim)
     return RelatorioDiario(dominio.vendas).serie_temporal(metrica)
 

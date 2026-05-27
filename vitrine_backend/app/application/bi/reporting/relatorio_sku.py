@@ -1,4 +1,5 @@
-﻿from app.application.bi.domain.vendas import Vendas
+﻿import pandas as pd
+from app.application.bi.domain.vendas import Vendas
 from app.application.bi.schema import COLUNAS
 from app.schemas.bi_schema import SkuDTO, PontoDiarioDTO, PontoHoraDTO, PontoDiaSemanaDTO
 
@@ -45,9 +46,9 @@ class RelatorioSku:
             .sort_values("_hora")
         )
 
-        self._df["_dia_semana_num"] = self._df[COLUNAS.emissao].apply(
-            lambda data: data.weekday() if hasattr(data, "weekday") else None
-        )
+        self._df["_dia_semana_num"] = pd.to_datetime(
+            self._df[COLUNAS.emissao]
+        ).dt.dayofweek
         df_por_dia_semana = (
             self._df
             .groupby("_dia_semana_num")[COLUNAS.receita]

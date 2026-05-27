@@ -226,144 +226,46 @@ Correções dos gaps identificados na revisão adversarial pós-Sprint 2.
 
 ---
 
-### 🔴 Abertos (2026-05-21 — Revisão Adversarial)
+### ✅ Corrigidos (2026-05-26 — 31 issues em 6 sprints)
 
-Issues identificados por auditoria adversarial de código. Não corrigidos — requerem ação.
+> Os 27 issues abaixo foram listados como "Abertos" na revisão adversarial de 2026-05-21 e **corrigidos** em 6 sprints no dia 2026-05-26.
+> Relatório completo: `docs/relatorio-mudancas-2026-05-26.md`
+
+| ID | Issue | Correção |
+|---|---|---|
+| **F3-Qtde** | Ranking Top 5 sem `quantidade` | Campo removido do type frontend (backend nunca preenchia). Backend mantém `quantidade: float = 0` como fallback. |
+| **P1** | Dashboard duplica chamadas API | 2 useEffects fundidos em 1 com `useRef(isFirstRender)`. 4 chamadas → 1. |
+| **P2** | Sem lazy loading BI | 8 páginas convertidas para `React.lazy` + `<Suspense>` + `ErrorBoundary`. |
+| **M1** | `_run_migrations()` em toda request | Movido para lifespan; guard `_migration_feita` com `threading.Lock`. |
+| **M2** | `_ADAPTER_CACHE` não thread-safe | `threading.Lock` + `with _ADAPTER_LOCK` em `get_product_source`/`get_transaction_source`. |
+| **M3** | `sync_com_erro()` código morto | Bloco try/except em `sync()` com rollback antes de gravar erro. |
+| **M4** | Observação sem limite | `max_length=500` no schema + truncamento na concatenação. |
+| **M5** | `useCountUp` reseta visual | `lastValueRef` mantém valor durante mudança de target. |
+| **M6** | BI cache sem limite | FIFO com `MAX_ENTRIES = 50` via `insertionOrderRef`. |
+| **M7** | Excel export RAM sem streaming | `Content-Length` adicionado. Streaming real (openpyxl) postergado (backlog). |
+| **M8** | Role redundante localStorage | `getRole()` decodifica JWT. Escritas residuais removidas. |
+| **M9** | `RolesEnum.get_hierarchy()` | Dead code removido. |
+| **M10** | `isTokenAboutToExpire()` | Dead code removido. |
+| **M11** | Config cache nunca atualiza | TTL 30s + `refreshConfig()` exportado + debounce com `pendingPromise`. |
+| **M12** | `setState` em componente desmontado | `mountedRef` adicionado na Busca (nome + EAN). |
+| **m4** | Erro de token genérico | Token expirado vs malformado agora têm mensagens diferentes. |
+| **m1** | `_filenameFromHeaders` regex frágil | Já tem fallback RFC 5987 (`filename*=UTF-8''...`) em `admin.ts`. |
+| **m2** | `baixarCSVdeArray` não revoga URL | Já chama `URL.revokeObjectURL(url)` em `csv.ts` linha 19. |
 
 ---
 
-#### 🟡 F3-Qtde — Ranking Top 5 sem campo `quantidade`
+### 🔴 Ainda Abertos (Verificados 2026-05-27)
 
-**Severidade:** Baixa  
-**Arquivo:** `vitrine_frontend/src/types/bi.ts` (ItemRankingDTO), `vitrine_backend/.../ranking`  
-**Adicionado:** 2026-05-22  
-**Descrição:** `ItemRankingDTO` (`codigo`, `produto`, `valor`) não inclui `quantidade`. O card Top 5 no Dashboard Consolidado não pode exibir o volume de vendas (unidades) junto da receita — informação útil pra diferenciar produtos de alto valor com poucas vendas vs. produtos populares.  
-**Recomendação:** Adicionar campo `quantidade: number` ao `ItemRankingDTO` e preenchê-lo no backend (BI ranking query).
+Issues da auditoria adversarial original que **não foram totalmente resolvidos** + novos achados.
 
 ---
 
-#### 🔴 P1 — Performance: Dashboard duplica chamadas de API no mount
+#### 🔴 P3 — BI: carga completa em RAM não resolvida (apenas mitigada)
 
 **Severidade:** Alta  
-**Arquivo:** `Dashboard.tsx` (L117 e L120-123)  
-**Descrição:** Dois `useEffect` disparam no mount: o primeiro chama `buscar()` (KPIs + ranking), o segundo (com dependência `[comparar]`) roda imediatamente porque `comparar` muda de `undefined` para `true` no estado inicial — e chama `buscar(undefined, true)` novamente com `force=true`. Total: **4 chamadas de API para carregar a mesma coisa**.  
-**Testes faltando:** Nenhum teste verifica número de chamadas no mount.
-
----
-
-#### 🔴 P2 — Performance: Sem lazy loading — bundle inclui todas as 8 páginas BI
-
-**Severidade:** Média  
-**Arquivo:** `App.tsx`  
-**Descrição:** Todos os componentes BI são importados estaticamente. O bundle inicial inclui Recharts, date-fns, e todo código BI mesmo para usuários operadores que nunca acessam BI. Bundle estimado ~2 MB (500 KB gzipped).  
-**Recomendação:** `React.lazy(() => import(...))` + `Suspense`.
-
----
-
-#### 🔴 P3 — Performance: BI carrega potencialmente GBs de dados na RAM
-
-**Severidade:** Alta  
-**Arquivos:** `factory.py`, `fluxo.py`, `transaction_source.py`, `relatorio.py`  
-**Descrição:** Para 2 anos com ~5M itens: `get_items()` retorna `list[TransactionItem]` (~2 GB), `Fluxo.df` cria DataFrame (~1 GB), `TTLCache` retém por 1h com `maxsize=32`. `RelatorioTemporal` faz `vendas.df.copy()` dobrando consumo. KPI faz dois groupbys separados em vez de `.agg()` único. Risco de OOM.  
-**Recomendação:** Limitar período máximo no frontend, ou implementar paginação/amostragem no backend.
-
----
-
-#### 🟡 M1 — `_run_migrations()` chamado em toda requisição
-
-**Arquivo:** `bootstrap.py`, `inventario.py`  
-`init_db()` → `_run_migrations()` executa `ALTER TABLE` em toda requisição de inventário. Após a primeira, falha silenciosamente com `except Exception: pass`. Round-trip SQLite desnecessário em cada request. Deveria rodar apenas no lifespan.
-
----
-
-#### 🟡 M2 — `_ADAPTER_CACHE` não é thread-safe e nunca é invalidado
-
-**Arquivo:** `deps.py`, `alterdata/db.py`  
-Race condition no primeiro acesso: duas requisições concorrentes podem criar dois `AlterdataProductSource`, cada um com pool PostgreSQL próprio (até 10 conexões). Se a config de ERP mudar, o cache nunca é limpo — precisa reiniciar o servidor.
-
----
-
-#### 🟡 M3 — `sync_com_erro()` é código morto
-
-**Arquivo:** `sync_service.py` (L65-74)  
-Método que registra falha no `CacheStatus` nunca é chamado. Se `sync()` falhar em `source.get_all_products()`, a exceção propaga sem registro no banco. `CacheStatus` só é escrito em caso de sucesso.
-
----
-
-#### 🟡 M4 — Observação sem limite de tamanho, concatenação infinita
-
-**Arquivo:** `inventario.py`, `inventario_schema.py`, `domain/models/inventario.py`  
-Cada re-scan com observação diferente concatena com `" | "`. String cresce sem limites. SQLite `TEXT` sem limite prático. Excel pode ter células muito longas.
-
----
-
-#### 🟡 M5 — `useCountUp` reseta para 0 se target muda durante animação
-
-**Arquivo:** `useCountUp.ts`  
-Se o target muda enquanto animação roda (ex.: dados chegam em dois batches), o valor "pisca" voltando a 0 antes de subir. Efeito visual de bug mesmo sendo comportamentalmente correto.
-
----
-
-#### 🟡 M6 — Cache do BI no frontend sem limite de tamanho
-
-**Arquivo:** `biCache.tsx`  
-`Map` em `useRef` com `set()` sem LRU, sem TTL, sem `maxEntries`. Na prática o usuário explora ~10-20 períodos, mas em teoria pode crescer indefinidamente.
-
----
-
-#### 🟡 M7 — Excel export constroi tudo em RAM sem streaming verdadeiro
-
-**Arquivo:** `exportador.py`, `routes/bi.py`  
-`StreamingResponse(io.BytesIO(excel_bytes))` — o nome engana. Todo o Excel é construído em RAM (openpyxl), serializado em bytes, e só então servido. Para 50k+ produtos, pico de ~250 MB por exportação.
-
----
-
-#### 🟡 M8 — Role redundante em localStorage sem validação
-
-**Arquivo:** `useAuth.ts` (L59-65)  
-`getRole()` faz fallback para `localStorage.getItem('role')` se o JWT falhar ao decodificar. O usuário pode modificar manualmente. Só afeta renderização condicional (backend sempre valida), mas é vetor de confusão.
-
----
-
-#### 🟡 M9 — `RolesEnum.get_hierarchy()` nunca usado
-
-**Arquivo:** `domain/enums.py`  
-100% código morto. As verificações usam lista simples `usuario.role not in [...]`. Pode levar a inconsistências se alguém tentar usar a hierarquia no futuro.
-
----
-
-#### 🟡 M10 — `isTokenAboutToExire` nunca chamado
-
-**Arquivo:** `useAuth.ts` (L112-116)  
-Função existe com lógica completa (threshold 5 min), mas nenhum componente a chama. Dead code.
-
----
-
-#### 🟡 M11 — Config cache frontend nunca atualiza automaticamente
-
-**Arquivo:** `configStore.ts`  
-Cache singleton carregado uma vez (API ou localStorage). Se admin muda nome da loja, headers mostram valor antigo até F5.
-
----
-
-#### 🟡 M12 — `setState` em componente desmontado na Busca
-
-**Arquivo:** `Busca.tsx` (L42-53)  
-Se o timeout de 300ms já disparou e o componente desmonta antes da Promise resolver, `setSearchResults` é chamado em componente desmontado. React 19 não crasha, mas loga warning.
-
----
-
-#### 🟢 m1 — `_filenameFromHeaders` com regex frágil
-
-**Arquivo:** `admin.ts`  
-`content-disposition` com UTF-8 pode quebrar o regex. Nunca testado.
-
----
-
-#### 🟢 m2 — `baixarCSVdeArray` não revoga URL.createObjectURL
-
-**Arquivo:** `csv.ts`  
-Cria blob URL mas nunca chama `URL.revokeObjectURL`.
+**Mitigação aplicada:** Limite de 180 dias no frontend (validação visual + clamp no API client + HTTP 400 no backend).  
+**O que ainda falta:** `criar_dominio()` carrega **todos** os itens do período em RAM. `TTLCache` de transações com `maxsize=32` retém dados por 300s. KPI aggregates via SQL existe (`get_kpi_aggregates()`) mas é opt-in — o full load ainda é o caminho principal. Para 5M+ itens, risco de OOM permanece.  
+**Recomendação:** Tornar `get_kpi_aggregates()` o caminho padrão para KPIs; implementar paginação/streaming no `get_items()`.
 
 ---
 
@@ -373,10 +275,13 @@ Toda prop inline (arrow functions, objetos literais) causa re-render em cascata.
 
 ---
 
-#### 🟢 m4 — Erro de token usa mesma mensagem para expirado e malformado
+### 🔴 Novos (2026-05-27 — Sessão Atual)
 
-**Arquivo:** `jwt_handler.py`  
-"Token inválido ou expirado" — impossível diagnosticar remote sem logs do servidor.
+| ID | Issue | Arquivo | Observação |
+|---|---|---|---|
+| **N1** | Console logs não aparecem no uvicorn | `logging_config.py` | `StreamHandler` configurado mas sem saída no terminal. File logging funciona. |
+| **N2** | `SchedulerJobsResponse` com `unknown[]` | `types/admin.ts` | Tipo existe (linha 16-18) mas `jobs: unknown[]` — contrato frágil. |
+| **N3** | Plugar `ProdutoPuro` nas rotas HTTP | `routes/produto.py` | Dataclass + RepositoryDomain existem mas rotas ainda usam service ORM. |
 
 ---
 

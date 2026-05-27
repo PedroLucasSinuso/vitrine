@@ -12,17 +12,10 @@ _DIAS_SEMANA = {
 class RelatorioTemporal:
     def __init__(self, vendas: Vendas):
         self.vendas = vendas
-        df_enriquecido = vendas.df.copy()
-        df_enriquecido["_hora"] = (
-            df_enriquecido[COLUNAS.hora]
-            .astype(str)
-            .str[:2]
-            .str.zfill(2)
+        self._df = vendas.df.assign(
+            _hora=vendas.df[COLUNAS.hora].astype(str).str[:2].str.zfill(2),
+            _dia_semana_num=pd.to_datetime(vendas.df[COLUNAS.emissao]).dt.dayofweek,
         )
-        df_enriquecido["_dia_semana_num"] = df_enriquecido[COLUNAS.emissao].apply(
-            lambda data: data.weekday() if hasattr(data, "weekday") else None
-        )
-        self._df = df_enriquecido
 
     def por_hora(self, metrica: Metrica) -> list[PontoHoraDTO]:
         col_metrica = metrica.value

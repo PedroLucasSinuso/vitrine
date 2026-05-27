@@ -44,7 +44,7 @@ export default function Trocas() {
   const animTrocas = useCountUp(dados?.total_trocas ?? 0, 600, !!dados)
   const animTaxa = useCountUp(dados?.taxa_troca_pct ?? 0, 600, !!dados)
 
-  const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false) => {
+  const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false, signal?: AbortSignal) => {
     const p = periodoOverride ?? periodo
     if (!force) {
       const cached = cache.get<TrocasDTO>('trocas', p)
@@ -53,11 +53,12 @@ export default function Trocas() {
     setErro(null)
     setLoading(true)
     try {
-      const data = await fetchTrocas(p)
+      const data = await fetchTrocas(p, signal)
       setDados(data)
       cache.set('trocas', p, data)
     } catch (e: unknown) {
-      const err = e as { response?: { status?: number; data?: { detail?: string } } }
+      const err = e as { response?: { status?: number; data?: { detail?: string } }; name?: string }
+      if (err?.name === 'CanceledError' || err?.name === 'AbortError') return
       if (err.response?.status === 400) setErro(err.response.data?.detail ?? 'Erro ao carregar dados.')
       else setErro('Erro ao carregar dados.')
     } finally {
@@ -65,7 +66,12 @@ export default function Trocas() {
     }
   }, [periodo, cache])
 
-  useEffect(() => { const t = setTimeout(() => buscar()); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const controller = new AbortController()
+    const signal = controller.signal
+    const t = setTimeout(() => buscar(undefined, undefined, signal))
+    return () => { clearTimeout(t); controller.abort() }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleBuscar(periodoOverride?: PeriodoBi) {
     cache.invalidate('trocas')

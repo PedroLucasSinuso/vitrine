@@ -48,3 +48,20 @@ class TransactionSource(ABC):
         Implementação padrão retorna None — o adapter pode sobrescrever.
         """
         return None
+
+    def get_dimensao_aggregates(self, start: date, end: date, dimensao: str, metrica: str) -> list[dict] | None:
+        """Opcional: retorna agregados por dimensão (produto/grupo/família).
+        metrica: 'receita' ou 'quantidade'.
+        Retorna None se não suportado."""
+        return None
+
+    def get_diario_aggregates(self, start: date, end: date, metrica: str) -> list[dict] | None:
+        """Opcional: retorna série temporal diária.
+        metrica: 'receita' ou 'quantidade'.
+        Retorna None se não suportado."""
+        return None
+
+    def get_curva_abc_aggregates(self, start: date, end: date, dimensao: str) -> list[dict] | None:
+        """Opcional: retorna dados para curva ABC (receita por dimensão).
+        Retorna None se não suportado."""
+        return None

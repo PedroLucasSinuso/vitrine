@@ -7,11 +7,7 @@ grupo (ex: "BEBIDAS", "Bebidas", "bebidas") e o operador quer consolidar.
 A normalização é aplicada no momento da leitura (query time via
 ``normalizar()``) ou pode ser integrada no fluxo de ETL futuramente.
 
-TODO: Integrar normalizacao_service no fluxo do adapter (ProductSource)
-      para normalizar grupos/famílias durante a carga de produtos.
-      Local sugerido: app/adapters/alterdata/product_source.py linha ~80,
-      após converter Product → Produto, aplicar normalizar() nos campos
-      group e family.
+NOTA: A normalização é aplicada no SyncService._to_orm() durante o sync.
 """
 
 import logging

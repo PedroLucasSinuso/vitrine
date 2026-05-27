@@ -3,8 +3,9 @@
 Usa ``cryptography.fernet.Fernet`` para criptografar valores de chaves
 sensíveis (ex: erp_password) antes de persistir no SQLite.
 
-Se ``ERPS_ENCRYPTION_KEY`` não estiver configurada no .env, as senhas
-são salvas em texto plano (compatibilidade retroativa).
+Se ``ERPS_ENCRYPTION_KEY`` não estiver configurada, o startup falha
+com erro (validator no Settings). Apenas no caso de chave inválida
+(em vez de ausente) o sistema cai em texto plano com warning crítico.
 """
 
 import logging
@@ -19,7 +20,9 @@ if settings.erps_encryption_key:
     try:
         _cipher = Fernet(settings.erps_encryption_key.encode())
     except Exception:
-        logger.warning("ERPS_ENCRYPTION_KEY inválida — senhas serão salvas em texto plano")
+        logger.critical("ERPS_ENCRYPTION_KEY inválida — senhas serão salvas em TEXTO PLANO. Corrija o .env e reinicie.")
+else:
+    logger.critical("ERPS_ENCRYPTION_KEY não configurada — senhas serão salvas em TEXTO PLANO. Configure a chave no .env.")
 
 # Sentinel value usado pelo frontend para campos mascarados.
 # Quando o PATCH recebe este valor, o backend interpreta como

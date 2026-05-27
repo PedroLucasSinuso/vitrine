@@ -25,78 +25,78 @@ function params(periodo: PeriodoBi, extra?: Record<string, unknown>) {
   return { data_inicio: periodo.data_inicio, data_fim: periodo.data_fim, ...extra }
 }
 
-export async function fetchKpis(periodo: PeriodoBi): Promise<KpisDTO> {
-  const r = await api.get('/bi/kpis', { params: params(periodo) })
+export async function fetchKpis(periodo: PeriodoBi, signal?: AbortSignal): Promise<KpisDTO> {
+  const r = await api.get('/bi/kpis', { params: params(periodo), signal })
   return r.data
 }
 
-export async function fetchKpisComparativo(periodo: PeriodoBi): Promise<KpisComparativoDTO> {
-  const r = await api.get('/bi/kpis/comparativo', { params: params(periodo) })
+export async function fetchKpisComparativo(periodo: PeriodoBi, signal?: AbortSignal): Promise<KpisComparativoDTO> {
+  const r = await api.get('/bi/kpis/comparativo', { params: params(periodo), signal })
   return r.data
 }
 
-export async function fetchReceita(periodo: PeriodoBi, dimensao: Dimensao): Promise<ItemDimensaoDTO[]> {
-  const r = await api.get('/bi/receita', { params: params(periodo, { dimensao }) })
+export async function fetchReceita(periodo: PeriodoBi, dimensao: Dimensao, signal?: AbortSignal): Promise<ItemDimensaoDTO[]> {
+  const r = await api.get('/bi/receita', { params: params(periodo, { dimensao }), signal })
   return r.data
 }
 
-export async function fetchQuantidade(periodo: PeriodoBi, dimensao: Dimensao): Promise<ItemDimensaoDTO[]> {
-  const r = await api.get('/bi/quantidade', { params: params(periodo, { dimensao }) })
+export async function fetchQuantidade(periodo: PeriodoBi, dimensao: Dimensao, signal?: AbortSignal): Promise<ItemDimensaoDTO[]> {
+  const r = await api.get('/bi/quantidade', { params: params(periodo, { dimensao }), signal })
   return r.data
 }
 
-export async function fetchCurvaAbc(periodo: PeriodoBi, dimensao: Dimensao): Promise<ItemCurvaAbcDTO[]> {
-  const r = await api.get('/bi/curva-abc', { params: params(periodo, { dimensao }) })
+export async function fetchCurvaAbc(periodo: PeriodoBi, dimensao: Dimensao, signal?: AbortSignal): Promise<ItemCurvaAbcDTO[]> {
+  const r = await api.get('/bi/curva-abc', { params: params(periodo, { dimensao }), signal })
   return r.data
 }
 
-export async function fetchRanking(periodo: PeriodoBi, metrica: Metrica, top: number): Promise<ItemRankingDTO[]> {
-  const r = await api.get('/bi/ranking', { params: params(periodo, { metrica, top }) })
+export async function fetchRanking(periodo: PeriodoBi, metrica: Metrica, top: number, signal?: AbortSignal): Promise<ItemRankingDTO[]> {
+  const r = await api.get('/bi/ranking', { params: params(periodo, { metrica, top }), signal })
   return r.data
 }
 
-export async function fetchTrocas(periodo: PeriodoBi): Promise<TrocasDTO> {
-  const r = await api.get('/bi/trocas', { params: params(periodo) })
+export async function fetchTrocas(periodo: PeriodoBi, signal?: AbortSignal): Promise<TrocasDTO> {
+  const r = await api.get('/bi/trocas', { params: params(periodo), signal })
   return r.data
 }
 
-export async function fetchPerdas(periodo: PeriodoBi): Promise<MovimentoDTO> {
-  const r = await api.get('/bi/perdas', { params: params(periodo) })
+export async function fetchPerdas(periodo: PeriodoBi, signal?: AbortSignal): Promise<MovimentoDTO> {
+  const r = await api.get('/bi/perdas', { params: params(periodo), signal })
   return r.data
 }
 
-export async function fetchConsumo(periodo: PeriodoBi): Promise<MovimentoDTO> {
-  const r = await api.get('/bi/consumo', { params: params(periodo) })
+export async function fetchConsumo(periodo: PeriodoBi, signal?: AbortSignal): Promise<MovimentoDTO> {
+  const r = await api.get('/bi/consumo', { params: params(periodo), signal })
   return r.data
 }
 
-export async function fetchDiario(periodo: PeriodoBi, metrica: Metrica): Promise<PontoDiarioDTO[]> {
-  const r = await api.get('/bi/diario', { params: params(periodo, { metrica }) })
+export async function fetchDiario(periodo: PeriodoBi, metrica: Metrica, signal?: AbortSignal): Promise<PontoDiarioDTO[]> {
+  const r = await api.get('/bi/diario', { params: params(periodo, { metrica }), signal })
   return r.data
 }
 
-export async function fetchDiarioComparativo(periodo: PeriodoBi, metrica: Metrica): Promise<DiarioComparativoDTO> {
-  const r = await api.get('/bi/diario/comparativo', { params: params(periodo, { metrica }) })
+export async function fetchDiarioComparativo(periodo: PeriodoBi, metrica: Metrica, signal?: AbortSignal): Promise<DiarioComparativoDTO> {
+  const r = await api.get('/bi/diario/comparativo', { params: params(periodo, { metrica }), signal })
   return r.data
 }
 
-export async function fetchDiarioProduto(periodo: PeriodoBi, codigo: string, metrica: Metrica): Promise<PontoDiarioDTO[]> {
-  const r = await api.get('/bi/diario/produto', { params: params(periodo, { codigo, metrica }) })
+export async function fetchDiarioProduto(periodo: PeriodoBi, codigo: string, metrica: Metrica, signal?: AbortSignal): Promise<PontoDiarioDTO[]> {
+  const r = await api.get('/bi/diario/produto', { params: params(periodo, { codigo, metrica }), signal })
   return r.data
 }
 
-export async function fetchTemporalHora(periodo: PeriodoBi, metrica: Metrica): Promise<PontoHoraDTO[]> {
-  const r = await api.get('/bi/temporal/hora', { params: params(periodo, { metrica }) })
+export async function fetchTemporalHora(periodo: PeriodoBi, metrica: Metrica, signal?: AbortSignal): Promise<PontoHoraDTO[]> {
+  const r = await api.get('/bi/temporal/hora', { params: params(periodo, { metrica }), signal })
   return r.data
 }
 
-export async function fetchTemporalDiaSemana(periodo: PeriodoBi, metrica: Metrica): Promise<PontoDiaSemanaDTO[]> {
-  const r = await api.get('/bi/temporal/dia-semana', { params: params(periodo, { metrica }) })
+export async function fetchTemporalDiaSemana(periodo: PeriodoBi, metrica: Metrica, signal?: AbortSignal): Promise<PontoDiaSemanaDTO[]> {
+  const r = await api.get('/bi/temporal/dia-semana', { params: params(periodo, { metrica }), signal })
   return r.data
 }
 
-export async function fetchSku(periodo: PeriodoBi, codigo: string): Promise<SkuDTO> {
-  const r = await api.get('/bi/sku', { params: params(periodo, { codigo }) })
+export async function fetchSku(periodo: PeriodoBi, codigo: string, signal?: AbortSignal): Promise<SkuDTO> {
+  const r = await api.get('/bi/sku', { params: params(periodo, { codigo }), signal })
   return r.data
 }
 
@@ -108,8 +108,8 @@ export async function fetchTabelaProdutos(params: {
   sort_order?: string
   limit?: number
   offset?: number
-}): Promise<TabelaProdutosResponse> {
-  const r = await api.get('/bi/tabela-produtos', { params })
+}, signal?: AbortSignal): Promise<TabelaProdutosResponse> {
+  const r = await api.get('/bi/tabela-produtos', { params, signal })
   return r.data
 }
 

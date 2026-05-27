@@ -6,11 +6,13 @@ from sqlalchemy import select, func
 from app.limiter import limiter
 import logging
 
+from app.core.config import settings
 from app.api.deps import get_db, require_admin, get_current_user, oauth2_scheme
 from app.infrastructure.repositories.usuario_repository import UsuarioRepository
 from app.application.services.auth_service import AuthService
 from app.application.utils.jwt_handler import decode_access_token
 from app.schemas.auth_schema import TokenResponse, RefreshRequest, MessageResponse
+from app.core.csrf import set_csrf_cookie
 from app.schemas.usuario_schema import UsuarioCreate, UsuarioPatch, UsuarioResponse
 from app.domain.models.usuario import Usuario
 from app.domain.models.token_blacklist import TokenBlacklist
@@ -34,6 +36,19 @@ def _contar_tentativas_falhas(db: Session, username: str) -> int:
     return db.execute(stmt).scalar() or 0
 
 
+def _contar_tentativas_por_ip(db: Session, ip: str) -> int:
+    """Conta tentativas falhas do IP em qualquer username nos últimos N minutos."""
+    if not ip:
+        return 0
+    limite = datetime.now(timezone.utc) - timedelta(minutes=LOGIN_LOCKOUT_MINUTES)
+    stmt = select(func.count()).where(
+        TentativaLogin.ip_address == ip,
+        TentativaLogin.sucesso == False,
+        TentativaLogin.attempted_at >= limite,
+    )
+    return db.execute(stmt).scalar() or 0
+
+
 def _limpar_tentativas_falhas(db: Session, username: str) -> None:
     """Remove tentativas falhas do username após login bem sucedido."""
     stmt = select(TentativaLogin).where(
@@ -47,13 +62,22 @@ def _limpar_tentativas_falhas(db: Session, username: str) -> None:
 
 @router.post("/token", response_model=TokenResponse)
 @limiter.limit("10/minute")
-def login(request: Request, dados: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login(request: Request, response: Response, dados: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     # ── Lockout check ──────────────────────────────────────────────
     tentativas = _contar_tentativas_falhas(db, dados.username)
     if tentativas >= LOGIN_MAX_ATTEMPTS:
         raise HTTPException(
             status_code=429,
             detail="Muitas tentativas. Tente novamente em 15 minutos.",
+        )
+
+    # ── Lockout por IP (anti-credential-stuffing) ────────────────────
+    ip = request.client.host if request.client else None
+    tentativas_ip = _contar_tentativas_por_ip(db, ip)
+    if tentativas_ip >= LOGIN_MAX_ATTEMPTS * 2:
+        raise HTTPException(
+            status_code=429,
+            detail="Muitas tentativas deste IP. Tente novamente em 15 minutos.",
         )
 
     # ── Tentativa de autenticação ──────────────────────────────────
@@ -73,24 +97,74 @@ def login(request: Request, dados: OAuth2PasswordRequestForm = Depends(), db: Se
     # Login bem sucedido — limpa falhas anteriores
     _limpar_tentativas_falhas(db, dados.username)
     db.commit()
+
+    # ── Set HttpOnly cookies (XSS mitigation) ────────────────────
+    secure = settings.environment == "production"
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=secure,
+        samesite="strict",
+        max_age=30 * 60,
+        path="/",
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=secure,
+        samesite="strict",
+        max_age=7 * 24 * 3600,
+        path="/",
+    )
+    set_csrf_cookie(response, secure=secure)
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 
 @router.post("/refresh", response_model=TokenResponse)
 @limiter.limit("10/minute")
-def refresh(request: Request, body: RefreshRequest, db: Session = Depends(get_db)):
+def refresh(request: Request, response: Response, body: RefreshRequest, db: Session = Depends(get_db)):
     """Troca um refresh token válido por um NOVO par (access + refresh).
 
     - Verifica assinatura, expiração e type == 'refresh'
     - Verifica token_version do usuário (logout-all)
     - Emite novos tokens com rotação completa
+    - Aceita refresh_token via corpo da requisição OU cookie
     """
+    refresh_token_value = body.refresh_token
+    if not refresh_token_value:
+        refresh_token_value = request.cookies.get("refresh_token")
+    if not refresh_token_value:
+        raise HTTPException(status_code=401, detail="Refresh token ausente")
+
     service = AuthService(UsuarioRepository(db))
     try:
-        access_token, refresh_token = service.refresh(body.refresh_token)
+        access_token, new_refresh_token = service.refresh(refresh_token_value)
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
-    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+
+    secure = settings.environment == "production"
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=secure,
+        samesite="strict",
+        max_age=30 * 60,
+        path="/",
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=new_refresh_token,
+        httponly=True,
+        secure=secure,
+        samesite="strict",
+        max_age=7 * 24 * 3600,
+        path="/",
+    )
+    set_csrf_cookie(response, secure=secure)
+    return TokenResponse(access_token=access_token, refresh_token=new_refresh_token)
 
 
 @router.post("/register", response_model=UsuarioResponse, status_code=201)
@@ -149,31 +223,39 @@ def excluir_usuario(
 @limiter.limit("10/minute")
 def logout(
     request: Request,
+    response: Response,
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
     """Revoga o token JWT atual individualmente."""
-    try:
-        payload = decode_access_token(token)
-    except ValueError:
-        raise HTTPException(status_code=401, detail="Token inválido")
 
-    jti = payload.get("jti")
-    exp = payload.get("exp")
-    if not jti or not exp:
-        raise HTTPException(status_code=400, detail="Token inválido: sem jti ou exp")
+    if token:
+        try:
+            payload = decode_access_token(token)
+        except ValueError:
+            raise HTTPException(status_code=401, detail="Token inválido")
 
-    expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
+        jti = payload.get("jti")
+        exp = payload.get("exp")
+        if not jti or not exp:
+            raise HTTPException(status_code=400, detail="Token inválido: sem jti ou exp")
 
-    entry = TokenBlacklist(
-        jti=jti,
-        user_id=current_user.id,
-        expires_at=expires_at,
-        revoked_at=datetime.now(timezone.utc),
-    )
-    db.add(entry)
-    db.commit()
+        expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
+
+        entry = TokenBlacklist(
+            jti=jti,
+            user_id=current_user.id,
+            expires_at=expires_at,
+            revoked_at=datetime.now(timezone.utc),
+        )
+        db.add(entry)
+        db.commit()
+
+    # ── Clear cookies ────────────────────────────────────────────
+    response.delete_cookie("access_token", path="/")
+    response.delete_cookie("refresh_token", path="/")
+    response.delete_cookie("csrf_token", path="/")
     return MessageResponse(message="Token revogado com sucesso")
 
 
@@ -181,6 +263,7 @@ def logout(
 @limiter.limit("5/minute")
 def logout_all(
     request: Request,
+    response: Response,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
@@ -192,4 +275,9 @@ def logout_all(
     """
     current_user.token_version += 1
     db.commit()
+
+    # ── Clear cookies ────────────────────────────────────────────
+    response.delete_cookie("access_token", path="/")
+    response.delete_cookie("refresh_token", path="/")
+    response.delete_cookie("csrf_token", path="/")
     return MessageResponse(message="Todos os tokens foram revogados com sucesso")

@@ -2,10 +2,11 @@ import { useCallback } from 'react'
 import { jwtDecode } from 'jwt-decode'
 import api from '../api/client'
 import { login as apiLogin } from '../api/auth'
+import { getAccessToken, setAccessToken } from '../api/tokenStore'
 import type { JwtPayload, Role } from '../types'
 
 function getToken(): string | null {
-  return localStorage.getItem('token')
+  return getAccessToken()
 }
 
 function parseJwtPayload(token: string): JwtPayload | null {
@@ -45,7 +46,6 @@ export function useAuth() {
     const token = getToken()
     if (!token) return false
     if (isTokenExpired(token)) {
-      // Não remove o token aqui — o interceptor do client.ts tentará refresh
       return false
     }
     return true
@@ -77,10 +77,7 @@ export function useAuth() {
   const login = useCallback(async (username: string, password: string) => {
     const data = await apiLogin(username, password)
     const decoded = jwtDecode<JwtPayload>(data.access_token)
-    localStorage.setItem('token', data.access_token)
-    if (data.refresh_token) {
-      localStorage.setItem('refresh_token', data.refresh_token)
-    }
+    setAccessToken(data.access_token)
     return decoded.role as Role
   }, [])
 
@@ -91,18 +88,13 @@ export function useAuth() {
       revoked = true
     } catch (err) {
       console.warn(
-        '[Auth] Não foi possível revogar o token no servidor. ' +
-        'O token expirará em até 8 horas.',
+        '[Auth] Não foi possível revogar o token no servidor.',
         err
       )
     }
-    localStorage.removeItem('token')
-    localStorage.removeItem('refresh_token')
+    setAccessToken(null)
     if (!revoked) {
-      console.warn(
-        '[Auth] Token ainda pode ser válido por até 8 horas. ' +
-        'Para revogá-lo manualmente, use "Logout em todos os dispositivos" no painel admin.'
-      )
+      console.warn('[Auth] Token pode ainda ser válido.')
     }
   }, [])
 

@@ -74,7 +74,7 @@ export default function Sku() {
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current) }
   }, [searchQuery])
 
-  const buscar = useCallback(async (codigoParam?: string, periodoOverride?: PeriodoBi, force = false) => {
+  const buscar = useCallback(async (codigoParam?: string, periodoOverride?: PeriodoBi, force = false, signal?: AbortSignal) => {
     const p = periodoOverride ?? periodo
     const valor = (codigoParam ?? codigoRef.current).trim()
     if (!valor) return
@@ -86,11 +86,12 @@ export default function Sku() {
     setErro(null)
     setLoading(true)
     try {
-      const data = await fetchSku(p, valor)
+      const data = await fetchSku(p, valor, signal)
       setDados(data)
       cache.set(cacheKey, p, data)
     } catch (e: unknown) {
-      const err = e as { response?: { status?: number } }
+      const err = e as { response?: { status?: number }; name?: string }
+      if (err?.name === 'CanceledError' || err?.name === 'AbortError') return
       if (err.response?.status === 400) setErro('Código inválido.')
       else if (err.response?.status === 404) setErro('Produto não encontrado no período informado.')
       else setErro('Erro ao carregar dados.')
@@ -104,14 +105,17 @@ export default function Sku() {
   // Also reacts to URL param changes for navigation between SKUs
   // ?force=1 bypasses cache (used from header search bar)
   useEffect(() => {
+    const controller = new AbortController()
+    const signal = controller.signal
     const codigoParam = searchParams.get('codigo')
     const forceParam = searchParams.get('force') === '1'
     if (codigoParam && codigoParam !== codigoRef.current) {
       setCodigo(codigoParam)
     }
     if (codigoParam) {
-      buscar(codigoParam, undefined, forceParam)
+      buscar(codigoParam, undefined, forceParam, signal)
     }
+    return () => controller.abort()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams.get('codigo'), searchParams.get('force')])
 

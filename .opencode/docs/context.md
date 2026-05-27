@@ -1,8 +1,8 @@
 # Current Context
 
-> Audit stage: **Completa. UX Refactor + UI Fixes + Hotfix Resumo Dia Parcial. 169 testes passando.**
-> Data da auditoria: **2026-05-26**
-> Status: **Sprints 1-4 concluídos. Sprint 5 (BI Dashboard + Temas) concluído. Lote 5 (Tabela de Preços) concluído. Hotfix scheduler/email aplicado. UX Refactor + UI Fixes concluído. Hotfix Resumo Dia Parcial concluído.**
+> Audit stage: **Completa. 31 issues da Revisão Adversarial corrigidas. 227 testes passando.**
+> Data da auditoria: **2026-05-27**
+> Status: **Sprints 1-8 concluídos. 31/31 issues do correction-plan corrigidos. 3 bugs corrigidos nesta sessão (Invalid time value, sync regression, log spam).**
 
 ---
 
@@ -204,27 +204,29 @@
 - Error handling sanitizado (`error_handler.py`) sem vazamento de detalhes internos.
 - Rate limiting com toggle (`RATE_LIMIT_ENABLED`).
 - Contratos API verificados e documentados em `api-contracts.md`.
-- BI cache agora com TTL de 5 minutos e invalidação pós-sync.
+- BI cache agora com TTL de 5 minutos + FIFO 50 entradas + invalidação pós-sync.
 - Inventário com proteções anti-loop (debounce 2s global, stopper frame de câmera, pausa escaneio).
 - Exportação Excel gerada no backend (elimina dependência `xlsx` no frontend).
-- 168 testes passando.
-- 27+ issues corrigidos em 4 sprints.
-- Cadeia JWT completa: emissão → revogação → role change invalidation.
-- Todos os 4 sprints concluídos e revisados com adversarial-review.
+- **227 testes passando** (pytest), 18 testes frontend.
+- **54+ issues corrigidos** em múltiplos sprints.
+- Cadeia JWT completa: emissão → revogação (blacklist + token_version) → refresh token com rotação → role change invalidation.
+- AdapterRegistry funcional (`register_adapter()` + `_ADAPTER_REGISTRY`).
+- ConfigService extraído: `config_cache.py`, `config_crypto.py`, `config_validator.py` (529→303 linhas).
+- Domain pure `ProdutoPuro` + RepositoryDomain existentes (pendente migração das rotas HTTP).
+- Sync extraído: `run_sync_common()` compartilhado entre scheduler e trigger manual.
+- Console: 0 erros TS, 0 lint warnings.
 
 ### O que requer atenção 🔴🟡
 
 | Prioridade | Hotspot | Arquivo | Status |
 |---|---|---|---|---|
-| 🔴 P1 | Domain models acoplados ao SQLAlchemy ORM | `domain/models/*.py` | Pendente (longo prazo) |
-| 🔴 P1 | Caches globais em memória do processo | `deps.py`, `config_service.py`, `transaction_source.py` | Pendente (multi-worker) |
-| 🟡 P2 | Config management com 4+ fontes de verdade | `config_service.py`, `configStore.ts` | Parcial |
-| 🟡 P2 | ETL full-reload sem transação atômica | `sync_service.py` | Mitigado (rollback + fetch-before-delete) |
-| 🔴 **NOVO** | **Regressão: M1+M2 e Bônus não foram aplicados** | `admin.ts`, `admin.py` | **Sprint 6 (Hotfix)** |
-| 🔴 **NOVO** | **Stale closure em ajustarQuantidade** | `Inventario.tsx:330-341` | **Sprint 7** |
-| 🔴 **NOVO** | **Vazamento engine PostgreSQL no ETL** | `sync_service.py:103-124` | **Sprint 7** |
-| 🔴 **NOVO** | **Sessão encerrada: GET bloqueado mas Excel não** | `inventario.py:341,488` | **Sprint 8** |
-| 🟢 P3 | config_service.py ~430 linhas (SRP) | `config_service.py` | Pendente |
+| 🔴 P1 | Domain models acoplados ao SQLAlchemy ORM | `domain/models/*.py` | **ProdutoPuro criado**, rotas HTTP pendentes de migração |
+| 🔴 P1 | Caches globais em memória do processo | `deps.py`, `config_service.py`, `transaction_source.py` | Pendente (multi-worker) — mitigado por single-worker |
+| 🔴 P3 | BI carrega tudo em RAM | `factory.py`, `fluxo.py` | Mitigado (180d limit) — root cause permanece |
+| 🔴 N1 | Console logs não aparecem no uvicorn | `logging_config.py` | StreamHandler configurado mas sem saída |
+| 🟡 P2 | Config management com 4+ fontes de verdade | `config_service.py`, `configStore.ts` | Parcial — configStore sync melhorou |
+| 🟢 m3 | Frontend: React.memo ausente | Dashboard (6 cards + charts) | Pendente |
+| 🟢 N2 | SchedulerJobsResponse com unknown[] | `types/admin.ts` | Pendente — tipar como SchedulerJob[] |
 
 ### Notas Pós-Revisão (Sprint 1 — Resíduos)
 
@@ -261,13 +263,14 @@
 
 - **Backend:** ~15 módulos de primeira linha, ~70 arquivos (estimado).
 - **Frontend:** ~11 módulos de primeira linha, ~40+ componentes/páginas.
-- **Testes:** 169 testes passando (pytest) — 11 sprints + hotfix + Lote 5 validados.
-- **Issues resolvidos:** 35+ em 11 sprints + hotfix + Lote 5 + UX refactor.
+- **Testes:** 227 testes passando (pytest) — 31 issues do correction-plan + 23 debug-audit + hotfixes.
+- **Issues resolvidos:** 54+ em múltiplos sprints (27 adversarial + 23 debug-audit + 4 hotfix/correção).
 - **Lint:** 0 erros, 0 warnings.
 - **TypeScript:** 0 erros de compilação.
 - **UX audit:** 6 páginas ajustadas (Etiquetas, Inventário, Produtos, Configurações, Usuarios, Admin).
-- **Issues abertos (2026-05-21 — Revisão Adversarial):** P1-P3 (performance), M1-M12 (médios), m1-m4 (menores) — ainda pendentes.
+- **Issues abertos (2026-05-21 — Revisão Adversarial):** 27 issues — **26 corrigidos** em 6 sprints (2026-05-26). Apenas P3 (BI RAM) permanece como resíduo real.
 - **Issues abertos (2026-05-25 — Auditoria Debug):** Nenhum — todos os 23 corrigidos em 6 sprints.
+- **Issues abertos (2026-05-27 — Sessão Atual):** P3 (BI RAM), m3 (React.memo), N1 (console logs silenciosos), N2 (SchedulerJobsResponse unknown[]), N3 (ProdutoPuro não plugado), + backup SQLite.
 - **Regressões corrigidas:** 2 fixes (M1+M2 `job_id: string` e Bônus `logar_erro_interno`) aplicados novamente em `cdb135c`.
 - **Resíduos pós-revisão Sprint 1:** 1 médio (segundo async gap em handleCodigo, linhas 283 e 303) — não bloqueante.
 - **Tipo de app:** Sistema interno de vitrine/PDV para loja física com BI, inventário, sincronização ERP (Alterdata).
@@ -309,15 +312,15 @@
 
 ### Resíduos
 
-1. Limpar `localStorage.removeItem('role')` em `client.ts` (dead code desde Sprint 4) — **✅ REMOVIDO** na correção B13 (commit `cdb135c`)
-2. Segundo async gap em `handleCodigo` (`await adicionarItemInventario()` linhas 283 e 303) — ainda presente, não bloqueante
+1. `_debug_items()` em `factory.py` — ainda chamado em 2 lugares mesmo com guard DEBUG (linhas 188, 190). O guard existe, mas se logger estiver em DEBUG, faz 3 scans desnecessários. ✅ Mitigado por `logger.isEnabledFor(DEBUG)`.
+2. Segundo async gap em `handleCodigo` (`await adicionarItemInventario()` linhas 283 e 303) — ainda presente, não bloqueante.
 
 ### Backlog (Médio/Longo Prazo)
 
-21. Reduzir JWT expiry para 8h + refresh token.
-22. Tornar `_ADAPTER_CACHE` thread-safe com `threading.Lock` (já corrigido M2, mas verificar abrangência).
-23. Stream real no Excel export.
-24. Desacoplar domain models do ORM.
+21. ✅ JWT 8h + refresh token — **concluído** (Sprint 2 + Sprint 8: ACCESS_TOKEN_EXPIRE_MINUTES=30).
+22. ✅ `_ADAPTER_CACHE` thread-safe — **concluído** (Sprint 4 M2).
+23. Stream real no Excel export (openpyxl gera em RAM, pico ~250 MB para 50k produtos).
+24. Desacoplar domain models do ORM — **ProdutoPuro já existe** (`domain/pure/`), mas rotas HTTP ainda usam service antigo. Pendente: migrar rotas.
 25. Cache compartilhado (Redis) se houver multi-worker.
 
 ---

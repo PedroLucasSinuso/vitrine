@@ -1,19 +1,10 @@
 ﻿import os
 import atexit
-import importlib
-import pkgutil
-import logging
 import threading
-from sqlalchemy import text
+import logging
+
 from app.infrastructure.db.database import Base
 from app.infrastructure.db.session import sqlite_engine
-
-# Auto-scan de models: todo .py em app/domain/models/ é importado
-# para registrar no Base.metadata (M11). Isso evita esquecer de
-# adicionar imports manuais quando um novo model é criado.
-import app.domain.models as _models_pkg
-for _module_info in pkgutil.iter_modules(_models_pkg.__path__):
-    importlib.import_module(f"app.domain.models.{_module_info.name}")
 
 logger = logging.getLogger(__name__)
 
@@ -22,63 +13,21 @@ _init_db_lock = threading.Lock()
 
 
 def _run_migrations():
-    """Executa migrações incrementais (ALTER TABLE) que o create_all não cobre."""
-    # Migration: coluna 'observacao' em itens_inventario
-    try:
-        with sqlite_engine.connect() as conn:
-            conn.execute(text("ALTER TABLE itens_inventario ADD COLUMN observacao TEXT"))
-            conn.commit()
-            logger.info("Migration: coluna 'observacao' adicionada a itens_inventario")
-    except Exception as e:
-        logger.warning("Migration (esperado se já existe): coluna 'observacao' — %s", e)
+    """Executa migrações via Alembic.
 
-    # Migration: coluna 'token_version' em usuarios (JWT revogação)
-    try:
-        with sqlite_engine.connect() as conn:
-            conn.execute(text("ALTER TABLE usuarios ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0"))
-            conn.commit()
-            logger.info("Migration: coluna 'token_version' adicionada a usuarios")
-    except Exception as e:
-        logger.warning("Migration (esperado se já existe): coluna 'token_version' — %s", e)
+    1. Stamp head — garante que DBs existentes (sem alembic_version)
+       sejam marcadas como atualizadas.
+    2. Upgrade head — aplica pendentes (seguro no-op se já atualizado).
+    """
+    from alembic.config import Config
+    from alembic import command
 
-    # Migration: limpar jwt_secret do banco (agora é somente .env)
-    try:
-        with sqlite_engine.connect() as conn:
-            conn.execute(text("DELETE FROM configuracoes WHERE chave = 'jwt_secret'"))
-            conn.commit()
-            logger.info("Migration: jwt_secret removido da tabela configuracoes")
-    except Exception as e:
-        logger.warning("Migration (esperado se já existe): jwt_secret — %s", e)
-
-    # Migration: cleanup de tokens expirados na blacklist (+30 dias)
-    try:
-        with sqlite_engine.connect() as conn:
-            conn.execute(text("DELETE FROM token_blacklist WHERE expires_at < datetime('now', '-30 days')"))
-            conn.commit()
-            logger.info("Migration: token_blacklist limpa (entradas >30 dias)")
-    except Exception as e:
-        logger.warning("Migration (esperado se já existe): token_blacklist cleanup — %s", e)
-
-    # Migration: índice composto para historico_precos
-    try:
-        with sqlite_engine.connect() as conn:
-            conn.execute(text(
-                "CREATE INDEX IF NOT EXISTS idx_hp_codigo_data "
-                "ON historico_precos(codigo_chamada, data_coleta)"
-            ))
-            conn.commit()
-            logger.info("Migration: índice idx_hp_codigo_data criado")
-    except Exception as e:
-        logger.warning("Migration (esperado se já existe): índice idx_hp_codigo_data — %s", e)
-
-    # Migration: coluna 'ativo' em produtos
-    try:
-        with sqlite_engine.connect() as conn:
-            conn.execute(text("ALTER TABLE produtos ADD COLUMN ativo BOOLEAN NOT NULL DEFAULT 1"))
-            conn.commit()
-            logger.info("Migration: coluna 'ativo' adicionada a produtos")
-    except Exception as e:
-        logger.warning("Migration (esperado se já existe): coluna 'ativo' — %s", e)
+    _base = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    alembic_cfg = Config(os.path.join(_base, "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", os.path.join(_base, "alembic"))
+    command.stamp(alembic_cfg, "head")
+    command.upgrade(alembic_cfg, "head")
+    logger.info("Migration: Alembic head verificado")
 
 
 def init_db():

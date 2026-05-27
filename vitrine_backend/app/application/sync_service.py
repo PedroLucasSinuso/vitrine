@@ -10,6 +10,7 @@ from app.core.models.product import Product
 from app.domain.models.produto import Produto, ProdutoCodigo
 from app.domain.models.cache_status import CacheStatus
 from app.core.timer import temporizador
+from app.application.normalizacao_service import normalizar
 from app.core.error_handler import sanitizar_erro
 import logging
 
@@ -43,29 +44,29 @@ class SyncService:
         logger.info("SyncService iniciando sync")
 
         with temporizador("SyncService completo", logger):
-            # Fetch ALL products from ERP FIRST, THEN delete local data.
-            # Isso elimina a janela de 0 produtos: se get_all_products()
-            # falhar, o banco local permanece intacto.
+            # 1. Fetch ALL products from ERP FIRST, THEN convert to ORM.
+            #    Nenhuma escrita no banco até que tudo esteja pronto em memória.
             products = self.source.get_all_products()
             logger.info("SyncService source retornou %s produtos", len(products))
 
-            # Transação: DELETE + INSERT são atômicos via autobegin.
-            # Se add_all falhar, o rollback em sync_com_erro desfaz o DELETE.
+            # 2. Converte para ORM FIRST, DEPOIS deleta + insere.
+            #    Sem with self.db.begin(): montar_url_postgres() já ativou
+            #    autobegin na session (via query de config). begin()
+            #    explícito causaria "A transaction is already begun on
+            #    this Session" — o erro clássico do 1º clique.
+            produtos_orm = [self._to_orm(p, self.db) for p in products]
+
             with temporizador("SyncService delete antigos", logger):
                 self.db.execute(delete(ProdutoCodigo))
                 self.db.execute(delete(Produto))
 
-            produtos_orm = [self._to_orm(p) for p in products]
-
             with temporizador("SyncService insert", logger):
                 self.db.add_all(produtos_orm)
 
-            # ── Gravar histórico de preços (dentro da transação atômica — C1)
+            # 4. Histórico de preços (após transação principal, pode ser atômico separado)
             with temporizador("SyncService historico_precos", logger):
                 from app.infrastructure.repositories.produto_repository import ProdutoRepository
 
-                # C6: se job_id foi passado externamente, usa direto (evita
-                # query race condition com func.max(SyncJob.id))
                 if job_id is None:
                     from app.domain.models.sync_job import SyncJob
                     ultimo_job = self.db.query(SyncJob).order_by(SyncJob.id.desc()).first()
@@ -82,12 +83,11 @@ class SyncService:
                         sync_job_id=job_id_resolved,
                     )
 
-            # ── CacheStatus dentro da transação ─────────────────────────────
+            # 5. CacheStatus
             self.db.add(CacheStatus(
                 last_updated=datetime.now(ZoneInfo("America/Sao_Paulo")),
                 status="sucesso",
             ))
-
             self.db.commit()
 
             produtos_count = len(produtos_orm)
@@ -109,12 +109,13 @@ class SyncService:
         raise RuntimeError("Erro ao sincronizar dados do ERP") from error
 
     @staticmethod
-    def _to_orm(p: Product) -> Produto:
+    def _to_orm(p: Product, db: Session) -> Produto:
+        grupo_norm, familia_norm = normalizar(db, p.group, p.family)
         return Produto(
             codigo_chamada=p.internal_code,
             nome=p.name,
-            grupo=p.group,
-            familia=p.family,
+            grupo=grupo_norm,
+            familia=familia_norm,
             preco_venda=float(p.sale_price),
             preco_custo=float(p.cost_price),
             estoque=p.stock,

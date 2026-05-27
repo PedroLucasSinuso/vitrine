@@ -1,16 +1,7 @@
-﻿import sys
-from pathlib import Path
+﻿from pathlib import Path
 import logging
 from logging.config import dictConfig
 from logging.handlers import TimedRotatingFileHandler
-
-
-class _Utf8StreamHandler(logging.StreamHandler):
-    def __init__(self, stream=None):
-        super().__init__(stream)
-        if hasattr(self.stream, 'buffer'):
-            import io
-            self.stream = io.TextIOWrapper(self.stream.buffer, encoding='utf-8')
 
 
 def setup_logging():
@@ -23,14 +14,11 @@ def setup_logging():
             "default": {
                 "format": "%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
             },
-            "etl": {
-                "format": "%(asctime)s [ETL] [%(levelname)s] %(message)s",
-            },
         },
 
         "handlers": {
             "console": {
-                "class": "app.core.logging_config._Utf8StreamHandler",
+                "class": "logging.StreamHandler",
                 "formatter": "default",
             },
             "file_app": {
@@ -39,16 +27,7 @@ def setup_logging():
                 "formatter": "default",
                 "when": "midnight",
                 "interval": 1,
-                "backupCount": 7,
-                "encoding": "utf-8",
-            },
-            "file_etl": {
-                "class": "logging.handlers.TimedRotatingFileHandler",
-                "filename": "logs/etl.log",
-                "formatter": "etl",
-                "when": "midnight",
-                "interval": 1,
-                "backupCount": 7,
+                "backupCount": 14,
                 "encoding": "utf-8",
             },
             "file_error": {
@@ -76,11 +55,6 @@ def setup_logging():
             "app": {
                 "level": "INFO",
                 "handlers": ["console", "file_app", "file_error"],
-                "propagate": False,
-            },
-            "app.application.etl": {
-                "level": "INFO",
-                "handlers": ["console", "file_etl", "file_error"],
                 "propagate": False,
             },
             "app.nao_encontrado": {

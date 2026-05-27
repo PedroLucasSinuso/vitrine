@@ -127,18 +127,25 @@ export default function Dashboard() {
 
   // ── Carregar meta + receita do mês atual ──
   useEffect(() => {
+    const controller = new AbortController()
+    const signal = controller.signal
     getConfigsCache().then((c) => {
       const val = c.meta_faturamento_mensal
       if (val && Number(val) > 0) setMetaMensal(Number(val))
     }).catch(() => {})
-    fetchKpis(periodoMesAtual())
+    fetchKpis(periodoMesAtual(), signal)
       .then((k) => setReceitaMesAtual(k.faturamento_bruto))
-      .catch(() => {})
+      .catch(err => {
+        if (err?.name !== 'CanceledError' && err?.name !== 'AbortError') {
+          // silent
+        }
+      })
       .finally(() => setLoadingMeta(false))
+    return () => controller.abort()
   }, [])
 
   // ── Carregar dados diários + comparativo ──
-  const buscarDiario = useCallback(async (p: PeriodoBi) => {
+  const buscarDiario = useCallback(async (p: PeriodoBi, signal?: AbortSignal) => {
     if (p.data_inicio === p.data_fim) {
       setDiarioReceita([])
       setDiarioTicketMedio([])
@@ -151,10 +158,10 @@ export default function Dashboard() {
     setLoadingHora(true)
     try {
       const [rc, tm, qt, hora] = await Promise.all([
-        fetchDiario(p, 'receita_produto'),
-        fetchDiario(p, 'ticket_medio'),
-        fetchDiario(p, 'qtd_tickets'),
-        fetchTemporalHora(p, 'receita_produto'),
+        fetchDiario(p, 'receita_produto', signal),
+        fetchDiario(p, 'ticket_medio', signal),
+        fetchDiario(p, 'qtd_tickets', signal),
+        fetchTemporalHora(p, 'receita_produto', signal),
       ])
       setDiarioReceita(rc)
       setDiarioTicketMedio(tm)
@@ -164,9 +171,9 @@ export default function Dashboard() {
       if (comparar) {
         try {
           const [compRc, compTk, compTm] = await Promise.all([
-            fetchDiarioComparativo(p, 'receita_produto'),
-            fetchDiarioComparativo(p, 'qtd_tickets'),
-            fetchDiarioComparativo(p, 'ticket_medio'),
+            fetchDiarioComparativo(p, 'receita_produto', signal),
+            fetchDiarioComparativo(p, 'qtd_tickets', signal),
+            fetchDiarioComparativo(p, 'ticket_medio', signal),
           ])
           setDiarioComparativo({ receita: compRc, tickets: compTk, ticketMedio: compTm })
         } catch {
@@ -183,9 +190,9 @@ export default function Dashboard() {
     }
   }, [comparar])
 
-  const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false) => {
+  const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false, signal?: AbortSignal) => {
     const p = periodoOverride ?? periodo
-    buscarDiario(p)
+    buscarDiario(p, signal)
     if (!force) {
       const cached = cache.get<{ kpis: KpisDTO | KpisComparativoDTO; ranking: ItemRankingDTO[] }>(cacheKey, p)
       if (cached) {
@@ -206,8 +213,8 @@ export default function Dashboard() {
     setErro(null)
     setLoading(true)
     try {
-      const kpisPromise = comparar ? fetchKpisComparativo(p) : fetchKpis(p)
-      const rankingPromise = fetchRanking(p, 'receita_produto', 5)
+      const kpisPromise = comparar ? fetchKpisComparativo(p, signal) : fetchKpis(p, signal)
+      const rankingPromise = fetchRanking(p, 'receita_produto', 5, signal)
       const [kpisData, rankingData] = await Promise.all([kpisPromise, rankingPromise])
       if (comparar) {
         setKpisComp(kpisData as KpisComparativoDTO)
@@ -222,13 +229,14 @@ export default function Dashboard() {
 
       // Busca Curva ABC (best-effort, não bloqueia o cache principal)
       try {
-        const abc = await fetchCurvaAbc(p, 'produto')
+        const abc = await fetchCurvaAbc(p, 'produto', signal)
         setCurvaAbc(abc)
       } catch {
         // silencioso
       }
     } catch (e: unknown) {
-      const err = e as { response?: { status?: number; data?: { detail?: string } } }
+      const err = e as { response?: { status?: number; data?: { detail?: string } }; name?: string }
+      if (err?.name === 'CanceledError' || err?.name === 'AbortError') return
       if (err.response?.status === 400) setErro(err.response.data?.detail ?? 'Erro ao carregar dados.')
       else setErro('Erro ao carregar dados. Verifique a conexão com o servidor.')
     } finally {
@@ -238,13 +246,16 @@ export default function Dashboard() {
 
   const isFirstRender = useRef(true)
   useEffect(() => {
+    const controller = new AbortController()
+    const signal = controller.signal
     if (isFirstRender.current) {
       isFirstRender.current = false
-      buscar()
+      buscar(undefined, undefined, signal)
     } else {
       cache.invalidate(cacheKey)
-      buscar(undefined, true)
+      buscar(undefined, true, signal)
     }
+    return () => controller.abort()
   }, [comparar]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleBuscar(periodoOverride?: PeriodoBi) {

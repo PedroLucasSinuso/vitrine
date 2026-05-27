@@ -3,6 +3,7 @@ import { createContext, useContext, useRef, useCallback, type ReactNode } from '
 import type { PeriodoBi } from '../types'
 
 const MAX_ENTRIES = 50
+const MAX_AGE_MS = 10 * 60 * 1000  // 10 minutes
 
 interface CacheEntry {
   data: unknown
@@ -33,6 +34,12 @@ export function BiCacheProvider({ children }: { children: ReactNode }) {
     const entry = cacheRef.current.get(key)
     if (!entry) return undefined
     if (entry.periodoKey !== periodoKey(periodo)) {
+      cacheRef.current.delete(key)
+      const idx = insertionOrderRef.current.indexOf(key)
+      if (idx !== -1) insertionOrderRef.current.splice(idx, 1)
+      return undefined
+    }
+    if (Date.now() - entry.timestamp > MAX_AGE_MS) {
       cacheRef.current.delete(key)
       const idx = insertionOrderRef.current.indexOf(key)
       if (idx !== -1) insertionOrderRef.current.splice(idx, 1)

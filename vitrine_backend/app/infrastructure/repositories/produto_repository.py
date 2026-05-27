@@ -141,29 +141,20 @@ class ProdutoRepository(IProdutoRepository):
         preco_venda: float,
         sync_job_id: Optional[int] = None,
     ) -> None:
-        logger.debug(
-            "Query inserir_historico_preco | codigo=%s custo=%s venda=%s",
-            codigo, preco_custo, preco_venda,
+        markup = (
+            (preco_venda - preco_custo) / preco_custo if preco_custo else 0.0
         )
-        with temporizador("SQL inserir_historico_preco", logger):
-            markup = (
-                (preco_venda - preco_custo) / preco_custo if preco_custo else 0.0
+        margem = (
+            (preco_venda - preco_custo) / preco_venda if preco_venda else 0.0
+        )
+        self._session.add(
+            HistoricoPreco(
+                codigo_chamada=codigo,
+                preco_custo=preco_custo,
+                preco_venda=preco_venda,
+                markup=markup,
+                margem=margem,
+                data_coleta=datetime.now(ZoneInfo("America/Sao_Paulo")),
+                sync_job_id=sync_job_id,
             )
-            margem = (
-                (preco_venda - preco_custo) / preco_venda if preco_venda else 0.0
-            )
-            self._session.add(
-                HistoricoPreco(
-                    codigo_chamada=codigo,
-                    preco_custo=preco_custo,
-                    preco_venda=preco_venda,
-                    markup=markup,
-                    margem=margem,
-                    data_coleta=datetime.now(ZoneInfo("America/Sao_Paulo")),
-                    sync_job_id=sync_job_id,
-                )
-            )
-        logger.info(
-            "SQL inserir_historico_preco | codigo=%s markup=%.4f margem=%.4f",
-            codigo, markup, margem,
         )

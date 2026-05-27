@@ -6,11 +6,13 @@ class DatabaseType(str, Enum):
     POSTGRES = "postgres"
     SQLITE = "sqlite"
 
-# Constante: 8h para access token, 7 dias para refresh token (não configurável via .env)
-ACCESS_TOKEN_EXPIRE_MINUTES = 480
+# Constante: 30 min para access token, 7 dias para refresh token (não configurável via .env)
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_MINUTES = 10080
 
 class Settings(BaseSettings):
+    environment: str = "development"
+
     # ── Conexão direta ao ERP (legado, usado pelo ETL interno) ──────────────
     # POSTGRES_URL é mantido para retrocompatibilidade: se o .env ainda tiver
     # a URL antiga, o ConfigService tenta parseá-la e popular os campos
@@ -73,6 +75,26 @@ class Settings(BaseSettings):
             raise ValueError(
                 "ALLOWED_ORIGINS não configurado."
                 "Defina a variável no arquivo .env antes de subir a aplicação."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validar_erps_encryption_key(self):
+        if not self.erps_encryption_key:
+            raise ValueError(
+                "ERPS_ENCRYPTION_KEY não configurada. "
+                "Defina a variável no arquivo .env antes de subir a aplicação. "
+                "Gere uma chave com: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+            )
+        # Valida que é uma chave Fernet válida
+        try:
+            from cryptography.fernet import Fernet
+            Fernet(self.erps_encryption_key.encode())
+        except Exception:
+            raise ValueError(
+                "ERPS_ENCRYPTION_KEY inválida. "
+                "Use uma chave Fernet válida gerada com: "
+                "python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
             )
         return self
 

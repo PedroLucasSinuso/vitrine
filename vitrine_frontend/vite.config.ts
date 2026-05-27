@@ -7,19 +7,21 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-  server: {
-    host: true,
-    allowedHosts: ['.trycloudflare.com'],
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
-        rewrite: (path) => path.replace(/^\/api/, ''),
-        changeOrigin: true,
-      },
-      '/static': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-      },
-    },
-  },
+  server: process.env.NODE_ENV !== 'production'
+    ? {
+        host: true,
+        allowedHosts: ['.trycloudflare.com'],
+        proxy: {
+          '/api': {
+            target: 'http://localhost:8000',
+            rewrite: (path) => path.replace(/^\/api/, ''),
+            changeOrigin: true,
+          },
+          '/static': {
+            target: 'http://localhost:8000',
+            changeOrigin: true,
+          },
+        },
+      }
+    : undefined,
 })

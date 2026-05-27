@@ -1,6 +1,6 @@
 ﻿import threading
 from datetime import datetime, timezone
-from fastapi import Depends, HTTPException
+from fastapi import Cookie, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from app.infrastructure.db.session import SqliteSession
 from app.infrastructure.repositories.produto_repository import ProdutoRepository
@@ -10,7 +10,7 @@ from app.domain.models.token_blacklist import TokenBlacklist
 from app.domain.enums import RolesEnum
 from app.application.utils.jwt_handler import decode_access_token
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token", auto_error=False)
 
 
 def get_db():
@@ -27,7 +27,11 @@ def get_produto_repository(db=Depends(get_db)):
     return ProdutoRepository(db)
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_db)) -> Usuario:
+def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db=Depends(get_db),
+    access_token_cookie: str | None = Cookie(default=None),
+) -> Usuario:
     """Valida o token JWT e retorna o usuário autenticado.
 
     Verifica:
@@ -35,6 +39,12 @@ def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_db)) ->
     - Se o ``jti`` do token está na blacklist (revogação individual)
     - Se o ``token_version`` do payload corresponde ao do banco (logout-all)
     """
+    # Fallback: se não veio Authorization header, tenta cookie
+    if not token and access_token_cookie:
+        token = access_token_cookie
+    if not token:
+        raise HTTPException(status_code=401, detail="Token ausente")
+
     try:
         payload = decode_access_token(token)
         username = payload.get("sub")

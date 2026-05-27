@@ -56,7 +56,7 @@ export default function CurvaAbc() {
 
   const cacheKey = `curva-abc_${dimensao}`
 
-  const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false) => {
+  const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false, signal?: AbortSignal) => {
     const p = periodoOverride ?? periodo
     if (!force) {
       const cached = cache.get<ItemCurvaAbcDTO[]>(cacheKey, p)
@@ -65,11 +65,12 @@ export default function CurvaAbc() {
     setErro(null)
     setLoading(true)
     try {
-      const data = await fetchCurvaAbc(p, dimensao)
+      const data = await fetchCurvaAbc(p, dimensao, signal)
       setDados(data)
       cache.set(cacheKey, p, data)
     } catch (e: unknown) {
-      const err = e as { response?: { status?: number; data?: { detail?: string } } }
+      const err = e as { response?: { status?: number; data?: { detail?: string } }; name?: string }
+      if (err?.name === 'CanceledError' || err?.name === 'AbortError') return
       if (err.response?.status === 400) setErro(err.response.data?.detail ?? 'Erro ao carregar dados.')
       else setErro('Erro ao carregar dados.')
     } finally {
@@ -77,7 +78,12 @@ export default function CurvaAbc() {
     }
   }, [periodo, dimensao, cache]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { const t = setTimeout(() => buscar()); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const controller = new AbortController()
+    const signal = controller.signal
+    const t = setTimeout(() => buscar(undefined, undefined, signal))
+    return () => { clearTimeout(t); controller.abort() }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function syncParams(d: Dimensao) {
     const next = new URLSearchParams()

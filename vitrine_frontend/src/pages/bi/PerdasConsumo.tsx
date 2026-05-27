@@ -82,7 +82,7 @@ export default function PerdasConsumo() {
   const cache = useBiCache()
   const { toast } = useToast()
 
-  const buscar = useCallback(async (force = false) => {
+  const buscar = useCallback(async (force = false, signal?: AbortSignal) => {
     if (!force) {
       const cacheKeyP = `perdas_${periodo.data_inicio}_${periodo.data_fim}`
       const cacheKeyC = `consumo_${periodo.data_inicio}_${periodo.data_fim}`
@@ -93,13 +93,14 @@ export default function PerdasConsumo() {
     setErro(null)
     setLoading(true)
     try {
-      const [p, c] = await Promise.all([fetchPerdas(periodo), fetchConsumo(periodo)])
+      const [p, c] = await Promise.all([fetchPerdas(periodo, signal), fetchConsumo(periodo, signal)])
       setPerdas(p)
       setConsumo(c)
       cache.set(`perdas_${periodo.data_inicio}_${periodo.data_fim}`, periodo, p)
       cache.set(`consumo_${periodo.data_inicio}_${periodo.data_fim}`, periodo, c)
     } catch (e: unknown) {
-      const err = e as { response?: { status?: number; data?: { detail?: string } } }
+      const err = e as { response?: { status?: number; data?: { detail?: string } }; name?: string }
+      if (err?.name === 'CanceledError' || err?.name === 'AbortError') return
       if (err.response?.status === 400) setErro(err.response.data?.detail ?? 'Erro ao carregar dados.')
       else setErro('Erro ao carregar dados.')
     } finally {
@@ -107,7 +108,12 @@ export default function PerdasConsumo() {
     }
   }, [periodo, cache])
 
-  useEffect(() => { const t = setTimeout(() => buscar()); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const controller = new AbortController()
+    const signal = controller.signal
+    const t = setTimeout(() => buscar(false, signal))
+    return () => { clearTimeout(t); controller.abort() }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleBuscar() {
     cache.invalidate(`perdas_${periodo.data_inicio}_${periodo.data_fim}`)

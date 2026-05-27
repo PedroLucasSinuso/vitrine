@@ -28,7 +28,7 @@ class AlterdataTransactionSource(TransactionSource):
         return path.read_text(encoding="utf-8")
 
     def get_items(self, start: date, end: date) -> list[TransactionItem]:
-        key = (start.isoformat(), end.isoformat())
+        key = (start.isoformat(), end.isoformat(), "items")
         if key in _cache:
             return _cache[key]
 
@@ -101,6 +101,82 @@ class AlterdataTransactionSource(TransactionSource):
         except Exception:
             logger.exception("BI KPI aggregates | erro na query agregada, fallback para full load")
             return None
+
+    @staticmethod
+    def _fmt_date(val) -> str:
+        """Converte valor date/datetime para string ISO 'YYYY-MM-DD'."""
+        if isinstance(val, datetime):
+            return val.date().isoformat()
+        if isinstance(val, date):
+            return val.isoformat()
+        return str(val)
+
+    def get_dimensao_aggregates(self, start: date, end: date, dimensao: str, metrica: str) -> list[dict] | None:
+        col_metrica = "SUM(doc.vlmovimento) AS valor" if metrica == "receita" else "SUM(doc.qtitem) AS valor"
+        try:
+            if dimensao == "produto":
+                sql = text(f"""
+                    SELECT doc.cdproduto AS codigo,
+                           p.nmproduto AS produto,
+                           p.nmgrupo AS grupo,
+                           p.nmfamilia AS familia,
+                           {col_metrica}
+                    FROM wshop.documen d
+                    JOIN wshop.docitem doc ON doc.iddocumento = d.iddocumento
+                    LEFT JOIN wshop.produto p ON p.cdproduto = doc.cdproduto
+                    WHERE d.dtemissao >= :data_inicio
+                      AND d.dtemissao <= :data_fim
+                      AND d.tpoperacao = 'V'
+                      AND COALESCE(d.stdocumentocancelado, '') != '*'
+                    GROUP BY doc.cdproduto, p.nmproduto, p.nmgrupo, p.nmfamilia
+                    ORDER BY valor DESC
+                """)
+            else:
+                group_col = "p.nmgrupo" if dimensao == "grupo" else "p.nmfamilia"
+                sql = text(f"""
+                    SELECT {group_col} AS dimensao,
+                           {col_metrica}
+                    FROM wshop.documen d
+                    JOIN wshop.docitem doc ON doc.iddocumento = d.iddocumento
+                    LEFT JOIN wshop.produto p ON p.cdproduto = doc.cdproduto
+                    WHERE d.dtemissao >= :data_inicio
+                      AND d.dtemissao <= :data_fim
+                      AND d.tpoperacao = 'V'
+                      AND COALESCE(d.stdocumentocancelado, '') != '*'
+                    GROUP BY {group_col}
+                    ORDER BY valor DESC
+                """)
+            with self._engine.connect() as conn:
+                rows = conn.execute(sql, {"data_inicio": start.isoformat(), "data_fim": end.isoformat()}).mappings().fetchall()
+            return [dict(r) for r in rows]
+        except Exception:
+            logger.exception("BI %s aggregates | erro na query agregada", dimensao)
+            return None
+
+    def get_diario_aggregates(self, start: date, end: date, metrica: str) -> list[dict] | None:
+        col_metrica = "SUM(doc.vlmovimento) AS valor" if metrica == "receita" else "SUM(doc.qtitem) AS valor"
+        sql = text(f"""
+            SELECT d.dtemissao AS data,
+                   {col_metrica}
+            FROM wshop.documen d
+            JOIN wshop.docitem doc ON doc.iddocumento = d.iddocumento
+            WHERE d.dtemissao >= :data_inicio
+              AND d.dtemissao <= :data_fim
+              AND d.tpoperacao = 'V'
+              AND COALESCE(d.stdocumentocancelado, '') != '*'
+            GROUP BY d.dtemissao
+            ORDER BY d.dtemissao
+        """)
+        try:
+            with self._engine.connect() as conn:
+                rows = conn.execute(sql, {"data_inicio": start.isoformat(), "data_fim": end.isoformat()}).mappings().fetchall()
+            return [{"data": self._fmt_date(r["data"]), "valor": float(r["valor"])} for r in rows]
+        except Exception:
+            logger.exception("BI diario aggregates | erro na query agregada")
+            return None
+
+    def get_curva_abc_aggregates(self, start: date, end: date, dimensao: str) -> list[dict] | None:
+        return self.get_dimensao_aggregates(start, end, dimensao, "receita")
 
     def _to_item(self, row: dict) -> TransactionItem:
         operacao_raw = row["operacao"]

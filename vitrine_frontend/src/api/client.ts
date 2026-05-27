@@ -1,7 +1,9 @@
 import axios from 'axios'
+import { getAccessToken, setAccessToken } from './tokenStore'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? '/api',
+  withCredentials: true,  // cookies HttpOnly (cross-tab/production)
 })
 
 // Flag para evitar loop infinito de refresh
@@ -18,32 +20,40 @@ function _addRefreshSubscriber(cb: (token: string) => void) {
 }
 
 async function _tryRefreshToken(): Promise<string | null> {
-  const refreshToken = localStorage.getItem('refresh_token')
-  if (!refreshToken) return null
-
   try {
     const response = await axios.post(
       `${import.meta.env.VITE_API_URL ?? '/api'}/auth/refresh`,
-      { refresh_token: refreshToken },
-      { headers: { 'Content-Type': 'application/json' } },
+      {},
+      {
+        headers: { 'Content-Type': 'application/json' },
+        withCredentials: true,
+      },
     )
-    const { access_token, refresh_token: newRefresh } = response.data
-    localStorage.setItem('token', access_token)
-    if (newRefresh) {
-      localStorage.setItem('refresh_token', newRefresh)
-    }
+    const { access_token } = response.data
+    if (access_token) setAccessToken(access_token)
     return access_token
   } catch {
-    localStorage.removeItem('token')
-    localStorage.removeItem('refresh_token')
     return null
   }
 }
 
+// CSRF token — read from cookie
+function getCsrfToken(): string | null {
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/)
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+// Interceptor: Authorization header from in-memory token + CSRF on mutations
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
+  const token = getAccessToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
+  }
+  if (config.method && !['get', 'head', 'options'].includes(config.method)) {
+    const csrfToken = getCsrfToken()
+    if (csrfToken) {
+      config.headers['X-CSRF-Token'] = csrfToken
+    }
   }
   return config
 })
@@ -53,14 +63,12 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
-    // Só tenta refresh em 401 e se não for a própria chamada de refresh
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
       !originalRequest.url?.includes('/auth/refresh')
     ) {
       if (_isRefreshing) {
-        // Outra requisição já está tentando refresh — aguarda
         return new Promise((resolve) => {
           _addRefreshSubscriber((newToken: string) => {
             originalRequest.headers.Authorization = `Bearer ${newToken}`
@@ -76,15 +84,11 @@ api.interceptors.response.use(
       _isRefreshing = false
 
       if (newToken) {
-        // Notifica subscribers e re-tenta a requisição original
         _onRefreshed(newToken)
         originalRequest.headers.Authorization = `Bearer ${newToken}`
         return api(originalRequest)
       }
 
-      // Refresh falhou — emite unauthorized
-      localStorage.removeItem('token')
-      localStorage.removeItem('refresh_token')
       _refreshSubscribers = []
       window.dispatchEvent(new CustomEvent('auth:unauthorized'))
     }

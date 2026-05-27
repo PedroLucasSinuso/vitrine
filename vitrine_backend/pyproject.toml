@@ -25,6 +25,7 @@ dependencies = [
     "pillow>=12.2.0",
     "cryptography>=44.0.0",
     "weasyprint>=68.1",
+    "alembic>=1.18.4",
 ]
 
 [tool.setuptools]

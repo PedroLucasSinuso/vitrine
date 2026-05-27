@@ -46,7 +46,7 @@ export default function Temporal() {
 
   const cacheKey = `temporal_${metrica}`
 
-  const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false) => {
+  const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false, signal?: AbortSignal) => {
     const p = periodoOverride ?? periodo
     if (!force) {
       const cached = cache.get<{ hora: PontoHoraDTO[]; dia: PontoDiaSemanaDTO[] }>(cacheKey, p)
@@ -56,14 +56,15 @@ export default function Temporal() {
     setLoading(true)
     try {
       const [hora, dia] = await Promise.all([
-        fetchTemporalHora(p, metrica),
-        fetchTemporalDiaSemana(p, metrica),
+        fetchTemporalHora(p, metrica, signal),
+        fetchTemporalDiaSemana(p, metrica, signal),
       ])
       setPorHora(hora)
       setPorDia(dia)
       cache.set(cacheKey, p, { hora, dia })
     } catch (e: unknown) {
-      const err = e as { response?: { status?: number; data?: { detail?: string } } }
+      const err = e as { response?: { status?: number; data?: { detail?: string } }; name?: string }
+      if (err?.name === 'CanceledError' || err?.name === 'AbortError') return
       if (err.response?.status === 400) setErro(err.response.data?.detail ?? 'Erro ao carregar dados.')
       else setErro('Erro ao carregar dados.')
     } finally {
@@ -71,7 +72,12 @@ export default function Temporal() {
     }
   }, [periodo, metrica, cache]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { const t = setTimeout(() => buscar()); return () => clearTimeout(t) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const controller = new AbortController()
+    const signal = controller.signal
+    const t = setTimeout(() => buscar(undefined, undefined, signal))
+    return () => { clearTimeout(t); controller.abort() }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleBuscar(periodoOverride?: PeriodoBi) {
     cache.invalidate(cacheKey)

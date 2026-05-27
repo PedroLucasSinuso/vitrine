@@ -1,9 +1,20 @@
+import { jwtDecode } from 'jwt-decode'
 import api from './client'
-import { getRole } from './auth'
-import type { ProdutoBasico, ProdutoCompleto } from '../types'
+import { getAccessToken } from './tokenStore'
+import type { ProdutoBasico, ProdutoCompleto, Role } from '../types'
+
+function _getRole(): Role | null {
+  const token = getAccessToken()
+  if (!token) return null
+  try {
+    return jwtDecode<{ role?: Role }>(token).role ?? null
+  } catch {
+    return null
+  }
+}
 
 export async function buscarProduto(codigo: string): Promise<ProdutoBasico | ProdutoCompleto> {
-  const role = getRole()
+  const role = _getRole()
   const endpoint = role === 'supervisor' || role === 'admin'
     ? `/produtos/${codigo}/completo`
     : `/produtos/${codigo}`
