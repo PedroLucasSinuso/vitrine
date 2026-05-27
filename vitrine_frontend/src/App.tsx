@@ -1,5 +1,6 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { tryRefreshOnStartup } from './api/client'
 import Login from './pages/Login'
 import Busca from './pages/Busca'
 import Admin from './pages/Admin'
@@ -41,10 +42,14 @@ function HomeRouter() {
 }
 
 /** Escuta o evento auth:unauthorized disparado pelo interceptor 401
- *  e redireciona via React Router (sem full page reload). */
+ *  e redireciona via React Router (sem full page reload).
+ *  Também tenta renovar o token proativamente no startup. */
 function AuthListener() {
   const navigate = useNavigate()
   React.useEffect(() => {
+    // Tenta renovar o token no startup (se cookie HttpOnly ainda for válido)
+    tryRefreshOnStartup().catch(() => {})
+
     const handler = () => navigate('/login', { replace: true })
     window.addEventListener('auth:unauthorized', handler)
     return () => window.removeEventListener('auth:unauthorized', handler)

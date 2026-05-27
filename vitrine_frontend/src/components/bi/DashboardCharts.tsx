@@ -130,7 +130,7 @@ export default memo(function DashboardCharts({
                   cursor={CHART_THEME.tooltip.cursor}
                   contentStyle={CHART_THEME.tooltip.contentStyle}
                   formatter={((v: number) => formatCurrency(v)) as never}
-                  labelFormatter={((l: string) => `${l}h`)}
+                  labelFormatter={(l) => `${l}h`}
                 />
                 <Area
                   type="monotone"

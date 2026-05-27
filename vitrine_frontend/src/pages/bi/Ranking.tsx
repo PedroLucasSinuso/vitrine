@@ -76,7 +76,7 @@ export default function Ranking() {
     const signal = controller.signal
     const t = setTimeout(() => buscar(undefined, undefined, signal))
     return () => { clearTimeout(t); controller.abort() }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [buscar])
 
   function syncParams(m: Metrica, t: number) {
     const next = new URLSearchParams()

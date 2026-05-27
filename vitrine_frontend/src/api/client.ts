@@ -8,15 +8,20 @@ const api = axios.create({
 
 // Flag para evitar loop infinito de refresh
 let _isRefreshing = false
-let _refreshSubscribers: ((token: string) => void)[] = []
+let _refreshSubscribers: Array<{ resolve: (token: string) => void; reject: (err: unknown) => void }> = []
 
 function _onRefreshed(newToken: string) {
-  _refreshSubscribers.forEach((cb) => cb(newToken))
+  _refreshSubscribers.forEach((s) => s.resolve(newToken))
   _refreshSubscribers = []
 }
 
-function _addRefreshSubscriber(cb: (token: string) => void) {
-  _refreshSubscribers.push(cb)
+function _onRefreshFailed(error: unknown) {
+  _refreshSubscribers.forEach((s) => s.reject(error))
+  _refreshSubscribers = []
+}
+
+function _addRefreshSubscriber(resolve: (token: string) => void, reject: (err: unknown) => void) {
+  _refreshSubscribers.push({ resolve, reject })
 }
 
 async function _tryRefreshToken(): Promise<string | null> {
@@ -69,11 +74,14 @@ api.interceptors.response.use(
       !originalRequest.url?.includes('/auth/refresh')
     ) {
       if (_isRefreshing) {
-        return new Promise((resolve) => {
-          _addRefreshSubscriber((newToken: string) => {
-            originalRequest.headers.Authorization = `Bearer ${newToken}`
-            resolve(api(originalRequest))
-          })
+        return new Promise((resolve, reject) => {
+          _addRefreshSubscriber(
+            (newToken: string) => {
+              originalRequest.headers.Authorization = `Bearer ${newToken}`
+              resolve(api(originalRequest))
+            },
+            (err) => reject(err),
+          )
         })
       }
 
@@ -89,12 +97,24 @@ api.interceptors.response.use(
         return api(originalRequest)
       }
 
-      _refreshSubscribers = []
+      // Rejeita subscribers pendentes em vez de apenas limpar (evita memory leak)
+      _onRefreshFailed(error)
       window.dispatchEvent(new CustomEvent('auth:unauthorized'))
     }
 
     return Promise.reject(error)
   }
 )
+
+/**
+ * Tenta renovar o token proativamente no startup da aplicação.
+ * Útil quando a página é recarregada e o cookie HttpOnly ainda é válido
+ * mas o token em memória foi perdido. Chamar cedo evita 401s em cascata.
+ */
+export async function tryRefreshOnStartup(): Promise<boolean> {
+  if (getAccessToken()) return true
+  const token = await _tryRefreshToken()
+  return token !== null
+}
 
 export default api

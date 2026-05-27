@@ -77,7 +77,7 @@ export default function Temporal() {
     const signal = controller.signal
     const t = setTimeout(() => buscar(undefined, undefined, signal))
     return () => { clearTimeout(t); controller.abort() }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [buscar])
 
   function handleBuscar(periodoOverride?: PeriodoBi) {
     cache.invalidate(cacheKey)

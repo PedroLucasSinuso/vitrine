@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { format } from 'date-fns'
 import {
   fetchKpis, fetchKpisComparativo, fetchRanking, fetchDiario,
-  fetchDiarioComparativo, fetchTemporalHora, fetchCurvaAbc,
+  fetchTemporalHora, fetchCurvaAbc,
   exportarExcelBI, exportarPDF,
 } from '../../api/bi'
 import { baixarCSVdeArray } from '../../utils/csv'
@@ -22,7 +22,7 @@ import EmptyState from '../../components/ui/EmptyState'
 import ErrorBanner from '../../components/ui/ErrorBanner'
 import type {
   KpisDTO, KpisComparativoDTO, ItemRankingDTO,
-  PontoDiarioDTO, PontoHoraDTO, DiarioComparativoDTO,
+  PontoDiarioDTO, PontoHoraDTO,
   PeriodoBi, ItemCurvaAbcDTO,
 } from '../../types'
 import { variacaoInfo } from './dashboardHelpers'
@@ -63,7 +63,6 @@ export default function Dashboard() {
   const [loadingMeta, setLoadingMeta] = useState(true)
 
   // ── Gráficos de tendência ──
-  const [diarioReceita, setDiarioReceita] = useState<PontoDiarioDTO[]>([])
   const [diarioTicketMedio, setDiarioTicketMedio] = useState<PontoDiarioDTO[]>([])
   const [diarioTickets, setDiarioTickets] = useState<PontoDiarioDTO[]>([])
   const [loadingDiario, setLoadingDiario] = useState(true)
@@ -71,13 +70,6 @@ export default function Dashboard() {
   // ── Gráfico de receita por hora ──
   const [dadosHora, setDadosHora] = useState<PontoHoraDTO[]>([])
   const [loadingHora, setLoadingHora] = useState(true)
-
-  // ── Comparativo do último dia (backed by /diario/comparativo) ──
-  const [diarioComparativo, setDiarioComparativo] = useState<{
-    receita: DiarioComparativoDTO | null
-    tickets: DiarioComparativoDTO | null
-    ticketMedio: DiarioComparativoDTO | null
-  }>({ receita: null, tickets: null, ticketMedio: null })
 
   // Determina qual fonte de dados usar (comparativo ou simples)
   const kpisAtivos = kpisComp ?? kpis
@@ -147,11 +139,9 @@ export default function Dashboard() {
   // ── Carregar dados diários + comparativo ──
   const buscarDiario = useCallback(async (p: PeriodoBi, signal?: AbortSignal) => {
     if (p.data_inicio === p.data_fim) {
-      setDiarioReceita([])
       setDiarioTicketMedio([])
       setDiarioTickets([])
       setDadosHora([])
-      setDiarioComparativo({ receita: null, tickets: null, ticketMedio: null })
       setLoadingDiario(false)
       setLoadingHora(false)
       return
@@ -159,38 +149,21 @@ export default function Dashboard() {
     setLoadingDiario(true)
     setLoadingHora(true)
     try {
-      const [rc, tm, qt, hora] = await Promise.all([
-        fetchDiario(p, 'receita_produto', signal),
+      const [tm, qt, hora] = await Promise.all([
         fetchDiario(p, 'ticket_medio', signal),
         fetchDiario(p, 'qtd_tickets', signal),
         fetchTemporalHora(p, 'receita_produto', signal),
       ])
-      setDiarioReceita(rc)
       setDiarioTicketMedio(tm)
       setDiarioTickets(qt)
       setDadosHora(hora)
-
-      if (comparar) {
-        try {
-          const [compRc, compTk, compTm] = await Promise.all([
-            fetchDiarioComparativo(p, 'receita_produto', signal),
-            fetchDiarioComparativo(p, 'qtd_tickets', signal),
-            fetchDiarioComparativo(p, 'ticket_medio', signal),
-          ])
-          setDiarioComparativo({ receita: compRc, tickets: compTk, ticketMedio: compTm })
-        } catch {
-          setDiarioComparativo({ receita: null, tickets: null, ticketMedio: null })
-        }
-      } else {
-        setDiarioComparativo({ receita: null, tickets: null, ticketMedio: null })
-      }
     } catch {
       // silencioso — série diária falhou
     } finally {
       setLoadingDiario(false)
       setLoadingHora(false)
     }
-  }, [comparar])
+  }, [])
 
   const buscar = useCallback(async (periodoOverride?: PeriodoBi, force = false, signal?: AbortSignal) => {
     const p = periodoOverride ?? periodo
@@ -360,31 +333,8 @@ export default function Dashboard() {
         <EmptyState title="Selecione um período" description="Escolha um período para analisar os dados." />
       )}
 
-      {/* ── Resumo do Dia ── */}
-      {kpisAtivos && diarioReceita.length > 0 && (
-        <ResumoDia
-          receita={diarioReceita}
-          tickets={diarioTickets}
-          ticketMedio={diarioTicketMedio}
-          comparar={comparar}
-          comparativo={diarioComparativo}
-        />
-      )}
-
-      {/* ── Resumo do Dia skeleton ── */}
-      {kpisAtivos && loadingDiario && diarioReceita.length === 0 && (
-        <div className="bg-bg-card border border-border rounded-xl p-4">
-          <div className="grid grid-cols-3 gap-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex flex-col gap-2">
-                <div className="h-3 w-16 bg-bg-hover rounded animate-pulse" />
-                <div className="h-6 w-24 bg-bg-hover rounded animate-pulse" />
-                <div className="h-3 w-20 bg-bg-hover rounded animate-pulse" />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* ── Resumo do Dia (sempre HOJE, independente do período) ── */}
+      {kpisAtivos && <ResumoDia />}
 
       {/* ── Secondary KPIs (4 cards) ── */}
       <DashboardSecondaryKpis

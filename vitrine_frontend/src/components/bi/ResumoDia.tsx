@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { CalendarDays, Clock } from 'lucide-react'
+import { format } from 'date-fns'
 import Card from '../ui/Card'
+import Skeleton from '../ui/Skeleton'
 import { getConfigsCache } from '../../stores/configStore'
+import { fetchDiario, fetchDiarioComparativo } from '../../api/bi'
 import type { PontoDiarioDTO, DiarioComparativoDTO } from '../../types'
 import { formatCurrency, formatDateWithWeekday } from '../../utils/formatters'
 
@@ -41,21 +44,19 @@ function LinhaOffset({ comp, fmt }: { comp: DiarioComparativoDTO | null; fmt: (v
   )
 }
 
-/* ── Resumo do Dia ── */
-interface ResumoDiaProps {
-  receita: PontoDiarioDTO[]
-  tickets: PontoDiarioDTO[]
-  ticketMedio: PontoDiarioDTO[]
-  comparar: boolean
-  comparativo?: {
+/* ── Resumo do Dia (sempre HOJE, independente do período selecionado) ── */
+export default function ResumoDia() {
+  const [marketName, setMarketName] = useState<string | null>(null)
+  const [receita, setReceita] = useState<PontoDiarioDTO[]>([])
+  const [tickets, setTickets] = useState<PontoDiarioDTO[]>([])
+  const [ticketMedio, setTicketMedio] = useState<PontoDiarioDTO[]>([])
+  const [comparativo, setComparativo] = useState<{
     receita: DiarioComparativoDTO | null
     tickets: DiarioComparativoDTO | null
     ticketMedio: DiarioComparativoDTO | null
-  } | null
-}
-
-export default function ResumoDia({ receita, tickets, ticketMedio, comparar: compAtivo, comparativo }: ResumoDiaProps) {
-  const [marketName, setMarketName] = useState<string | null>(null)
+  }>({ receita: null, tickets: null, ticketMedio: null })
+  const [loading, setLoading] = useState(true)
+  const [erro, setErro] = useState<string | null>(null)
 
   useEffect(() => {
     getConfigsCache().then((c) => {
@@ -63,21 +64,45 @@ export default function ResumoDia({ receita, tickets, ticketMedio, comparar: com
     }).catch(() => {})
   }, [])
 
-  const sorted = [...receita].sort((a, b) => b.data.localeCompare(a.data))
-  const ultimo = sorted[0]
-  if (!ultimo) return null
+  // Busca dados APENAS do dia atual, independente do período do Dashboard
+  useEffect(() => {
+    const controller = new AbortController()
+    const signal = controller.signal
+    const hoje = format(new Date(), 'yyyy-MM-dd')
+    const periodoHoje = { data_inicio: hoje, data_fim: hoje }
 
-  const compReceita = compAtivo ? comparativo?.receita ?? null : null
-  const compTickets = compAtivo ? comparativo?.tickets ?? null : null
-  const compTicketMedio = compAtivo ? comparativo?.ticketMedio ?? null : null
+    Promise.all([
+      fetchDiario(periodoHoje, 'receita_produto', signal),
+      fetchDiario(periodoHoje, 'qtd_tickets', signal),
+      fetchDiario(periodoHoje, 'ticket_medio', signal),
+      fetchDiarioComparativo(periodoHoje, 'receita_produto', signal),
+      fetchDiarioComparativo(periodoHoje, 'qtd_tickets', signal),
+      fetchDiarioComparativo(periodoHoje, 'ticket_medio', signal),
+    ])
+      .then(([rc, tk, tm, compRc, compTk, compTm]) => {
+        setReceita(rc)
+        setTickets(tk)
+        setTicketMedio(tm)
+        setComparativo({ receita: compRc, tickets: compTk, ticketMedio: compTm })
+      })
+      .catch((e: unknown) => {
+        const err = e as { name?: string }
+        if (err?.name === 'CanceledError' || err?.name === 'AbortError') return
+        setErro('Indisponível')
+      })
+      .finally(() => setLoading(false))
 
-  // Usa o valor do endpoint /diario/comparativo quando disponível.
-  // Esse endpoint já aplica _filtrar_hora() para dias parciais (hoje),
-  // garantindo consistência entre o valor exibido e o badge de variação.
-  // Fallback para a série diária bruta quando não há comparativo.
-  const valorReceita = compReceita?.valor ?? receita.find((t) => t.data === ultimo.data)?.valor ?? 0
-  const valorTickets = compTickets?.valor ?? tickets.find((t) => t.data === ultimo.data)?.valor ?? 0
-  const valorTicketMedio = compTicketMedio?.valor ?? ticketMedio.find((t) => t.data === ultimo.data)?.valor ?? 0
+    return () => controller.abort()
+  }, [])
+
+  const hojeStr = format(new Date(), 'yyyy-MM-dd')
+  const valorReceita = receita.find((r) => r.data === hojeStr)?.valor ?? 0
+  const valorTickets = tickets.find((t) => t.data === hojeStr)?.valor ?? 0
+  const valorTicketMedio = ticketMedio.find((t) => t.data === hojeStr)?.valor ?? 0
+
+  const compReceita = comparativo.receita
+  const compTickets = comparativo.tickets
+  const compTicketMedio = comparativo.ticketMedio
 
   const ultimoEParcial = !!compReceita?.parcial_ate
   const parcialAte = compReceita?.parcial_ate ?? null
@@ -93,7 +118,7 @@ export default function ResumoDia({ receita, tickets, ticketMedio, comparar: com
             {marketName ? `${marketName} — ` : ''}Hoje
           </span>
         </div>
-        <span className="text-[11px] text-text-muted">{formatDateWithWeekday(ultimo.data)}</span>
+        <span className="text-[11px] text-text-muted">{formatDateWithWeekday(hojeStr)}</span>
         {ultimoEParcial && parcialAte && (
           <span className="text-[10px] text-warning bg-warning-light px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1">
             <Clock size={10} /> Parcial até {parcialAte}
@@ -101,31 +126,49 @@ export default function ResumoDia({ receita, tickets, ticketMedio, comparar: com
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-8">
-        {/* Vendas */}
-        <div className="flex flex-col gap-1.5">
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-text-muted">Vendas</p>
-          <p className="text-xl font-bold text-text-primary tabular-nums tracking-tight">{formatCurrency(valorReceita)}</p>
-          <BadgeVariacao atual={valorReceita} comp={compReceita} />
-          <LinhaOffset comp={compReceita} fmt={formatCurrency} />
+      {loading && (
+        <div className="grid grid-cols-3 gap-8">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex flex-col gap-2">
+              <Skeleton className="h-3 w-12" />
+              <Skeleton className="h-7 w-24" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          ))}
         </div>
+      )}
 
-        {/* Tickets */}
-        <div className="flex flex-col gap-1.5">
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-text-muted">Tickets</p>
-          <p className="text-xl font-bold text-text-primary tabular-nums tracking-tight">{Math.round(valorTickets).toLocaleString('pt-BR')}</p>
-          <BadgeVariacao atual={valorTickets} comp={compTickets} />
-          <LinhaOffset comp={compTickets} fmt={(v) => Math.round(v).toLocaleString('pt-BR')} />
-        </div>
+      {!loading && erro && (
+        <p className="text-center text-sm text-text-muted py-4">{erro}</p>
+      )}
 
-        {/* Ticket Médio */}
-        <div className="flex flex-col gap-1.5">
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-text-muted">Ticket Médio</p>
-          <p className="text-xl font-bold text-text-primary tabular-nums tracking-tight">{formatCurrency(valorTicketMedio)}</p>
-          <BadgeVariacao atual={valorTicketMedio} comp={compTicketMedio} />
-          <LinhaOffset comp={compTicketMedio} fmt={formatCurrency} />
+      {!loading && !erro && (
+        <div className="grid grid-cols-3 gap-8">
+          {/* Vendas */}
+          <div className="flex flex-col gap-1.5">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-text-muted">Vendas</p>
+            <p className="text-xl font-bold text-text-primary tabular-nums tracking-tight">{formatCurrency(valorReceita)}</p>
+            <BadgeVariacao atual={valorReceita} comp={compReceita} />
+            <LinhaOffset comp={compReceita} fmt={formatCurrency} />
+          </div>
+
+          {/* Tickets */}
+          <div className="flex flex-col gap-1.5">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-text-muted">Tickets</p>
+            <p className="text-xl font-bold text-text-primary tabular-nums tracking-tight">{Math.round(valorTickets).toLocaleString('pt-BR')}</p>
+            <BadgeVariacao atual={valorTickets} comp={compTickets} />
+            <LinhaOffset comp={compTickets} fmt={(v) => Math.round(v).toLocaleString('pt-BR')} />
+          </div>
+
+          {/* Ticket Médio */}
+          <div className="flex flex-col gap-1.5">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-text-muted">Ticket Médio</p>
+            <p className="text-xl font-bold text-text-primary tabular-nums tracking-tight">{formatCurrency(valorTicketMedio)}</p>
+            <BadgeVariacao atual={valorTicketMedio} comp={compTicketMedio} />
+            <LinhaOffset comp={compTicketMedio} fmt={formatCurrency} />
+          </div>
         </div>
-      </div>
+      )}
     </Card>
   )
 }

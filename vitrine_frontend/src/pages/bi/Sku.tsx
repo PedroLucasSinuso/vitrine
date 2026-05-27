@@ -165,30 +165,7 @@ export default function Sku() {
               <p className="mt-1 text-sm text-primary font-medium">{produtoNome}</p>
             )}
           </div>
-          <div className="flex gap-2">
-            <input
-              className="form-input-base flex-1"
-              placeholder="Código do produto (EAN ou PLU)"
-              value={codigo}
-              onChange={(e) => setCodigo(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  setSearchParams({ codigo })
-                  buscar(codigo)
-                }
-              }}
-            />
-            <button
-              onClick={() => {
-                setSearchParams({ codigo })
-                buscar()
-              }}
-              disabled={loading}
-              className="bg-primary hover:bg-primary-hover text-white font-semibold px-4 py-2 rounded-lg transition disabled:opacity-50 text-sm"
-            >
-              {loading ? '...' : 'Buscar'}
-            </button>
-          </div>
+
           {erro && <ErrorBanner message={erro} />}
           <ExportButtons
             onExcel={() => { exportarExcelBI(periodo, 'sku', { codigo }); toast({ type: 'success', message: 'Excel exportado' }) }}
