@@ -196,6 +196,24 @@
   50% { background-color: var(--color-primary); opacity: 0.08; }
 }
 
+/* ── Premium glow animations ── */
+@keyframes glow-danger {
+  0%, 100% { box-shadow: 0 0 12px color-mix(in srgb, var(--color-danger) 15%, transparent), 0 0 40px color-mix(in srgb, var(--color-danger) 5%, transparent); }
+  50% { box-shadow: 0 0 20px color-mix(in srgb, var(--color-danger) 25%, transparent), 0 0 60px color-mix(in srgb, var(--color-danger) 8%, transparent); }
+}
+@keyframes glow-warning {
+  0%, 100% { box-shadow: 0 0 12px color-mix(in srgb, var(--color-warning) 12%, transparent), 0 0 40px color-mix(in srgb, var(--color-warning) 4%, transparent); }
+  50% { box-shadow: 0 0 20px color-mix(in srgb, var(--color-warning) 20%, transparent), 0 0 60px color-mix(in srgb, var(--color-warning) 6%, transparent); }
+}
+@keyframes glow-info {
+  0%, 100% { box-shadow: 0 0 12px color-mix(in srgb, var(--color-info) 10%, transparent), 0 0 40px color-mix(in srgb, var(--color-info) 3%, transparent); }
+  50% { box-shadow: 0 0 20px color-mix(in srgb, var(--color-info) 18%, transparent), 0 0 60px color-mix(in srgb, var(--color-info) 5%, transparent); }
+}
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 /* Utility classes */
 .animate-fade-in-up { animation: fade-in-up 0.5s ease-out both; }
 .animate-pulse-glow { animation: pulse-glow 0.8s ease-out; }
@@ -205,6 +223,10 @@
 .animate-fade-out { animation: fade-out 0.2s ease-in both; }
 .animate-slide-down { animation: slide-down 0.2s ease-in both; }
 .animate-highlight-pulse { animation: highlight-pulse 1.5s ease-out; }
+.animate-glow-danger { animation: glow-danger 3s ease-in-out infinite; }
+.animate-glow-warning { animation: glow-warning 3s ease-in-out infinite; }
+.animate-glow-info { animation: glow-info 3s ease-in-out infinite; }
+.animate-status-pulse { animation: status-pulse 2s ease-in-out infinite; }
 
 /* Card hover lift — reutilizável */
 .card-hover {
@@ -214,6 +236,18 @@
 .card-hover:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-card-hover);
+}
+
+/* Hero card — para a seção de resumo executivo premium */
+.hero-card {
+  background: linear-gradient(135deg, 
+    color-mix(in srgb, var(--color-primary) 8%, transparent) 0%, 
+    color-mix(in srgb, var(--color-info) 4%, transparent) 50%,
+    transparent 100%);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 12%, transparent);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card), 
+              0 0 40px color-mix(in srgb, var(--color-primary) 5%, transparent);
 }
 
 /* Focus ring refinement */

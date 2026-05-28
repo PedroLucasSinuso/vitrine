@@ -78,28 +78,38 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
   }
 
   function navBtnClass(active: boolean, collapsed: boolean): string {
-    const base = 'relative w-full flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-fast text-left'
-    if (collapsed) return `${base} justify-center px-0 py-2.5 ${active ? 'text-primary font-semibold bg-bg-sidebar-item-active' : 'text-text-muted hover:text-text-primary hover:bg-bg-hover'}`
-    return `${base} px-3 py-2 ${active ? 'text-primary font-semibold bg-bg-sidebar-item-active' : 'text-text-muted hover:text-text-primary hover:bg-bg-hover'}`
+    const base = 'relative w-full flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-150 text-left'
+    if (collapsed) {
+      return `${base} justify-center px-0 py-2.5 ${
+        active
+          ? 'text-primary bg-primary/[0.1] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-primary),12%)]'
+          : 'text-text-muted hover:text-text-secondary hover:bg-bg-hover'
+      }`
+    }
+    return `${base} px-3 py-2.5 ${
+      active
+        ? 'text-primary bg-primary/[0.08] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-primary),10%)] font-semibold'
+        : 'text-text-muted hover:text-text-secondary hover:bg-bg-hover'
+    }`
   }
 
   function bottomBtnClass(collapsed: boolean, danger = false): string {
-    const base = 'w-full flex items-center gap-3 rounded-lg text-sm transition-all duration-fast'
+    const base = 'w-full flex items-center gap-3 rounded-lg text-sm transition-all duration-150'
     const color = danger
-      ? 'text-danger hover:bg-danger-light'
-      : 'text-text-muted hover:text-text-primary hover:bg-bg-hover'
+      ? 'text-danger hover:bg-danger/[0.08]'
+      : 'text-text-muted hover:text-text-secondary hover:bg-bg-hover'
     if (collapsed) return `${base} justify-center px-0 py-2.5 ${color}`
     return `${base} px-3 py-2 ${color}`
   }
 
   return (
     <aside
-      className={`fixed left-0 top-0 h-full z-40 bg-bg-sidebar border-r border-border flex flex-col transition-all duration-300 ease-out ${
+      className={`fixed left-0 top-0 h-full z-40 bg-bg-sidebar border-r border-border/60 flex flex-col transition-all duration-300 ease-out ${
         collapsed ? 'w-[64px]' : 'w-[var(--sidebar-width)]'
       }`}
     >
       {/* Logo + toggle */}
-      <div className={`flex items-center h-[var(--header-height)] border-b border-border shrink-0 ${
+      <div className={`flex items-center h-[var(--header-height)] border-b border-border/50 shrink-0 ${
         collapsed ? 'justify-center px-0' : 'justify-between px-5'
       }`}>
         {!collapsed && <Logo height={28} className="text-primary shrink-0" />}
@@ -114,7 +124,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4 space-y-5">
+      <nav className="flex-1 overflow-y-auto py-5 space-y-6">
         {navGroups.map((group) => {
           const visibleItems = group.items.filter(item => role && item.roles.includes(role))
           if (visibleItems.length === 0) return null
@@ -123,8 +133,8 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
             <div key={group.label}>
               {/* Group label */}
               {!collapsed && (
-                <div className="px-5 mb-1.5">
-                  <span className="text-[11px] font-semibold text-text-muted uppercase tracking-widest select-none">
+                <div className="px-5 mb-2">
+                  <span className="text-[10px] font-semibold text-text-muted uppercase tracking-[0.12em] select-none">
                     {group.label}
                   </span>
                 </div>
@@ -141,11 +151,6 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
                       className={navBtnClass(active, collapsed)}
                       title={collapsed ? item.label : undefined}
                     >
-                      {/* Active indicator bar */}
-                      {active && (
-                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-primary rounded-r-full" />
-                      )}
-
                       <span className="shrink-0">{item.icon}</span>
                       {!collapsed && <span className="truncate">{item.label}</span>}
                     </button>
@@ -158,14 +163,17 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
       </nav>
 
       {/* Bottom — User area */}
-      <div className={`border-t border-border py-3 space-y-1 ${collapsed ? 'px-1' : 'px-3'}`}>
+      <div className={`border-t border-border/50 py-3 space-y-1 ${collapsed ? 'px-1' : 'px-3'}`}>
         {/* User profile */}
         {!collapsed ? (
           <div className="flex items-center gap-3 px-2 py-2 rounded-lg">
             <UserAvatar name={displayName} size="sm" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-text-primary truncate">{displayName}</p>
-              <span className="text-[11px] text-text-muted">Online</span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-success" />
+                <span className="text-[10px] text-text-muted">Online</span>
+              </div>
             </div>
           </div>
         ) : (
@@ -176,7 +184,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
 
         {/* Support */}
         <button className={bottomBtnClass(collapsed)} title={collapsed ? 'Ajuda' : undefined}>
-          <HelpCircle size={18} className="shrink-0" />
+          <HelpCircle size={16} className="shrink-0" />
           {!collapsed && <span>Ajuda</span>}
         </button>
 
@@ -186,7 +194,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
           className={bottomBtnClass(collapsed, true)}
           title={collapsed ? 'Sair' : undefined}
         >
-          <LogOut size={18} className="shrink-0" />
+          <LogOut size={16} className="shrink-0" />
           {!collapsed && <span>Sair</span>}
         </button>
       </div>
