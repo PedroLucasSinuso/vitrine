@@ -1,5 +1,6 @@
 /** Página principal do Vitrine Intelligence — AI Command Center. */
-import { Sparkles, BarChart3, AlertTriangle, TrendingUp, Activity, RotateCw } from 'lucide-react'
+import { useCallback } from 'react'
+import { Sparkles, BarChart3, AlertTriangle, TrendingUp, Activity, RotateCw, FileDown, RefreshCw } from 'lucide-react'
 import BiPageLayout from '../../components/bi/BiPageLayout'
 import Button from '../../components/ui/Button'
 import Skeleton from '../../components/ui/Skeleton'
@@ -7,7 +8,9 @@ import EmptyState from '../../components/ui/EmptyState'
 import ErrorBanner from '../../components/ui/ErrorBanner'
 import ResumoExecutivo from '../../components/intelligence/ResumoExecutivo'
 import InsightCard from '../../components/intelligence/InsightCard'
+import MacroStrip from '../../components/intelligence/MacroStrip'
 import { useIntelligence } from '../../hooks/useIntelligence'
+import { useMacroIndicators } from '../../hooks/useMacroIndicators'
 
 /** KPI rápido para o hero */
 function HeroKpi({ icon, label, value, trend, color }: {
@@ -40,6 +43,18 @@ function HeroKpi({ icon, label, value, trend, color }: {
 
 export default function Intelligence() {
   const { status, resultado, erro, gerarAnalise, dismissInsight } = useIntelligence()
+  const { indicadores: macroIndicadores, status: macroStatus, erro: macroErro } = useMacroIndicators()
+
+  const exportarRelatorio = useCallback(() => {
+    if (!resultado) return
+    const blob = new Blob([JSON.stringify(resultado, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `intelligence_${new Date().toISOString().split('T')[0]}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [resultado])
 
   return (
     <BiPageLayout
@@ -143,6 +158,13 @@ export default function Intelligence() {
           </div>
         </div>
 
+        {/* ── Macro Indicators Strip ── */}
+        <MacroStrip
+          indicadores={macroIndicadores}
+          loading={macroStatus === 'loading'}
+          erro={macroErro}
+        />
+
         {/* ── Loading ── */}
         {status === 'loading' && (
           <div className="space-y-4">
@@ -188,12 +210,19 @@ export default function Intelligence() {
               <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mr-1">
                 Ações rápidas
               </span>
-              <Button variant="secondary" size="sm">
-                <BarChart3 size={12} />
+              <Button
+                variant="secondary" size="sm"
+                onClick={exportarRelatorio}
+                disabled={!resultado}
+              >
+                <FileDown size={12} />
                 Exportar relatório
               </Button>
-              <Button variant="secondary" size="sm">
-                <RotateCw size={12} />
+              <Button
+                variant="secondary" size="sm"
+                onClick={gerarAnalise}
+              >
+                <RefreshCw size={12} />
                 Regenerar insights
               </Button>
             </div>

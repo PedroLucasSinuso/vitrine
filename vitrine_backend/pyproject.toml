@@ -31,5 +31,10 @@ dependencies = [
 [tool.setuptools]
 packages = ["app"]
 
+[dependency-groups]
+dev = [
+    "pytest-asyncio>=1.4.0",
+]
+
 [project.scripts]
 create-admin = "app.cli:main"

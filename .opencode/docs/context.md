@@ -1,8 +1,11 @@
 # Current Context
 
-> Audit stage: **Completa. 31 issues da Revisão Adversarial corrigidas. 227 testes passando.**
+> Audit stage: **Completa. 31 issues da Revisão Adversarial corrigidas. 334 testes passando.**
+> Data da última atualização: **2026-05-28**
+> Status: **Intelligence Module — completo + Macro Indicators (F1-F3) implementados. 334 testes.**
 > Data da auditoria: **2026-05-27**
 > Status: **Sprints 1-8 + 6 refinamentos concluídos. 31/31 issues do correction-plan corrigidos.**
+> Macro indicators: **Fases 1, 2 e 3 implementadas. ADR-016 em vigor.**
 
 ---
 
@@ -220,7 +223,7 @@
 - BI cache agora com TTL de 5 minutos + FIFO 50 entradas + invalidação pós-sync.
 - Inventário com proteções anti-loop (debounce 2s global, stopper frame de câmera, pausa escaneio).
 - Exportação Excel gerada no backend (elimina dependência `xlsx` no frontend).
-- **227 testes passando** (pytest), 18 testes frontend.
+- **334 testes passando** (pytest), 0 falhas frontend.
 - **54+ issues corrigidos** em múltiplos sprints.
 - Cadeia JWT completa: emissão → revogação (blacklist + token_version) → refresh token com rotação → role change invalidation.
 - AdapterRegistry funcional (`register_adapter()` + `_ADAPTER_REGISTRY`).
@@ -328,6 +331,43 @@
 1. `_debug_items()` em `factory.py` — ainda chamado em 2 lugares mesmo com guard DEBUG (linhas 188, 190). O guard existe, mas se logger estiver em DEBUG, faz 3 scans desnecessários. ✅ Mitigado por `logger.isEnabledFor(DEBUG)`.
 2. Segundo async gap em `handleCodigo` (`await adicionarItemInventario()` linhas 283 e 303) — ainda presente, não bloqueante.
 
+### Macro Indicators — Implementação (2026-05-28)
+
+Plano completo documentado em ADR-016. 3 fases implementadas:
+
+**Fase 1 — Backend: `macro_fetcher.py` + cache mensal:**
+- Fetch ao vivo de 7 séries do BC SGS (Selic, Selic 12m, IPCA, IPCA Alimentação, IGP-M, INPC, Desemprego)
+- Zero valores hardcoded — removidos `ipca_alimentacao_12m`, `ipca_geral_12m`, `selic` do `config.py`
+- Cache mensal para indicadores mensais (IPCA, IGP-M, INPC, Desemprego); Selic sempre ao vivo
+- "API indisponível" como estado explícito (`disponivel=False` com mensagem descritiva)
+- Endpoint `GET /bi/intelligence/macro` (rate 30/h, sem auth)
+- ORM `MacroCache` em SQLite
+
+**Fase 2 — Detector `MacroContextoDetector`:**
+- 5 insights macro: Selic alta vs encalhe, IPCA Alimentação vs ticket, IGP-M vs custos fixos, desemprego vs consumo, IPCA geral vs faturamento real
+- Só gera insight se indicador `disponivel=True` — se API falhar, pula
+- Registrado no `service.py` + branch no `TemplateProvider`
+
+**Fase 3 — Frontend `MacroStrip`:**
+- Componentes: `MacroStrip`, `MacroCard`, hook `useMacroIndicators`, tipos `macro.ts`
+- Card com dois estados visuais (disponível / API indisponível)
+- Timestamp de consulta sempre visível
+- Integrado na página Intelligence entre Hero e ResumoExecutivo
+- `InsightTipo` ganha `macro_contexto`; `InsightCard` exibe badge do indicador de referência
+
+**Bug fix: cache deserialization (2026-05-28):**
+- `consultado_em` era salvo como string no cache (via `json.dumps(default=str)`) e não era reconvertido pra `datetime` ao carregar
+- Causava `'str' object has no attribute 'isoformat'` no endpoint `/macro`
+- Corrigido: `_obter_cache_mensal()` agora faz `datetime.fromisoformat()` no restore
+
+**Fixes finais (2026-05-28):**
+- MacroCards centralizados (`text-center` + `justify-center`)
+- Botão "Regenerar insights" chama `gerarAnalise()`
+- Botão "Exportar relatório" baixa JSON do resultado
+- 25 + 17 = 42 novos testes, 334 total, 0 falhas
+
+
+
 ### Backlog (Médio/Longo Prazo)
 
 21. ✅ JWT 8h + refresh token — **concluído** (Sprint 2 + Sprint 8: ACCESS_TOKEN_EXPIRE_MINUTES=30).
@@ -335,6 +375,8 @@
 23. Stream real no Excel export (openpyxl gera em RAM, pico ~250 MB para 50k produtos).
 24. Desacoplar domain models do ORM — **ProdutoPuro já existe** (`domain/pure/`), mas rotas HTTP ainda usam service antigo. Pendente: migrar rotas.
 25. Cache compartilhado (Redis) se houver multi-worker.
+26. ✅ **Macro indicators (F1-F3)** — concluído (2026-05-28). 3 fases: fetcher BC SGS, detector macro_contexto, frontend MacroStrip + MacroCard.
+27. **Macro indicators F4** — refresh manual no frontend (botão "Atualizar indicadores" que força re-fetch).
 
 ---
 
@@ -343,7 +385,7 @@
 | Documento | Conteúdo |
 |---|---|---|
 | `architecture.md` | Análise completa: layers, coupling, state, scalability, hotspots |
-| `decisions.md` | ADRs com tradeoffs documentados (ADR-001 a 015) |
+| `decisions.md` | ADRs com tradeoffs documentados (ADR-001 a 016) |
 | `context.md` (este) | Status atual, riscos, próximos passos |
 | `known-issues.md` | Histórico de correções + issues abertos |
 | `debug-audit-2026-05-25.md` | **NOVO** — Relatório completo da auditoria debug (23 issues) |

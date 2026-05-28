@@ -54,6 +54,11 @@ class InsightMetricas(BaseModel):
     margem_b: float | None = None
     margem_lider: float | None = None
     potencial_ganho_mensal: float | None = None
+    # Macro contexto
+    valor_indicador: float | None = None
+    variacao_ticket: float | None = None
+    variacao_faturamento: float | None = None
+    chave_indicador: str | None = None
     # Sugestão de preço promocional
     preco_atual: float | None = None
     preco_sugerido: float | None = None
@@ -62,7 +67,7 @@ class InsightMetricas(BaseModel):
 
 class Insight(BaseModel):
     hash: str
-    tipo: Literal["encalhe", "margem_erosao", "taxa_troca", "oportunidade_b", "sazonalidade", "outro"]
+    tipo: Literal["encalhe", "margem_erosao", "taxa_troca", "oportunidade_b", "sazonalidade", "macro_contexto", "outro"]
     impacto: Literal["alto", "medio", "baixo"]
     confianca: Literal["alta", "media", "hipotese"] = "alta"
     titulo: str

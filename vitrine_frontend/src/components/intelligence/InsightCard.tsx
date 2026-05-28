@@ -3,7 +3,7 @@ import { useState } from 'react'
 import {
   Lightbulb, X, AlertTriangle, RefreshCw,
   ShoppingCart, Calendar, List, ChevronRight,
-  Sparkles, TrendingDown,
+  Sparkles, TrendingDown, BarChart3,
 } from 'lucide-react'
 import Badge from '../ui/Badge'
 import Button from '../ui/Button'
@@ -16,6 +16,7 @@ const TIPO_ICON: Record<InsightTipo, React.ReactNode> = {
   taxa_troca: <RefreshCw size={16} />,
   oportunidade_b: <Lightbulb size={16} />,
   sazonalidade: <Calendar size={16} />,
+  macro_contexto: <BarChart3 size={16} />,
   outro: <ShoppingCart size={16} />,
 }
 
@@ -144,6 +145,19 @@ export default function InsightCard({ insight, onDismiss }: Props) {
         <p className="text-xs text-text-muted italic border-l-2 border-border/50 pl-3 mb-4 leading-relaxed">
           {insight.sugestao}
         </p>
+
+        {/* Macro: indicador de referência */}
+        {insight.tipo === 'macro_contexto' && insight.metricas?.valor_indicador != null && (
+          <div className="flex items-center gap-2 mb-3 text-[11px] text-text-muted bg-info/[0.06] rounded-lg px-3 py-1.5 border border-info/10">
+            <BarChart3 size={12} className="text-info" />
+            <span>
+              Indicador de referência: <strong className="text-text-primary">{insight.metricas.valor_indicador.toFixed(2).replace('.', ',')}%</strong>
+              {insight.metricas.chave_indicador && (
+                <span className="ml-1 text-[10px]">({insight.metricas.chave_indicador})</span>
+              )}
+            </span>
+          </div>
+        )}
 
         {/* Footer actions */}
         <div className="flex items-center justify-between gap-3 pt-2 border-t border-border/20">

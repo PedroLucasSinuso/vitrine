@@ -17,6 +17,7 @@ from app.api.routes import configuracoes
 from app.api.routes import inventario
 from app.api.routes import whatsapp
 from app.api.routes import email as email_routes
+from app.api.routes import macro
 from app.core.logging_config import setup_logging
 from app.core.config import settings
 from app.application.scheduler import iniciar_scheduler, parar_scheduler
@@ -85,6 +86,7 @@ app.include_router(configuracoes.router)
 app.include_router(inventario.router)
 app.include_router(whatsapp.router)
 app.include_router(email_routes.router)
+app.include_router(macro.router)
 
 if settings.intelligence_enabled:
     from app.api.routes import intelligence as intelligence_router

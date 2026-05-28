@@ -49,6 +49,7 @@ function getColunas(tipo: InsightTipo): Coluna[] {
       { key: 'upside_margem', label: 'Upside (%)', render: p => p.upside_margem != null ? `${p.upside_margem}%` : '—' },
       { key: 'potencial_ganho_mensal', label: 'Potencial/mês', render: p => p.potencial_ganho_mensal != null ? formatCurrency(p.potencial_ganho_mensal) : '—' },
     ],
+    macro_contexto: [],
     outro: [],
   }
 

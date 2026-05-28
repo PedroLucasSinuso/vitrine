@@ -173,6 +173,30 @@ class TemplateProvider:
                 produtos=_mapear_produtos(ops_b, "oportunidade_b"),
             ))
 
+        # ── 6. Macro Contexto ──
+        macro_items = dados_detectores.get("macro_contexto", [])
+        for item in macro_items:
+            tipo = item.get("tipo", "macro_contexto")
+            titulo = item.get("titulo", "")
+            hash_val = f"{tipo}_{hash(titulo)}"
+            metricas = InsightMetricas(
+                valor_indicador=item.get("valor_indicador"),
+                variacao_ticket=item.get("variacao_ticket"),
+                variacao_faturamento=item.get("variacao_faturamento"),
+                chave_indicador=item.get("chave_indicador"),
+            )
+            insights.append(Insight(
+                hash=hash_val,
+                tipo="macro_contexto",
+                impacto=item.get("impacto", "medio"),
+                confianca="alta",
+                titulo=titulo,
+                descricao=item.get("descricao", ""),
+                sugestao=item.get("sugestao", ""),
+                metricas=metricas,
+                produtos=[],
+            ))
+
         # ── Resumo executivo ──
         linhas = []
         if dados_macro.get("faturamento"):

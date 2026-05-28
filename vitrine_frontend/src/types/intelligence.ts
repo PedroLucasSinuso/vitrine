@@ -20,9 +20,14 @@ export interface InsightMetricas {
   preco_atual?: number | null
   preco_sugerido?: number | null
   economia_percentual?: number | null
+  // Macro contexto
+  valor_indicador?: number | null
+  variacao_ticket?: number | null
+  variacao_faturamento?: number | null
+  chave_indicador?: string | null
 }
 
-export type InsightTipo = 'encalhe' | 'margem_erosao' | 'taxa_troca' | 'oportunidade_b' | 'sazonalidade' | 'outro'
+export type InsightTipo = 'encalhe' | 'margem_erosao' | 'taxa_troca' | 'oportunidade_b' | 'sazonalidade' | 'macro_contexto' | 'outro'
 export type Impacto = 'alto' | 'medio' | 'baixo'
 export type Confianca = 'alta' | 'media' | 'hipotese'
 export type Fonte = 'claude' | 'gpt4o_mini' | 'deterministico'
