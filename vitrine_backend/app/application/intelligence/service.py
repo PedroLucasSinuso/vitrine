@@ -61,8 +61,16 @@ def _executar_analise(
 
         # 2. Executa detectores
         from app.application.intelligence.detectores.encalhe import EncalheDetector
+        from app.application.intelligence.detectores.taxa_troca import TaxaTrocaDetector
+        from app.application.intelligence.detectores.sazonalidade import SazonalidadeDetector
+        from app.application.intelligence.detectores.erosao_margem import ErosaoMargemDetector
+        from app.application.intelligence.detectores.oportunidade_b import OportunidadeBDetector
         detectores = [
             ("encalhes", EncalheDetector()),
+            ("taxa_troca", TaxaTrocaDetector()),
+            ("sazonalidade", SazonalidadeDetector()),
+            ("erosao_margem", ErosaoMargemDetector()),
+            ("oportunidade_b", OportunidadeBDetector()),
         ]
         dados_detectores = {}
         for nome, detector in detectores:
