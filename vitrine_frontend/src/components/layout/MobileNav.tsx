@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { ClipboardList, LayoutDashboard, Search, Package, Settings, ShieldAlert, Tags } from 'lucide-react'
+import { ClipboardList, LayoutDashboard, Search, Package, Settings, ShieldAlert, Tags, Sparkles } from 'lucide-react'
 import type { Role } from '../../types'
 
 interface MobileTab {
@@ -10,6 +10,8 @@ interface MobileTab {
   roles: Role[]
 }
 
+const intelligenceEnabled = import.meta.env.VITE_INTELLIGENCE_ENABLED === 'true'
+
 const tabs: MobileTab[] = [
   // Left side
   { label: 'Busca',      path: '/busca',                   icon: <Search size={20} />,          roles: ['operador', 'supervisor', 'admin'] },
@@ -17,6 +19,8 @@ const tabs: MobileTab[] = [
   { label: 'Inventário', path: '/inventario',              icon: <ClipboardList size={20} />,   roles: ['operador', 'supervisor', 'admin'] },
   // Center — destacado
   { label: 'Resumo',     path: '/bi',                      icon: <LayoutDashboard size={24} />, roles: ['supervisor', 'admin'] },
+  // Intelligence (condicional, ao lado do Resumo)
+  ...(intelligenceEnabled ? [{ label: 'Intel.', path: '/bi/intelligence', icon: <Sparkles size={20} />, roles: ['supervisor', 'admin'] as Role[] }] : []),
   // Right side
   { label: 'Etiquetas',  path: '/etiquetas',               icon: <Tags size={20} />,            roles: ['operador', 'supervisor', 'admin'] },
   { label: 'Admin',      path: '/admin',                   icon: <ShieldAlert size={20} />,     roles: ['admin'] },

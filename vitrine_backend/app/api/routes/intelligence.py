@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/bi", tags=["Intelligence"])
 
 
-@router.get("/intelligence", response_model=IntelligenceResponse | dict)
+@router.get("/intelligence")
 @limiter.limit("3/hour")
 def get_intelligence(
     request: Request,
@@ -27,7 +27,11 @@ def get_intelligence(
     _usuario: Usuario = Depends(require_supervisor),
 ):
     """Retorna análise se cache hit, ou cria job e retorna job_id."""
-    resultado, is_cached, job_id = solicitar_analise(db, source)
+    try:
+        resultado, is_cached, job_id = solicitar_analise(db, source)
+    except Exception as e:
+        logger.exception("solicitar_analise falhou")
+        raise HTTPException(status_code=500, detail=f"Erro ao solicitar análise: {e}")
 
     if is_cached and resultado:
         return resultado
@@ -35,9 +39,12 @@ def get_intelligence(
     if job_id:
         from app.application.intelligence.service import _executar_analise
         import asyncio
-        # Dispara em background com run_in_executor + nova session própria
-        loop = asyncio.get_event_loop()
-        loop.run_in_executor(None, _executar_analise, source, job_id, data_inicio, data_fim)
+        try:
+            loop = asyncio.get_event_loop()
+            loop.run_in_executor(None, _executar_analise, source, job_id, data_inicio, data_fim)
+        except Exception as e:
+            logger.exception("Falha ao disparar background task")
+            raise HTTPException(status_code=500, detail=f"Falha ao iniciar análise em background: {e}")
         return {"status": "processing", "job_id": job_id}
 
     # Bucket cheio — fallback já foi executado e retornou resultado
@@ -73,3 +80,19 @@ def dismiss_intelligence_insight(
     """Marca um insight como ignorado."""
     dismiss_service(db, hash)
     return {"status": "ok"}
+
+
+@router.get("/intelligence/debug")
+def debug_intelligence(
+    db: Session = Depends(get_db),
+    _usuario: Usuario = Depends(require_supervisor),
+):
+    """Endpoint de debug — verifica se tabelas existem."""
+    from sqlalchemy import inspect
+    inspector = inspect(db.bind)
+    tables = inspector.get_table_names()
+    intelligence_tables = [t for t in tables if 'intelligence' in t]
+    return {
+        "tables_exist": intelligence_tables,
+        "all_tables": tables,
+    }
