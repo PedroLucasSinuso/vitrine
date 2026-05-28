@@ -106,15 +106,24 @@ api.interceptors.response.use(
   }
 )
 
+// ── Startup refresh: evita que ProtectedRoute redirecione ao /login
+//     antes do refresh silencioso completar (cookie HttpOnly).
+let _startupPromise: Promise<boolean> | null = null
+
 /**
  * Tenta renovar o token proativamente no startup da aplicação.
  * Útil quando a página é recarregada e o cookie HttpOnly ainda é válido
  * mas o token em memória foi perdido. Chamar cedo evita 401s em cascata.
+ *
+ * A promessa é cacheada para que múltiplas chamadas (AuthListener + ProtectedRoute)
+ * aguardem a mesma requisição em vez de disparar N refreshes simultâneos.
  */
 export async function tryRefreshOnStartup(): Promise<boolean> {
   if (getAccessToken()) return true
-  const token = await _tryRefreshToken()
-  return token !== null
+  if (_startupPromise) return _startupPromise
+
+  _startupPromise = _tryRefreshToken().then(token => token !== null)
+  return _startupPromise
 }
 
 export default api

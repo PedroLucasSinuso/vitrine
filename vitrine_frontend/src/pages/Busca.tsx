@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
 import { Camera, Loader2, Search as SearchIcon, BarChart3 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { formatCurrency } from '../utils/formatters'
 import { buscarProduto, buscarProdutosPorNome, registrarNaoEncontrado } from '../api/produtos'
 import type { ProdutoBasico, ProdutoCompleto } from '../types'
@@ -13,11 +13,12 @@ import Badge from '../components/ui/Badge'
 import Modal from '../components/ui/Modal'
 import EmptyState from '../components/ui/EmptyState'
 
-function isCompleto(p: ProdutoBasico | ProdutoCompleto): p is ProdutoCompleto {
+  function isCompleto(p: ProdutoBasico | ProdutoCompleto): p is ProdutoCompleto {
   return 'preco_custo' in p
 }
 
 export default function Busca() {
+  const navigate = useNavigate()
   const { getRole } = useAuth()
 
   const [codigo, setCodigo] = useState('')
@@ -246,13 +247,13 @@ export default function Busca() {
         </Card>
 
         {(role === 'supervisor' || role === 'admin') && (
-          <Link
-            to={`/bi/sku?codigo=${produto.codigo_chamada ?? ''}&force=1`}
+          <button
+            onClick={() => navigate(`/bi/sku?codigo=${produto.codigo_chamada ?? ''}&force=1`)}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-hover transition-colors mt-4 w-full max-w-md"
           >
             <BarChart3 size={16} />
             Análise de Vendas
-          </Link>
+          </button>
         )}
       </>
       )}
