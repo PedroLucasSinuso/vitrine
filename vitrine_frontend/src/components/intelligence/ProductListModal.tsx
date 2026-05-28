@@ -79,7 +79,7 @@ export default function ProductListModal({ open, onClose, tipo, produtos }: Prop
       open={open}
       onClose={onClose}
       title={`${produtos.length} ${tipoLabel}`}
-      size="lg"
+      size="xl"
       actions={
         <Button variant="secondary" size="sm" onClick={() => exportCSV(produtos, colunas, tipo)}>
           <FileDown size={14} className="mr-1" />

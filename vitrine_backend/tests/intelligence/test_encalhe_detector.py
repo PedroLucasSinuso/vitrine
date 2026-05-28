@@ -112,17 +112,17 @@ class TestEncalheDetector:
         assert resultado == []
 
     def test_produto_ativo_sem_venda_aparece(self, db_session):
-        """Produto ativo (teve devolução em 90d) mas sem venda em 30d é encalhado."""
+        """Produto ativo (vendeu em 90d) mas sem venda em 30d é encalhado."""
         _make_produto(db_session, "P001", nome="ProdutoA", estoque=5, preco_custo=100.0)
         source = MagicMock()
         source.get_items.return_value = [
-            _make_transacao("P001", operation=OperationType.RETURN, days_ago=60),
+            _make_transacao("P001", operation=OperationType.SALE, days_ago=60),
         ]
         resultado = self.detector.detectar(db_session, source, self.mes_atras, self.hoje)
         assert len(resultado) == 1
         assert resultado[0]["nome"] == "ProdutoA"
         assert resultado[0]["valor_estimado"] == 500.0  # 5 * 100
-        assert resultado[0]["dias_parado"] == 90  # sem venda em 90d → mínimo 90
+        assert resultado[0]["dias_parado"] == 60  # última venda foi há 60 dias
 
     def test_dias_parado_real(self, db_session):
         """dias_parado deve refletir a última venda real, não hardcoded."""
@@ -166,10 +166,10 @@ class TestEncalheDetector:
         _make_produto(db_session, "P001", nome="Barato", estoque=2, preco_custo=10.0)
         _make_produto(db_session, "P002", nome="Caro", estoque=2, preco_custo=1000.0)
         source = MagicMock()
-        # Ambos ativos via retorno, mas sem venda recente
+        # Ambos ativos (venderam uma vez há 60d) mas sem venda recente (30d)
         source.get_items.return_value = [
-            _make_transacao("P001", operation=OperationType.RETURN, days_ago=60),
-            _make_transacao("P002", operation=OperationType.RETURN, days_ago=60),
+            _make_transacao("P001", operation=OperationType.SALE, days_ago=60),
+            _make_transacao("P002", operation=OperationType.SALE, days_ago=60),
         ]
         resultado = self.detector.detectar(db_session, source, self.mes_atras, self.hoje)
         assert len(resultado) == 2
@@ -181,9 +181,9 @@ class TestEncalheDetector:
         for i in range(20):
             _make_produto(db_session, f"P{i:03d}", nome=f"Produto {i}", estoque=2, preco_custo=10.0)
         source = MagicMock()
-        # Todos ativos via retorno, nenhum vendeu
+        # Todos ativos (venderam há 60d), nenhum vendeu nos últimos 30d
         source.get_items.return_value = [
-            _make_transacao(f"P{i:03d}", operation=OperationType.RETURN, days_ago=60)
+            _make_transacao(f"P{i:03d}", operation=OperationType.SALE, days_ago=60)
             for i in range(20)
         ]
         resultado = self.detector.detectar(db_session, source, self.mes_atras, self.hoje)
@@ -198,8 +198,8 @@ class TestEncalheDetector:
         set_many(db_session, {"ignored_groups": "LOJA, USO PESSOAL"})
         source = MagicMock()
         source.get_items.return_value = [
-            _make_transacao("SACOLA", operation=OperationType.RETURN, days_ago=60),
-            _make_transacao("COCA", operation=OperationType.RETURN, days_ago=60),
+            _make_transacao("SACOLA", operation=OperationType.SALE, days_ago=60),
+            _make_transacao("COCA", operation=OperationType.SALE, days_ago=60),
         ]
         resultado = self.detector.detectar(db_session, source, self.mes_atras, self.hoje)
         codigos = [r["codigo"] for r in resultado]

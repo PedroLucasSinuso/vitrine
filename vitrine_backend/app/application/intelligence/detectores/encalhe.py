@@ -61,9 +61,12 @@ class EncalheDetector(Detector):
 
         for t in transacoes_90d:
             cod = t.product_code
-            ativos_90d.add(cod)
 
+            # Só SALE indica que o produto está ativo no mercado.
+            # LOSS (perda), CONSUMPTION (consumo interno) e RETURN (devolução
+            # isolada) não significam que o produto faz parte do sortimento atual.
             if t.operation == OperationType.SALE:
+                ativos_90d.add(cod)
                 if cod not in ultima_venda or t.date > ultima_venda[cod]:
                     ultima_venda[cod] = t.date
                 if t.date >= periodo_30d:
