@@ -1,11 +1,11 @@
 """Detector de taxa de troca — produtos com alta devolução/troca."""
 import logging
-from collections import defaultdict
 from datetime import date
 from sqlalchemy.orm import Session
 from app.core.interfaces.source import TransactionSource
 from app.core.models.transaction import OperationType
 from app.application.intelligence.detectores.base import Detector
+from app.application.intelligence.filtros import get_ignored_groups, filtrar_por_grupo
 
 logger = logging.getLogger(__name__)
 
@@ -70,4 +70,9 @@ class TaxaTrocaDetector(Detector):
 
         # Ordena por taxa (decrescente) e limita
         resultado.sort(key=lambda x: x["taxa"], reverse=True)
+
+        # Remove grupos ignorados
+        ignored = get_ignored_groups(db)
+        resultado = filtrar_por_grupo(resultado, ignored)
+
         return resultado[:LIMITE_ITENS]

@@ -5,7 +5,12 @@ import logging
 from datetime import date, datetime
 from app.application.intelligence._utils import utcnow
 from sqlalchemy.orm import Session
-from app.schemas.intelligence_schema import IntelligenceResponse
+from app.schemas.intelligence_schema import IntelligenceResponse, IntelligenceJobStatus
+from app.domain.models.intelligence_job import IntelligenceJob
+from app.application.intelligence.cache import obter_cache, salvar_cache
+from app.application.intelligence.cost_control import pode_solicitar, registrar_chamada
+
+logger = logging.getLogger(__name__)
 
 
 def solicitar_analise(
@@ -124,22 +129,26 @@ def _sintetizar_com_ia(
     dados_macro: dict,
     dados_detectores: dict,
 ) -> IntelligenceResponse:
-    """Tenta chain de providers. Se tudo falhar, cai pra fallback."""
-    from app.application.intelligence.providers.claude import ClaudeProvider
-    from app.application.intelligence.providers.openai import OpenAIProvider
-    from app.application.intelligence.providers.template import TemplateProvider
-
-    providers = [
-        ("claude", ClaudeProvider),
-        ("gpt4o_mini", OpenAIProvider),
-    ]
+    """Tenta chain de providers (com imports lazy para fallback silencioso)."""
+    providers: list[tuple[str, type]] = []
+    for nome, mod_path, cls_name in [
+        ("claude", "app.application.intelligence.providers.claude", "ClaudeProvider"),
+        ("gpt4o_mini", "app.application.intelligence.providers.openai", "OpenAIProvider"),
+    ]:
+        try:
+            import importlib
+            mod = importlib.import_module(mod_path)
+            provider_cls = getattr(mod, cls_name)
+            providers.append((nome, provider_cls))
+        except Exception as e:
+            logger.warning("Provider %s não disponível: %s", nome, e)
 
     for nome, provider_cls in providers:
         try:
             provider = provider_cls()
             return provider.sintetizar(dados_macro, dados_detectores)
         except Exception as e:
-            logger.warning("Provider %s falhou: %s", nome, e)
+            logger.warning("Provider %s falhou na execução: %s", nome, e)
 
     return _sintetizar_fallback(dados_macro, dados_detectores)
 
@@ -161,7 +170,7 @@ def consultar_job(db: Session, job_id: str) -> IntelligenceJobStatus | None:
         return None
 
     resultado = None
-    if job.status == "ready" and job.resultado_hash:
+    if job.status == "ready":
         cached = obter_cache(db)
         if cached:
             resultado = IntelligenceResponse(**cached)

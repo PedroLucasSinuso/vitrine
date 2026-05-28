@@ -10,7 +10,7 @@ import InsightCard from '../../components/intelligence/InsightCard'
 import { useIntelligence } from '../../hooks/useIntelligence'
 
 export default function Intelligence() {
-  const { status, resultado, gerarAnalise, dismissInsight } = useIntelligence()
+  const { status, resultado, erro, gerarAnalise, dismissInsight } = useIntelligence()
 
   return (
     <BiPageLayout
@@ -43,7 +43,9 @@ export default function Intelligence() {
 
         {/* ── Error ── */}
         {status === 'error' && (
-          <ErrorBanner message="Não foi possível gerar a análise. Tente novamente." />
+          <ErrorBanner
+            message={erro?.message || 'Não foi possível gerar a análise. Tente novamente.'}
+          />
         )}
 
         {/* ── Idle (primeira vez) ── */}

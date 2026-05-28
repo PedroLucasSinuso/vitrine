@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from sqlalchemy.orm import Session
 from app.core.interfaces.source import TransactionSource
 from app.application.intelligence.detectores.base import Detector
+from app.application.intelligence.filtros import get_ignored_groups, filtrar_por_grupo
 from app.domain.models.produto import Produto
 
 logger = logging.getLogger(__name__)
@@ -65,5 +66,9 @@ class EncalheDetector(Detector):
 
         # 5. Ordena por valor estimado (decrescente) e limita
         encalhados.sort(key=lambda x: x["valor_estimado"], reverse=True)
+
+        # 6. Remove grupos ignorados (USO PESSOAL, LOJA, etc)
+        ignored = get_ignored_groups(db)
+        encalhados = filtrar_por_grupo(encalhados, ignored)
 
         return encalhados[:LIMITE_ITENS]

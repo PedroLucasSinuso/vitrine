@@ -51,6 +51,8 @@ CHAVES_EDITAVEIS: set[str] = {
     # Aba Sistema
     "anthropic_api_key",
     "openai_api_key",
+    # Intelligence — grupos ignorados
+    "ignored_groups",
     # Aba Metas
     "meta_faturamento_mensal",
 }

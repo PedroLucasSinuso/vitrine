@@ -1,23 +1,14 @@
 /** Hook para o módulo Intelligence — polling, cache sessionStorage, dismiss. */
 import { useCallback, useRef, useState } from 'react'
 import { fetchIntelligence, fetchIntelligenceStatus, dismissInsightAPI } from '../api/intelligence'
-import type { IntelligenceResponse, IntelligenceStatus } from '../types/intelligence'
+import type { IntelligenceResponse } from '../types/intelligence'
+
+type IntelligenceStatus = 'idle' | 'loading' | 'ready' | 'error'
+type IntelligenceError = { message: string } | null
 
 const SESSION_STORAGE_KEY = 'vitrine_intelligence'
 const POLLING_INTERVAL = 2000
 const POLLING_TIMEOUT = 300_000 // 5 min
-const CACHE_TTL = 3_600_000 // 1h (sessionStorage)
-
-function getCache(): { data: IntelligenceResponse; timestamp: number } | null {
-  try {
-    const raw = sessionStorage.getItem(SESSION_STORAGE_KEY)
-    if (!raw) return null
-    return JSON.parse(raw)
-  } catch {
-    sessionStorage.removeItem(SESSION_STORAGE_KEY)
-    return null
-  }
-}
 
 function setCache(data: IntelligenceResponse) {
   try {
@@ -30,6 +21,7 @@ function setCache(data: IntelligenceResponse) {
 export function useIntelligence() {
   const [status, setStatus] = useState<IntelligenceStatus>('idle')
   const [resultado, setResultado] = useState<IntelligenceResponse | null>(null)
+  const [erro, setErro] = useState<IntelligenceError>(null)
   const [jobId, setJobId] = useState<string | null>(null)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const controllerRef = useRef<AbortController | null>(null)
@@ -48,16 +40,12 @@ export function useIntelligence() {
     controllerRef.current = controller
     const signal = controller.signal
 
-    // 1. Verifica cache
-    const cached = getCache()
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      setResultado(cached.data)
-      setStatus('ready')
-      return
-    }
+    // Remove cache sessionStorage para forçar requisição ao backend
+    sessionStorage.removeItem(SESSION_STORAGE_KEY)
 
     setStatus('loading')
     setResultado(null)
+    setErro(null)
     setJobId(null)
 
     try {
@@ -82,9 +70,11 @@ export function useIntelligence() {
               setCache(jobStatus.resultado)
             } else if (jobStatus.status === 'error') {
               pararPolling()
+              setErro({ message: jobStatus.erro || 'Análise falhou no processamento' })
               setStatus('error')
             } else if (Date.now() - inicio > POLLING_TIMEOUT) {
               pararPolling()
+              setErro({ message: 'A análise excedeu o tempo limite. Tente novamente.' })
               setStatus('error')
             }
           } catch {
@@ -99,8 +89,11 @@ export function useIntelligence() {
         setCache(response)
       }
     } catch (e: unknown) {
-      const err = e as { name?: string }
+      const err = e as { name?: string; message?: string; response?: { status?: number; data?: { error?: string } } }
       if (err?.name === 'CanceledError' || err?.name === 'AbortError') return
+      const errorMsg = err?.response?.data?.error || err?.message || 'Erro desconhecido'
+      console.error('[Intelligence] fetchIntelligence failed:', err?.response?.status, errorMsg)
+      setErro({ message: errorMsg })
       setStatus('error')
     }
   }, [pararPolling])
@@ -118,5 +111,5 @@ export function useIntelligence() {
     }
   }, [])
 
-  return { status, resultado, jobId, gerarAnalise, dismissInsight }
+  return { status, resultado, erro, jobId, gerarAnalise, dismissInsight }
 }

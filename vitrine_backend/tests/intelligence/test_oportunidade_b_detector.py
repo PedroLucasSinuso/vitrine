@@ -5,12 +5,13 @@ from app.application.intelligence.detectores.oportunidade_b import OportunidadeB
 from app.core.models.transaction import OperationType
 
 
-def _make_transacao(codigo: str, valor=100.0, nome="Produto") -> MagicMock:
+def _make_transacao(codigo: str, valor=100.0, nome="Produto", custo=50.0) -> MagicMock:
     t = MagicMock()
     t.product_code = codigo
     t.operation = OperationType.SALE
     t.quantity = 1.0
     t.line_total = valor
+    t.unit_cost = custo
     t.product_name = nome
     return t
 
@@ -57,16 +58,17 @@ class TestOportunidadeBDetector:
         assert resultado == []
 
     def test_fallback_manual_sem_abc(self, db_session):
-        """Quando get_curva_abc_aggregates retorna None, deve usar fallback manual."""
+        """Quando get_curva_abc_aggregates retorna None, deve usar fallback manual com margem."""
         source = MagicMock()
         source.get_curva_abc_aggregates.return_value = None
+        # P001 é classe A (80%+), P002 é classe B com margem > média A
         source.get_items.return_value = [
-            _make_transacao("P001", valor=100, nome="Barato"),
-            _make_transacao("P002", valor=10, nome="MuitoBarato"),
+            _make_transacao("P001", valor=100, nome="Barato", custo=50.0),    # margem=50%
+            _make_transacao("P002", valor=10, nome="MuitoBarato", custo=3.0), # margem=70% > 50%
         ]
         resultado = self.detector.detectar(db_session, source, self.inicio, self.fim)
-        # Fallback manual retorna itens com participacao <= 15%
         assert len(resultado) >= 1
+        assert resultado[0]["margem_atual"] > resultado[0]["margem_media_a"]
 
     def test_fallback_sem_transacoes_retorna_vazio(self, db_session):
         source = MagicMock()

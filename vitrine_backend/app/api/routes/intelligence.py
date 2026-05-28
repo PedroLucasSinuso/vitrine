@@ -16,8 +16,8 @@ router = APIRouter(prefix="/bi", tags=["Intelligence"])
 
 
 @router.get("/intelligence")
-@limiter.limit("3/hour")
-def get_intelligence(
+@limiter.limit("30/hour")
+async def get_intelligence(
     request: Request,
     data_inicio: date = Query(...),
     data_fim: date = Query(...),
@@ -41,9 +41,9 @@ def get_intelligence(
 
     if job_id:
         from app.application.intelligence.service import _executar_analise
-        import asyncio
         try:
-            loop = asyncio.get_event_loop()
+            import asyncio
+            loop = asyncio.get_running_loop()
             loop.run_in_executor(None, _executar_analise, job_id, data_inicio, data_fim)
         except Exception as e:
             logger.exception("Falha ao disparar background task")
@@ -126,5 +126,64 @@ def debug_intelligence(
         }
     except Exception as e:
         results["postgres"] = {"connected": False, "error": str(e)}
+
+    # 4. Diagnóstico do filtro de grupos ignorados
+    try:
+        from app.application.intelligence.filtros import get_ignored_groups, filtrar_por_grupo
+        from app.domain.models.produto import Produto
+
+        raw = get_config(db, "ignored_groups", "")  # get_config imported above
+        ignored = get_ignored_groups(db)
+        results["ignored_groups"] = {
+            "raw_config_value": raw,
+            "parsed_set": sorted(ignored),
+        }
+
+        # Amostra de produtos do SQLite para verificar o grupo real
+        amostra = (
+            db.query(Produto)
+            .filter(Produto.ativo == True, Produto.estoque > 0)
+            .order_by(Produto.estoque.desc())
+            .limit(5)
+            .all()
+        )
+        results["produtos_amostra"] = [
+            {"codigo": p.codigo_chamada, "nome": p.nome, "grupo": p.grupo}
+            for p in amostra
+        ]
+
+        # Busca o produto SACOLA especificamente no SQLite
+        sacola = (
+            db.query(Produto)
+            .filter(Produto.nome.ilike("%SACOLA%"), Produto.ativo == True, Produto.estoque > 0)
+            .all()
+        )
+        results["produto_sacola"] = [
+            {"codigo": p.codigo_chamada, "nome": p.nome, "grupo": p.grupo, "estoque": float(p.estoque)}
+            for p in sacola
+        ] if sacola else "Nenhum produto com 'SACOLA' no nome encontrado no SQLite"
+
+        # Testa o filtro: simula como o encalhe detector avaliaria
+        simulado = [
+            {"codigo": "TESTE", "nome": "SACOLA LEI RIO 37X50 C/1000", "grupo": grupo}
+            for grupo in ["LOJA", "USO PESSOAL", "BEBIDAS", "", "SEM GRUPO"]
+        ]
+        antes = len(simulado)
+        depois = len(filtrar_por_grupo(simulado, ignored))
+        results["filtro_teste"] = {
+            "itens_antes": antes,
+            "itens_depois": depois,
+            "filtrados": antes - depois,
+            "simulacao": [
+                {
+                    "grupo": s["grupo"],
+                    "seria_filtrado": s["grupo"].strip().upper() in ignored,
+                }
+                for s in simulado
+            ],
+        }
+    except Exception as e:
+        results["filtro_diagnostico_erro"] = str(e)
+        logger.exception("Erro no diagnóstico do filtro")
 
     return results

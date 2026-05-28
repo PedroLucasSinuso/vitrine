@@ -1,34 +1,18 @@
-"""Tests for the ErosaoMargemDetector."""
+"""Tests for the ErosaoMargemDetector — agora usa unit_cost do TransactionItem,
+não mais Produto.preco_custo do SQLite."""
 from datetime import date, timedelta
 from unittest.mock import MagicMock
 from app.application.intelligence.detectores.erosao_margem import ErosaoMargemDetector
-from app.domain.models.produto import Produto
 from app.core.models.transaction import OperationType
 
 
-def _make_produto(db, codigo, nome="Produto", preco_custo=50.0, preco_venda=100.0, estoque=10):
-    p = Produto(
-        codigo_chamada=codigo,
-        nome=nome,
-        grupo="GRUPO",
-        familia="FAMILIA",
-        preco_venda=preco_venda,
-        preco_custo=preco_custo,
-        estoque=estoque,
-        ativo=True,
-    )
-    db.add(p)
-    db.commit()
-    db.refresh(p)
-    return p
-
-
-def _make_transacao(codigo: str, qtd=1.0, valor=100.0) -> MagicMock:
+def _make_transacao(codigo: str, qtd=1.0, valor=100.0, custo=50.0) -> MagicMock:
     t = MagicMock()
     t.product_code = codigo
     t.operation = OperationType.SALE
     t.quantity = qtd
     t.line_total = valor
+    t.unit_cost = custo
     t.product_name = ""
     return t
 
@@ -48,22 +32,20 @@ class TestErosaoMargemDetector:
 
     def test_margem_estavel_ignorada(self, db_session):
         """Margem sem queda significativa não deve aparecer."""
-        _make_produto(db_session, "P001", preco_custo=50.0)
         source = MagicMock()
         source.get_items.side_effect = [
-            [_make_transacao("P001", qtd=10, valor=1000.0)],   # atual: preco medio = 100
-            [_make_transacao("P001", qtd=10, valor=1000.0)],   # anterior: preco medio = 100
+            [_make_transacao("P001", qtd=10, valor=1000.0, custo=50.0)],
+            [_make_transacao("P001", qtd=10, valor=1000.0, custo=50.0)],
         ]
         resultado = self.detector.detectar(db_session, source, self.inicio, self.fim)
         assert resultado == []
 
     def test_queda_de_margem_aparece(self, db_session):
         """Queda de margem > 5pp deve ser detectada."""
-        _make_produto(db_session, "P001", preco_custo=70.0)
         source = MagicMock()
         source.get_items.side_effect = [
-            [_make_transacao("P001", qtd=10, valor=1000.0)],   # atual: preco medio = 100, margem = 30%
-            [_make_transacao("P001", qtd=10, valor=2000.0)],   # anterior: preco medio = 200, margem = 65%
+            [_make_transacao("P001", qtd=10, valor=1000.0, custo=70.0)],   # preco medio = 100, margem = 30%
+            [_make_transacao("P001", qtd=10, valor=2000.0, custo=70.0)],   # preco medio = 200, margem = 65%
         ]
         resultado = self.detector.detectar(db_session, source, self.inicio, self.fim)
         assert len(resultado) == 1
@@ -72,32 +54,38 @@ class TestErosaoMargemDetector:
 
     def test_vendas_insuficientes_ignoradas(self, db_session):
         """Menos de 5 unidades vendidas deve ser ignorado."""
-        _make_produto(db_session, "P001", preco_custo=70.0)
         source = MagicMock()
         source.get_items.side_effect = [
-            [_make_transacao("P001", qtd=2, valor=200.0)],    # atual: 2 unidades
-            [_make_transacao("P001", qtd=2, valor=300.0)],    # anterior: 2 unidades
+            [_make_transacao("P001", qtd=2, valor=200.0, custo=70.0)],
+            [_make_transacao("P001", qtd=2, valor=300.0, custo=70.0)],
         ]
         resultado = self.detector.detectar(db_session, source, self.inicio, self.fim)
         assert resultado == []
 
     def test_produto_sem_custo_ignorado(self, db_session):
-        """Produto sem custo (preco_custo <= 0) deve ser ignorado."""
-        _make_produto(db_session, "P001", preco_custo=0.0)
+        """Produto sem custo (unit_cost <= 0) deve ser ignorado."""
         source = MagicMock()
         source.get_items.side_effect = [
-            [_make_transacao("P001", qtd=10, valor=1000.0)],
-            [_make_transacao("P001", qtd=10, valor=2000.0)],
+            [_make_transacao("P001", qtd=10, valor=1000.0, custo=0.0)],
+            [_make_transacao("P001", qtd=10, valor=2000.0, custo=0.0)],
         ]
         resultado = self.detector.detectar(db_session, source, self.inicio, self.fim)
         assert resultado == []
 
     def test_limite_de_itens(self, db_session):
-        for i in range(15):
-            _make_produto(db_session, f"P{i:03d}", preco_custo=70.0)
         source = MagicMock()
-        atuais = [_make_transacao(f"P{i:03d}", qtd=10, valor=1000.0) for i in range(15)]
-        anteriores = [_make_transacao(f"P{i:03d}", qtd=10, valor=2000.0) for i in range(15)]
+        atuais = [_make_transacao(f"P{i:03d}", qtd=10, valor=1000.0, custo=70.0) for i in range(15)]
+        anteriores = [_make_transacao(f"P{i:03d}", qtd=10, valor=2000.0, custo=70.0) for i in range(15)]
         source.get_items.side_effect = [atuais, anteriores]
         resultado = self.detector.detectar(db_session, source, self.inicio, self.fim)
         assert len(resultado) <= 10
+
+    def test_custo_maior_que_venda_ignorado(self, db_session):
+        """Produto com custo > preço médio (dado errado) deve ser ignorado."""
+        source = MagicMock()
+        source.get_items.side_effect = [
+            [_make_transacao("P001", qtd=10, valor=100.0, custo=200.0)],   # custo=200 >> venda=10
+            [_make_transacao("P001", qtd=10, valor=200.0, custo=200.0)],   # custo=200 = venda=20
+        ]
+        resultado = self.detector.detectar(db_session, source, self.inicio, self.fim)
+        assert resultado == []

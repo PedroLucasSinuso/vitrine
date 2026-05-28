@@ -44,6 +44,7 @@ class TransactionItem:
     quantity: Decimal = Decimal("0")            # qtitem
     line_total: Decimal = Decimal("0")          # vlmovimento (receita_produto)
     document_total: Decimal = Decimal("0")      # vltotal (total_documento)
+    unit_cost: Decimal = Decimal("0")           # vlprecocusto (custo unitário do cadastro no PostgreSQL)
 
     # ── Documento comprobatório ──
     external_document_id: Optional[str] = None

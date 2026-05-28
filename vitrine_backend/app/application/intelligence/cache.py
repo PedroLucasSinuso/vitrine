@@ -47,6 +47,17 @@ def salvar_cache(
     db.commit()
 
 
+def invalidar_cache_intelligence(db: Session, tenant_id: str = "default") -> None:
+    """Remove o cache de inteligência forçando re-análise na próxima requisição.
+
+    Chamado quando configurações relevantes (ex: ignored_groups) são alteradas.
+    """
+    db.query(IntelligenceCache).filter(
+        IntelligenceCache.tenant_id == tenant_id,
+    ).delete()
+    db.commit()
+
+
 def limpar_expirados(db: Session) -> int:
     """Remove caches expirados. Retorna qtd removida."""
     agora = utcnow()

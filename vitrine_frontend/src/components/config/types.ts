@@ -33,6 +33,7 @@ export interface ConfigForm {
   anthropic_api_key?: string
   openai_api_key?: string
   relatorio_dias_retroativos?: string
+  ignored_groups?: string
   meta_faturamento_mensal?: string
 }
 

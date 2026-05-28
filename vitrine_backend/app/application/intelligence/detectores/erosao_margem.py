@@ -1,12 +1,11 @@
 """Detector de erosão de margem — produtos com margem caindo vs. período anterior."""
 import logging
-from collections import defaultdict
 from datetime import date, timedelta
 from sqlalchemy.orm import Session
 from app.core.interfaces.source import TransactionSource
 from app.core.models.transaction import OperationType
 from app.application.intelligence.detectores.base import Detector
-from app.domain.models.produto import Produto
+from app.application.intelligence.filtros import get_ignored_groups, filtrar_por_grupo
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +15,9 @@ QTD_MIN_VENDAS = 5  # mínimo de unidades vendidas para considerar
 
 
 class ErosaoMargemDetector(Detector):
-    """Identifica produtos cuja margem bruta caiu na comparação com o período anterior."""
+    """Identifica produtos cuja margem bruta caiu na comparação com o período anterior.
+    Usa custo unitário do PostgreSQL (TransactionItem.unit_cost), não do SQLite local.
+    """
 
     def detectar(
         self,
@@ -35,7 +36,7 @@ class ErosaoMargemDetector(Detector):
         if not atuais:
             return []
 
-        # Agrega vendas por produto
+        # Agrega vendas + custo por produto
         def _agregar(itens: list) -> dict[str, dict]:
             agg: dict[str, dict] = {}
             for t in itens:
@@ -43,24 +44,23 @@ class ErosaoMargemDetector(Detector):
                     continue
                 cod = t.product_code
                 if cod not in agg:
-                    agg[cod] = {"qtd": 0.0, "valor": 0.0}
+                    agg[cod] = {"qtd": 0.0, "valor": 0.0, "custo_total": 0.0, "nome": "", "grupo": ""}
                 qtd = float(t.quantity or 0)
                 agg[cod]["qtd"] += qtd
                 agg[cod]["valor"] += float(t.line_total or 0)
-                agg[cod]["preco_medio"] = agg[cod]["valor"] / agg[cod]["qtd"] if agg[cod]["qtd"] > 0 else 0
+                agg[cod]["custo_total"] += float(t.unit_cost or 0) * qtd
+                if t.product_name:
+                    agg[cod]["nome"] = t.product_name
+                if t.group_name:
+                    agg[cod]["grupo"] = t.group_name
+            for cod in agg:
+                d = agg[cod]
+                d["preco_medio"] = d["valor"] / d["qtd"] if d["qtd"] > 0 else 0
+                d["custo_medio"] = d["custo_total"] / d["qtd"] if d["qtd"] > 0 else 0
             return agg
 
         agg_atual = _agregar(atuais)
         agg_anterior = _agregar(anteriores)
-
-        # Busca custo dos produtos do DB
-        codigos = set(agg_atual.keys()) | set(agg_anterior.keys())
-        produtos_db = (
-            db.query(Produto)
-            .filter(Produto.codigo_chamada.in_(codigos))  # type: ignore
-            .all()
-        )
-        custos: dict[str, float] = {p.codigo_chamada: float(p.preco_custo or 0) for p in produtos_db}
 
         resultado = []
         for cod, dados in agg_atual.items():
@@ -70,8 +70,13 @@ class ErosaoMargemDetector(Detector):
             if not anterior or anterior["qtd"] < QTD_MIN_VENDAS:
                 continue
 
-            custo = custos.get(cod, 0)
+            custo = dados["custo_medio"]
             if custo <= 0:
+                continue
+            # Custo > preço médio = dado claramente errado no cadastro (ex: custo de lote,
+            # produto composto sem rateio, preenchimento incorreto). Esses produtos poluem
+            # a análise com margens negativas absurdas e devem ser ignorados.
+            if custo > dados["preco_medio"]:
                 continue
 
             margem_atual = (dados["preco_medio"] - custo) / dados["preco_medio"] if dados["preco_medio"] > 0 else 0
@@ -79,15 +84,10 @@ class ErosaoMargemDetector(Detector):
             variacao = margem_atual - margem_anterior
 
             if variacao <= -LIMIAR_QUEDA_MARGEM:
-                nome = ""
-                if cod in agg_atual:
-                    for t in atuais:
-                        if t.product_code == cod and t.product_name:
-                            nome = t.product_name
-                            break
                 resultado.append({
                     "codigo": cod,
-                    "nome": nome,
+                    "nome": dados["nome"],
+                    "grupo": dados.get("grupo", ""),
                     "margem_anterior": round(margem_anterior * 100, 2),
                     "margem_atual": round(margem_atual * 100, 2),
                     "variacao_pp": round(variacao * 100, 2),
@@ -96,4 +96,9 @@ class ErosaoMargemDetector(Detector):
                 })
 
         resultado.sort(key=lambda x: x["variacao_pp"])
+
+        # Remove grupos ignorados
+        ignored = get_ignored_groups(db)
+        resultado = filtrar_por_grupo(resultado, ignored)
+
         return resultado[:LIMITE_ITENS]

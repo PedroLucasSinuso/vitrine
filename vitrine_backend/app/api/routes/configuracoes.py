@@ -35,6 +35,7 @@ from app.application.config_service import (
     is_sensitive,
     CHAVES_EDITAVEIS,
 )
+from app.application.intelligence.cache import invalidar_cache_intelligence
 from app.core.error_handler import sanitizar_erro
 
 logger = logging.getLogger(__name__)
@@ -105,6 +106,13 @@ def atualizar_configuracoes(
             reagendar_relatorio_email(dia, hora, minuto, _enviar_relatorio_email)
         except Exception as e:
             logger.error("Erro ao reagendar Email: %s", e)
+
+    if "ignored_groups" in valores:
+        try:
+            invalidar_cache_intelligence(db)
+            logger.info("Cache de Intelligence invalidado após alteração em ignored_groups")
+        except Exception as e:
+            logger.error("Erro ao invalidar cache de Intelligence: %s", e)
 
     stmt = select(Configuracao)
     results = db.execute(stmt).scalars().all()

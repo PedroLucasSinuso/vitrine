@@ -113,36 +113,51 @@ class AlterdataTransactionSource(TransactionSource):
 
     def get_dimensao_aggregates(self, start: date, end: date, dimensao: str, metrica: str) -> list[dict] | None:
         col_metrica = "SUM(doc.vlmovimento) AS valor" if metrica == "receita" else "SUM(doc.qtitem) AS valor"
+
+        # JOIN comum para todas as dimensões: docitem → detalhe → produto → grupo/familia
+        from_clause = """
+            FROM wshop.documen d
+            JOIN wshop.docitem doc ON doc.iddocumento = d.iddocumento
+            JOIN wshop.detalhe det ON doc.iddetalhe = det.iddetalhe
+            LEFT JOIN wshop.produto p ON det.idproduto = p.idproduto
+            LEFT JOIN wshop.grupo g ON p.idgrupo = g.idgrupo
+            LEFT JOIN wshop.familia f ON det.idfamilia = f.idfamilia
+        """
+        where_clause = """
+            WHERE d.dtemissao >= :data_inicio
+              AND d.dtemissao <= :data_fim
+              AND d.tpoperacao = 'V'
+              AND COALESCE(d.stdocumentocancelado, '') != '*'
+        """
         try:
             if dimensao == "produto":
                 sql = text(f"""
-                    SELECT doc.cdproduto AS codigo,
-                           p.nmproduto AS produto,
-                           p.nmgrupo AS grupo,
-                           p.nmfamilia AS familia,
-                           {col_metrica}
-                    FROM wshop.documen d
-                    JOIN wshop.docitem doc ON doc.iddocumento = d.iddocumento
-                    LEFT JOIN wshop.produto p ON p.cdproduto = doc.cdproduto
-                    WHERE d.dtemissao >= :data_inicio
-                      AND d.dtemissao <= :data_fim
-                      AND d.tpoperacao = 'V'
-                      AND COALESCE(d.stdocumentocancelado, '') != '*'
-                    GROUP BY doc.cdproduto, p.nmproduto, p.nmgrupo, p.nmfamilia
+                    SELECT det.cdprincipal AS codigo,
+                           det.dsdetalhe AS produto,
+                           COALESCE(g.nmgrupo, '') AS grupo,
+                           COALESCE(f.dsfamilia, '') AS familia,
+                           {col_metrica},
+                           SUM(doc.qtitem * COALESCE(det.vlprecocusto, 0)) AS custo_total,
+                           CASE WHEN SUM(doc.vlmovimento) > 0
+                               THEN (SUM(doc.vlmovimento) - SUM(doc.qtitem * COALESCE(det.vlprecocusto, 0))) / SUM(doc.vlmovimento)
+                               ELSE 0 END AS margem
+                    {from_clause}
+                    {where_clause}
+                    GROUP BY det.cdprincipal, det.dsdetalhe, g.nmgrupo, f.dsfamilia
                     ORDER BY valor DESC
                 """)
             else:
-                group_col = "p.nmgrupo" if dimensao == "grupo" else "p.nmfamilia"
+                if dimensao == "grupo":
+                    select_col = "COALESCE(g.nmgrupo, '') AS dimensao"
+                    group_col = "g.nmgrupo"
+                else:
+                    select_col = "COALESCE(f.dsfamilia, '') AS dimensao"
+                    group_col = "f.dsfamilia"
                 sql = text(f"""
-                    SELECT {group_col} AS dimensao,
+                    SELECT {select_col},
                            {col_metrica}
-                    FROM wshop.documen d
-                    JOIN wshop.docitem doc ON doc.iddocumento = d.iddocumento
-                    LEFT JOIN wshop.produto p ON p.cdproduto = doc.cdproduto
-                    WHERE d.dtemissao >= :data_inicio
-                      AND d.dtemissao <= :data_fim
-                      AND d.tpoperacao = 'V'
-                      AND COALESCE(d.stdocumentocancelado, '') != '*'
+                    {from_clause}
+                    {where_clause}
                     GROUP BY {group_col}
                     ORDER BY valor DESC
                 """)
@@ -283,6 +298,7 @@ class AlterdataTransactionSource(TransactionSource):
             line_total=Decimal(str(row["receita_produto"])),
             document_total=Decimal(str(row.get("total_documento", 0))),
             external_document_id=row.get("id_nfe") or None,
+            unit_cost=Decimal(str(row.get("custo", 0) or 0)),
         )
 
     def invalidar_cache(self) -> None:

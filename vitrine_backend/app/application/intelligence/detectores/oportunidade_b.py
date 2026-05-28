@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.interfaces.source import TransactionSource
 from app.core.models.transaction import OperationType
 from app.application.intelligence.detectores.base import Detector
+from app.application.intelligence.filtros import get_ignored_groups, filtrar_por_grupo
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +27,12 @@ class OportunidadeBDetector(Detector):
         abc = source.get_curva_abc_aggregates(data_inicio, data_fim, "produto")
         if abc is None:
             # Fallback: calcula manualmente a partir das transações
-            return self._calcular_manual(source, data_inicio, data_fim)
+            return self._calcular_manual(db, source, data_inicio, data_fim)
 
         # Ordena por receita decrescente
-        abc.sort(key=lambda x: float(x.get("receita", 0) or 0), reverse=True)
-        receita_total = sum(float(x.get("receita", 0) or 0) for x in abc)
+        # NOTA: get_dimensao_aggregates retorna "valor" como chave da métrica
+        abc.sort(key=lambda x: float(x.get("valor", x.get("receita", 0)) or 0), reverse=True)
+        receita_total = sum(float(x.get("valor", x.get("receita", 0)) or 0) for x in abc)
 
         if receita_total <= 0:
             return []
@@ -42,10 +44,11 @@ class OportunidadeBDetector(Detector):
         cutoff_a = 0.80 * receita_total
         cutoff_b = 0.95 * receita_total
         for item in abc:
-            receita = float(item.get("receita", 0) or 0)
+            receita = float(item.get("valor", item.get("receita", 0)) or 0)
             entry = {
                 "codigo": str(item.get("codigo", "")),
-                "nome": str(item.get("nome", "")),
+                "nome": str(item.get("produto", item.get("nome", ""))),
+                "grupo": str(item.get("grupo", "")),
                 "receita": round(receita, 2),
                 "participacao": round(receita / receita_total, 4) if receita_total else 0,
                 "margem": float(item.get("margem", 0) or 0),
@@ -68,6 +71,7 @@ class OportunidadeBDetector(Detector):
                 resultado.append({
                     "codigo": item["codigo"],
                     "nome": item["nome"],
+                    "grupo": item.get("grupo", ""),
                     "receita": item["receita"],
                     "participacao": item["participacao"],
                     "margem_atual": round(item["margem"] * 100, 2),
@@ -77,10 +81,16 @@ class OportunidadeBDetector(Detector):
                 })
 
         resultado.sort(key=lambda x: x["potencial_ganho_mensal"], reverse=True)
+
+        # Remove grupos ignorados
+        ignored = get_ignored_groups(db)
+        resultado = filtrar_por_grupo(resultado, ignored)
+
         return resultado[:LIMITE_ITENS]
 
     def _calcular_manual(
         self,
+        db: Session,
         source: TransactionSource,
         data_inicio: date,
         data_fim: date,
@@ -101,25 +111,84 @@ class OportunidadeBDetector(Detector):
                     "codigo": cod,
                     "nome": t.product_name or "",
                     "receita": 0.0,
+                    "custo_total": 0.0,
+                    "qtd": 0.0,
                 }
+            qtd = float(t.quantity or 0)
             agg[cod]["receita"] += float(t.line_total or 0)
+            agg[cod]["custo_total"] += float(t.unit_cost or 0) * qtd
+            agg[cod]["qtd"] += qtd
 
         if not agg:
             return []
 
-        items = list(agg.values())
+        # Adiciona margem a cada item
+        items = []
+        for v in agg.values():
+            preco_medio = v["receita"] / v["qtd"] if v["qtd"] > 0 else 0
+            custo_medio = v["custo_total"] / v["qtd"] if v["qtd"] > 0 else 0
+            margem = (preco_medio - custo_medio) / preco_medio if preco_medio > 0 and custo_medio > 0 else 0
+            items.append({
+                "codigo": v["codigo"],
+                "nome": v["nome"],
+                "grupo": v.get("grupo", ""),
+                "receita": v["receita"],
+                "margem": margem,
+            })
+
         items.sort(key=lambda x: x["receita"], reverse=True)
         receita_total = sum(x["receita"] for x in items)
 
         if receita_total <= 0:
             return []
 
-        # Classifica A, B manualmente (sem margem — dados insuficientes)
-        resultado = []
+        # Classifica A (acumulado <= 80%), B (<= 95%), C (resto)
+        classe_a: list[dict] = []
+        classe_b: list[dict] = []
+        acumulado = 0.0
+        cutoff_a = 0.80 * receita_total
+        cutoff_b = 0.95 * receita_total
         for item in items:
-            if item["receita"] / receita_total <= 0.15:
-                resultado.append(item)
+            receita = item["receita"]
+            entry = {
+                "codigo": item["codigo"],
+                "nome": item["nome"],
+                "grupo": item.get("grupo", ""),
+                "receita": round(receita, 2),
+                "participacao": round(receita / receita_total, 4) if receita_total else 0,
+                "margem": item["margem"],
+            }
+            if acumulado < cutoff_a:
+                classe_a.append(entry)
+            elif acumulado < cutoff_b:
+                classe_b.append(entry)
+            acumulado += receita
 
-        # Retorna os que têm receita significativa mas não são top
-        resultado.sort(key=lambda x: x["receita"], reverse=True)
+        if not classe_b:
+            return []
+
+        margem_media_a = sum(x["margem"] for x in classe_a) / len(classe_a) if classe_a else 0
+
+        resultado = []
+        for item in classe_b:
+            if item["margem"] > margem_media_a and item["margem"] >= LIMIAR_MARGEM_B:
+                upside = item["margem"] - margem_media_a
+                resultado.append({
+                    "codigo": item["codigo"],
+                    "nome": item["nome"],
+                    "grupo": item.get("grupo", ""),
+                    "receita": item["receita"],
+                    "participacao": item["participacao"],
+                    "margem_atual": round(item["margem"] * 100, 2),
+                    "margem_media_a": round(margem_media_a * 100, 2),
+                    "upside_margem": round(upside * 100, 2),
+                    "potencial_ganho_mensal": round(item["receita"] * upside, 2),
+                })
+
+        resultado.sort(key=lambda x: x["potencial_ganho_mensal"], reverse=True)
+
+        # Remove grupos ignorados
+        ignored = get_ignored_groups(db)
+        resultado = filtrar_por_grupo(resultado, ignored)
+
         return resultado[:LIMITE_ITENS]

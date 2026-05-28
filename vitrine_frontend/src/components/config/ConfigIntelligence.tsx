@@ -1,4 +1,4 @@
-import { Key, Clock } from 'lucide-react'
+import { Key, Clock, FilterX } from 'lucide-react'
 import SectionHeader from '../ui/SectionHeader'
 import TestConnectionButton from '../TestConnectionButton'
 import PasswordConfigInput from '../PasswordConfigInput'
@@ -36,6 +36,21 @@ export default function ConfigIntelligence({ form, updateField }: TabProps) {
         <div className="ml-9">
           <CompactInput label="Dias retroativos" type="number" min="1" value={form.relatorio_dias_retroativos ?? '30'} onChange={(e) => updateField('relatorio_dias_retroativos', e.target.value)} placeholder="30" className="max-w-[120px]" />
           <p className="text-[11px] text-text-muted mt-1">Quantos dias de dados o relatório de inteligência analisa</p>
+        </div>
+      </div>
+
+      <div className="border-t border-border/50 pt-4">
+        <div className="mb-3">
+          <SectionHeader icon={FilterX} title="Grupos ignorados" description="Grupos de produtos excluídos das análises (separados por vírgula)" />
+        </div>
+        <div className="ml-9">
+          <textarea
+            className="form-input-base min-h-[80px] resize-y"
+            value={form.ignored_groups ?? ''}
+            onChange={(e) => updateField('ignored_groups', e.target.value)}
+            placeholder="USO PESSOAL, LOJA, QUINTAL, PERDA, CONSUMO"
+          />
+          <p className="text-[11px] text-text-muted mt-1">Produtos desses grupos não aparecem nos insights de encalhe, erosão de margem, sazonalidade, taxa de troca e oportunidade classe B</p>
         </div>
       </div>
 

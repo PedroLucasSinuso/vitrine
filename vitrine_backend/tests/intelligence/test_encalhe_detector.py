@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from unittest.mock import MagicMock
 from app.application.intelligence.detectores.encalhe import EncalheDetector
 from app.domain.models.produto import Produto
+from app.application.config_service import set_many
 
 
 def _make_produto(db, codigo, nome="Produto Teste", estoque=10, grupo="GRUPO", preco_custo=50.0, familia="FAMILIA"):
@@ -96,6 +97,21 @@ class TestEncalheDetector:
         source.get_items.return_value = []
         resultado = self.detector.detectar(db_session, source, self.mes_atras, self.hoje)
         assert len(resultado) <= 15
+
+    def test_grupo_ignorado_nao_aparece_no_resultado(self, db_session):
+        """Produto de grupo ignorado (ex: LOJA) não deve aparecer no encalhe."""
+        # Cria dois produtos: um do grupo LOJA e outro do grupo BEBIDAS
+        _make_produto(db_session, "SACOLA", nome="SACOLA LEI RIO 37X50 C/1000", estoque=50, preco_custo=10.0, grupo="LOJA")
+        _make_produto(db_session, "COCA", nome="Coca Cola 2L", estoque=50, preco_custo=5.0, grupo="BEBIDAS")
+        # Configura ignored_groups
+        set_many(db_session, {"ignored_groups": "LOJA, USO PESSOAL"})
+        source = MagicMock()
+        source.get_items.return_value = []
+        resultado = self.detector.detectar(db_session, source, self.mes_atras, self.hoje)
+        # SACOLA (LOJA) deve ser filtrada, COCA (BEBIDAS) deve aparecer
+        codigos = [r["codigo"] for r in resultado]
+        assert "SACOLA" not in codigos, "LOJA deveria ter sido filtrado"
+        assert "COCA" in codigos, "BEBIDAS não deveria ser filtrado"
 
     def test_periodo_de_analise_correto(self, db_session):
         """Deve analisar vendas nos últimos 30 dias a partir de data_fim."""
