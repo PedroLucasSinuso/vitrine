@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { tryRefreshOnStartup } from './api/client'
 import Login from './pages/Login'
@@ -59,6 +59,25 @@ function AuthListener() {
 }
 
 function App() {
+  const [appReady, setAppReady] = useState(false)
+
+  useEffect(() => {
+    tryRefreshOnStartup().finally(() => setAppReady(true))
+  }, [])
+
+  if (!appReady) {
+    return (
+      <ThemeProvider>
+        <div className="flex items-center justify-center min-h-screen bg-bg-page">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-text-muted">Carregando...</p>
+          </div>
+        </div>
+      </ThemeProvider>
+    )
+  }
+
   return (
     <BrowserRouter>
       <ThemeProvider>
