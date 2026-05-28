@@ -1,15 +1,14 @@
 """Vitrine Intelligence — endpoints de análise semanal com IA."""
 import logging
-from datetime import date, datetime
+from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from app.limiter import limiter
-from app.api.deps import get_db, require_supervisor, get_transaction_source
-from app.core.interfaces.source import TransactionSource
+from app.api.deps import get_db, require_supervisor
 from app.domain.models.usuario import Usuario
 from app.application.intelligence.service import solicitar_analise, consultar_job
 from app.application.intelligence.dismiss import dismiss_insight as dismiss_service
-from app.schemas.intelligence_schema import IntelligenceResponse, IntelligenceJobStatus
+from app.schemas.intelligence_schema import IntelligenceJobStatus
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +22,16 @@ def get_intelligence(
     data_inicio: date = Query(...),
     data_fim: date = Query(...),
     db: Session = Depends(get_db),
-    source: TransactionSource = Depends(get_transaction_source),
     _usuario: Usuario = Depends(require_supervisor),
 ):
-    """Retorna análise se cache hit, ou cria job e retorna job_id."""
+    """Retorna análise se cache hit, ou cria job e retorna job_id.
+
+    NOTA: TransactionSource (PostgreSQL) NÃO é dependência deste endpoint.
+    A conexão PostgreSQL é criada dentro de _executar_analise (background task)
+    para evitar que falhas no PostgreSQL impeçam a criação do job.
+    """
     try:
-        resultado, is_cached, job_id = solicitar_analise(db, source)
+        resultado, is_cached, job_id = solicitar_analise(db)
     except Exception as e:
         logger.exception("solicitar_analise falhou")
         raise HTTPException(status_code=500, detail=f"Erro ao solicitar análise: {e}")
@@ -41,7 +44,7 @@ def get_intelligence(
         import asyncio
         try:
             loop = asyncio.get_event_loop()
-            loop.run_in_executor(None, _executar_analise, source, job_id, data_inicio, data_fim)
+            loop.run_in_executor(None, _executar_analise, job_id, data_inicio, data_fim)
         except Exception as e:
             logger.exception("Falha ao disparar background task")
             raise HTTPException(status_code=500, detail=f"Falha ao iniciar análise em background: {e}")

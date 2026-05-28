@@ -5,20 +5,16 @@ import logging
 from datetime import date, datetime
 from app.application.intelligence._utils import utcnow
 from sqlalchemy.orm import Session
-from app.core.interfaces.source import TransactionSource
-from app.application.intelligence.cache import obter_cache, salvar_cache
-from app.application.intelligence.cost_control import pode_solicitar, registrar_chamada
-from app.schemas.intelligence_schema import IntelligenceResponse, IntelligenceJobStatus
-from app.domain.models.intelligence_job import IntelligenceJob
-
-logger = logging.getLogger(__name__)
+from app.schemas.intelligence_schema import IntelligenceResponse
 
 
 def solicitar_analise(
     db: Session,
-    source: TransactionSource,
 ) -> tuple[IntelligenceResponse | None, bool, str | None]:
     """Ponto de entrada principal.
+    
+    NOTA: TransactionSource (PostgreSQL) não é necessário nesta função.
+    A conexão PostgreSQL é criada apenas em _executar_analise (background).
     
     Retorna (response, is_cached, job_id):
     - Cache hit: (response, True, None)
@@ -46,7 +42,6 @@ def solicitar_analise(
 
 
 def _executar_analise(
-    source: TransactionSource,
     job_id: str,
     data_inicio: date,
     data_fim: date,
@@ -54,13 +49,17 @@ def _executar_analise(
     """Executa a análise em background.
 
     Cria sessão SQLAlchemy própria (não reusa session do request,
-    que é fechada quando o request termina).
+    que é fechada quando o request termina). Também cria o
+    TransactionSource do PostgreSQL internamente — o request não
+    precisa de PostgreSQL, apenas a background task.
     """
     from app.infrastructure.db.session import SqliteSession
+    from app.application.erp_factory import create_transaction_source
     from app.application.intelligence.macro_collector import coletar_dados_macro
 
     db = SqliteSession()
     try:
+        source = create_transaction_source(db)
         # 1. Coleta dados
         dados_macro = coletar_dados_macro(db, source, data_inicio, data_fim)
 
