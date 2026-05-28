@@ -35,6 +35,9 @@ def init_db():
     with _init_db_lock:
         if _migration_feita:
             return
+        # Import all domain models para registrar no Base.metadata
+        # ANTES de create_all(). Inclui modelos de intelligence, etc.
+        import app.domain.models  # noqa: F401
         _warn_fernet_key_rotation()
         Base.metadata.create_all(bind=sqlite_engine)
         _run_migrations()
