@@ -87,15 +87,44 @@ def dismiss_intelligence_insight(
 
 @router.get("/intelligence/debug")
 def debug_intelligence(
+    request: Request,
     db: Session = Depends(get_db),
-    _usuario: Usuario = Depends(require_supervisor),
 ):
-    """Endpoint de debug — verifica se tabelas existem."""
-    from sqlalchemy import inspect
+    """Endpoint de debug — sem auth. Verifica tabelas + conexão PostgreSQL.
+
+    Uso: GET /api/bi/intelligence/debug
+    """
+    results = {}
+
+    # 1. Tabelas SQLite
+    from sqlalchemy import inspect, text
     inspector = inspect(db.bind)
-    tables = inspector.get_table_names()
-    intelligence_tables = [t for t in tables if 'intelligence' in t]
-    return {
-        "tables_exist": intelligence_tables,
-        "all_tables": tables,
-    }
+    results["sqlite_tables"] = inspector.get_table_names()
+    intelligence_tables = [t for t in results["sqlite_tables"] if 'intelligence' in t]
+    results["intelligence_tables"] = intelligence_tables
+
+    # 2. Tenta ler configuração do ERP
+    try:
+        from app.application.config_service import get as get_config
+        erp_adapter = get_config(db, "erp_adapter", "alterdata")
+        results["erp_adapter"] = erp_adapter
+    except Exception as e:
+        results["erp_adapter_error"] = str(e)
+
+    # 3. Tenta conectar PostgreSQL (TransactionSource)
+    try:
+        from app.application.erp_factory import create_transaction_source
+        source = create_transaction_source(db)
+        # Tenta buscar dados
+        from datetime import date, timedelta
+        hoje = date.today()
+        items = source.get_items(hoje - timedelta(days=7), hoje)
+        results["postgres"] = {
+            "connected": True,
+            "items_7d": len(items),
+            "sample_codes": list(set(i.product_code for i in items[:5])) if items else [],
+        }
+    except Exception as e:
+        results["postgres"] = {"connected": False, "error": str(e)}
+
+    return results
