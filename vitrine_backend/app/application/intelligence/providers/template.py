@@ -1,6 +1,62 @@
 """Fallback determinístico — gera resposta sem IA usando templates Jinja2."""
 from app.application.intelligence._utils import utcnow
-from app.schemas.intelligence_schema import IntelligenceResponse, Insight, InsightMetricas
+from app.schemas.intelligence_schema import (
+    IntelligenceResponse,
+    Insight,
+    InsightMetricas,
+    ProdutoInsight,
+)
+
+MAX_PRODUTOS_POR_INSIGHT = 10
+
+
+def _mapear_produtos(items: list[dict], tipo: str) -> list[ProdutoInsight]:
+    """Mapeia resultados de detectores para ProdutoInsight."""
+    mapeados = []
+    for item in items[:MAX_PRODUTOS_POR_INSIGHT]:
+        base = {
+            "codigo": item.get("codigo", ""),
+            "nome": item.get("nome", ""),
+            "grupo": item.get("grupo"),
+            "estoque": item.get("estoque"),
+        }
+        if tipo == "encalhe":
+            base.update({
+                "dias_parado": item.get("dias_parado"),
+                "valor_estimado": item.get("valor_estimado"),
+            })
+        elif tipo == "taxa_troca":
+            base.update({
+                "taxa_troca": item.get("taxa"),
+                "qtd_trocas": item.get("qtd_trocas"),
+                "qtd_vendas": item.get("qtd_vendas"),
+            })
+        elif tipo == "sazonalidade":
+            base.update({
+                "crescimento_qtd": item.get("crescimento_qtd"),
+                "qtd_anterior": item.get("qtd_anterior"),
+                "qtd_atual": item.get("qtd_atual"),
+                "valor_atual": item.get("valor_atual"),
+            })
+        elif tipo == "erosao_margem":
+            base.update({
+                "margem_anterior": item.get("margem_anterior"),
+                "margem_atual": item.get("margem_atual"),
+                "variacao_pp": item.get("variacao_pp"),
+                "preco_medio_anterior": item.get("preco_medio_anterior"),
+                "preco_medio_atual": item.get("preco_medio_atual"),
+            })
+        elif tipo == "oportunidade_b":
+            base.update({
+                "receita": item.get("receita"),
+                "participacao": item.get("participacao"),
+                "margem_b": item.get("margem_atual"),
+                "margem_lider": item.get("margem_media_a"),
+                "upside_margem": item.get("upside_margem"),
+                "potencial_ganho_mensal": item.get("potencial_ganho_mensal"),
+            })
+        mapeados.append(ProdutoInsight(**base))
+    return mapeados
 
 
 class TemplateProvider:
@@ -27,6 +83,7 @@ class TemplateProvider:
                     total_encalhados=total,
                     valor_total_encalhado=round(valor_total, 2),
                 ),
+                produtos=_mapear_produtos(encalhes, "encalhe"),
             ))
 
         # ── 2. Taxa de troca ──
@@ -49,6 +106,7 @@ class TemplateProvider:
                     qtd_trocas=int(top_troca.get("qtd_trocas", 0)),
                     qtd_vendas=int(top_troca.get("qtd_vendas", 0)),
                 ),
+                produtos=_mapear_produtos(trocas, "taxa_troca"),
             ))
 
         # ── 3. Sazonalidade ──
@@ -67,6 +125,7 @@ class TemplateProvider:
                 ),
                 sugestao="Avalie se é demanda sazonal genuína e ajuste o estoque preventivamente.",
                 metricas=None,
+                produtos=_mapear_produtos(sazonais, "sazonalidade"),
             ))
 
         # ── 4. Erosão de margem ──
@@ -88,6 +147,7 @@ class TemplateProvider:
                     margem_atual=top_erosao.get("margem_atual"),
                     variacao=top_erosao.get("variacao_pp"),
                 ),
+                produtos=_mapear_produtos(erosoes, "erosao_margem"),
             ))
 
         # ── 5. Oportunidade B ──
@@ -110,6 +170,7 @@ class TemplateProvider:
                     margem_lider=top_op.get("margem_media_a"),
                     potencial_ganho_mensal=top_op.get("potencial_ganho_mensal"),
                 ),
+                produtos=_mapear_produtos(ops_b, "oportunidade_b"),
             ))
 
         # ── Resumo executivo ──

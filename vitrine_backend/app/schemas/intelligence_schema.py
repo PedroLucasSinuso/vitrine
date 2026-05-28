@@ -4,6 +4,39 @@ from pydantic import BaseModel
 from typing import Literal
 
 
+class ProdutoInsight(BaseModel):
+    """Produto listado no detalhamento de um insight."""
+    codigo: str
+    nome: str
+    grupo: str | None = None
+    estoque: float | None = None
+    dias_parado: int | None = None
+    ultima_venda: str | None = None
+    valor_estimado: float | None = None
+    # Taxa de troca
+    taxa_troca: float | None = None
+    qtd_trocas: int | None = None
+    qtd_vendas: int | None = None
+    # Erosão de margem
+    margem_anterior: float | None = None
+    margem_atual: float | None = None
+    variacao_pp: float | None = None
+    preco_medio_anterior: float | None = None
+    preco_medio_atual: float | None = None
+    # Sazonalidade
+    crescimento_qtd: float | None = None
+    qtd_anterior: int | None = None
+    qtd_atual: int | None = None
+    valor_atual: float | None = None
+    # Oportunidade B
+    receita: float | None = None
+    participacao: float | None = None
+    margem_b: float | None = None
+    margem_lider: float | None = None
+    upside_margem: float | None = None
+    potencial_ganho_mensal: float | None = None
+
+
 class InsightMetricas(BaseModel):
     """Métricas específicas por tipo de insight."""
     # Encalhe
@@ -36,6 +69,7 @@ class Insight(BaseModel):
     descricao: str
     sugestao: str
     metricas: InsightMetricas | None = None
+    produtos: list[ProdutoInsight] | None = None
 
 
 class IntelligenceResponse(BaseModel):
