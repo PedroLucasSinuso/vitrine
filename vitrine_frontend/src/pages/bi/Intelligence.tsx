@@ -16,6 +16,7 @@ export default function Intelligence() {
     <BiPageLayout
       titulo="Intelligence"
       breadcrumb={[{ label: 'BI', path: '/bi' }, { label: 'Intelligence' }]}
+      hideSubNav
     >
       <div className="space-y-6">
         {/* ── Botão + descrição ── */}

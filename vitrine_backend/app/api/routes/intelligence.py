@@ -35,9 +35,9 @@ def get_intelligence(
     if job_id:
         from app.application.intelligence.service import _executar_analise
         import asyncio
-        # Dispara em background com run_in_executor para não travar event loop
+        # Dispara em background com run_in_executor + nova session própria
         loop = asyncio.get_event_loop()
-        loop.run_in_executor(None, _executar_analise, db, source, job_id, data_inicio, data_fim)
+        loop.run_in_executor(None, _executar_analise, source, job_id, data_inicio, data_fim)
         return {"status": "processing", "job_id": job_id}
 
     # Bucket cheio — fallback já foi executado e retornou resultado

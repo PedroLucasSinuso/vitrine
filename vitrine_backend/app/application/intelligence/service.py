@@ -46,15 +46,20 @@ def solicitar_analise(
 
 
 def _executar_analise(
-    db: Session,
     source: TransactionSource,
     job_id: str,
     data_inicio: date,
     data_fim: date,
 ) -> None:
-    """Executa a análise em background."""
+    """Executa a análise em background.
+
+    Cria sessão SQLAlchemy própria (não reusa session do request,
+    que é fechada quando o request termina).
+    """
+    from app.infrastructure.db.session import SqliteSession
     from app.application.intelligence.macro_collector import coletar_dados_macro
 
+    db = SqliteSession()
     try:
         # 1. Coleta dados
         dados_macro = coletar_dados_macro(db, source, data_inicio, data_fim)
@@ -103,12 +108,17 @@ def _executar_analise(
 
     except Exception as e:
         logger.exception("Análise Intelligence falhou: %s", e)
-        job = db.query(IntelligenceJob).filter(IntelligenceJob.id == job_id).first()
-        if job:
-            job.status = "error"
-            job.erro = str(e)
-            job.concluido_em = utcnow()
-            db.commit()
+        try:
+            job = db.query(IntelligenceJob).filter(IntelligenceJob.id == job_id).first()
+            if job:
+                job.status = "error"
+                job.erro = str(e)
+                job.concluido_em = utcnow()
+                db.commit()
+        except Exception:
+            logger.exception("Falha ao atualizar status do job")
+    finally:
+        db.close()
 
 
 def _sintetizar_com_ia(

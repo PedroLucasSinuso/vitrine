@@ -7,10 +7,11 @@ interface Props {
   titulo: string
   subtitulo?: string
   breadcrumb?: { label: string; path?: string }[]
+  hideSubNav?: boolean
   children: ReactNode
 }
 
-export default function BiPageLayout({ titulo, subtitulo, breadcrumb, children }: Props) {
+export default function BiPageLayout({ titulo, subtitulo, breadcrumb, hideSubNav, children }: Props) {
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -39,8 +40,8 @@ export default function BiPageLayout({ titulo, subtitulo, breadcrumb, children }
         </div>
       </div>
 
-      {/* BI Sub-nav */}
-      <BiSubNav />
+      {/* BI Sub-nav (oculto em páginas como Intelligence) */}
+      {!hideSubNav && <BiSubNav />}
 
       {/* Content area */}
       <div key={location.pathname} className="animate-page-in flex flex-col gap-5">
