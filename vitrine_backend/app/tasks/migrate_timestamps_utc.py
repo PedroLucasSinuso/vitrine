@@ -21,7 +21,7 @@ from datetime import timedelta
 
 from sqlalchemy import text
 
-from app.infrastructure.db.database import SessionLocal
+from app.infrastructure.db.session import SqliteSession
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ DELTA_HORAS = 3  # BRT (UTC-3) → UTC
 def migrate() -> int:
     """Executa migração. Retorna total de registros alterados."""
     total = 0
-    db = SessionLocal()
+    db = SqliteSession()
     try:
         for tabela, colunas in TABELAS.items():
             for coluna in colunas:
