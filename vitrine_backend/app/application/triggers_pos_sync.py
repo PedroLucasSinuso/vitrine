@@ -146,7 +146,6 @@ def verificar_margem_negativa(
         mensagem = (
             f"{total_problematicos} produtos estão sendo vendidos com custo "
             f"maior que o preço. {format_brl(valor_impacto)} de impacto estimado por mês."
-            f"por mês."
         )
         if top5:
             mensagem += f"\n\nPrincipais: {', '.join(top5)}"

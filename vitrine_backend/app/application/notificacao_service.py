@@ -41,6 +41,7 @@ def criar_notificacao(
         existente.dados_json = json.dumps(dados_json) if dados_json else None
         existente.lida = False
         existente.resolvida = False
+        existente.criada_em = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()
         logger.info("Notificação atualizada: %s (%s)", tipo, titulo)
         return existente
