@@ -14,7 +14,8 @@ LEFT JOIN wshop.produto p   ON d.idproduto = p.idproduto
 LEFT JOIN wshop.grupo   g   ON p.idgrupo = g.idgrupo
 LEFT JOIN wshop.estoque e   ON d.iddetalhe = e.iddetalhe
 
-WHERE e.dtreferencia = (
+WHERE e.dtreferencia IS NULL
+   OR e.dtreferencia = (
     SELECT MAX(e2.dtreferencia)
     FROM wshop.estoque e2
     WHERE e2.iddetalhe = d.iddetalhe

@@ -40,7 +40,7 @@ class AlterdataProductSource(ProductSource):
                 barcodes=barcodes_map.get(str(row["codigo_chamada"]), []),
                 sale_price=Decimal(str(row["preco_venda"])),
                 cost_price=Decimal(str(row["preco_custo"])),
-                stock=float(row["estoque"]),
+                stock=float(row["estoque"]) if row["estoque"] is not None else 0.0,
                 group=str(row["grupo"]),
                 family=str(row["familia"]),
                 is_active=bool(row.get("ativo", True)),
