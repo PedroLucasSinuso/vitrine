@@ -50,8 +50,8 @@ export default function MobileNav() {
       {/* Frosted background */}
       <div className="absolute inset-0 bg-bg-sidebar/90 backdrop-blur-lg border-t border-border" />
 
-      {/* Tabs */}
-      <div className="relative flex items-center justify-center w-full max-w-lg mx-auto gap-1 sm:gap-2">
+      {/* Tabs — scroll horizontal no mobile */}
+      <div className="relative flex items-center w-full max-w-lg mx-auto gap-1 sm:gap-2 overflow-x-auto scrollbar-none whitespace-nowrap px-2">
         {visibleTabs.map((tab) => {
           const active = isActive(tab.path)
           const isCenter = tab.label === 'Resumo'
