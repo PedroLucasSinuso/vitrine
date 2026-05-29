@@ -4,11 +4,21 @@ Usado para alertas pós-sync: margem negativa, erro de sync, encalhe severo, etc
 Cada notificação é consolidada (1 alerta = 1 linha, não 1 por produto).
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, func
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
 
 from app.infrastructure.db.database import Base
+
+
+def _utcnow() -> datetime:
+    """Retorna datetime UTC naive (sem timezone) para armazenamento consistente.
+
+    SQLite CURRENT_TIMESTAMP retorna hora local, não UTC. Usar Python
+    datetime.utcnow() garante que todo timestamp armazenado seja UTC,
+    independente do fuso horário do servidor.
+    """
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class Notificacao(Base):
@@ -29,14 +39,14 @@ class Notificacao(Base):
     resolvida = Column(Boolean, default=False, index=True)
     """resolvida=true quando o problema deixou de existir no próximo sync."""
 
-    criada_em = Column(DateTime, default=func.now())
+    criada_em = Column(DateTime, default=_utcnow)
     lida_em = Column(DateTime, nullable=True)
     resolvida_em = Column(DateTime, nullable=True)
 
     def marcar_lida(self) -> None:
         self.lida = True
-        self.lida_em = datetime.now()
+        self.lida_em = _utcnow()
 
     def marcar_resolvida(self) -> None:
         self.resolvida = True
-        self.resolvida_em = datetime.now()
+        self.resolvida_em = _utcnow()

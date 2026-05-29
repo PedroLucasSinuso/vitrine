@@ -1,11 +1,9 @@
 # Current Context
 
-> Audit stage: **Completa. 31 issues da Revisão Adversarial corrigidas. 334 testes passando.**
-> Data da última atualização: **2026-05-28**
-> Status: **Intelligence Module — completo + Macro Indicators (F1-F3) implementados. 334 testes.**
-> Data da auditoria: **2026-05-27**
-> Status: **Sprints 1-8 + 6 refinamentos concluídos. 31/31 issues do correction-plan corrigidos.**
-> Macro indicators: **Fases 1, 2 e 3 implementadas. ADR-016 em vigor.**
+> Audit stage: **Completa. 334 testes passando. 9 correções na sessão 2026-05-29.**
+> Data da última atualização: **2026-05-29**
+> Status: **Sprint 12 + Hotfixes (health, notificação, excel, intelligence, scheduler, formatters)**
+> Testes: **334 passando, 0 regressões.**
 
 ---
 
@@ -279,8 +277,8 @@
 
 - **Backend:** ~15 módulos de primeira linha, ~70 arquivos (estimado).
 - **Frontend:** ~11 módulos de primeira linha, ~40+ componentes/páginas.
-- **Testes:** 227 testes passando (pytest) — 31 issues do correction-plan + 23 debug-audit + hotfixes.
-- **Issues resolvidos:** 54+ em múltiplos sprints (27 adversarial + 23 debug-audit + 4 hotfix/correção).
+- **Testes:** 334 testes passando (pytest) — 31 issues do correction-plan + 23 debug-audit + hotfixes + macro indicators + sprint-12.
+- **Issues resolvidos:** 58+ em múltiplos sprints (27 adversarial + 23 debug-audit + 4 hotfix/correção + 4 sprint-12).
 - **Lint:** 0 erros, 0 warnings.
 - **TypeScript:** 0 erros de compilação.
 - **UX audit:** 6 páginas ajustadas (Etiquetas, Inventário, Produtos, Configurações, Usuarios, Admin).
@@ -310,7 +308,7 @@
 
 ## Próximos Passos
 
-### ✅ All Sprints (1-11 + Hotfix + UX Refactor) — Concluídos
+### ✅ All Sprints (1-12 + Hotfix + UX Refactor) — Concluídos
 
 **Sprint 1 (Bugs Críticos):** C1, C2, C3 — require_sessao_ativa, Fernet doc, stale closure.  
 **Sprint 2 (Segurança):** S1-S5 + G1-G6 — JWT revogação, rate limits, frontend logout, role invalidation.  
@@ -324,7 +322,8 @@
 **Sprint 9 (Frontend):** B13, B18, B19, B9 — 401 reload, polling leak, erros engolidos, dead code.  
 **Sprint 10 (Segurança):** B10, B12, B17 — ProtectedRoute, logout fail, type fix.  
 **Sprint 11 (Housekeeping):** B2, B20, B21, B23, B25 — email, modelo Claude, log, gaps de teste.  
-**UX Refactor (2026-05-25):** Layout Busca em 6 páginas, prepend+highlight, Config espaçamento+inputs, Usuarios/Admin centralizados, Produtos max-w-6xl.
+**UX Refactor (2026-05-25):** Layout Busca em 6 páginas, prepend+highlight, Config espaçamento+inputs, Usuarios/Admin centralizados, Produtos max-w-6xl.  
+**Sprint 12 (Correções Checkpoint 28 Mai):** SameSite=Lax (mobile logout), OportunidadeB mediana, job lock, hash frágil, repo hygiene.
 
 ### Resíduos
 
@@ -368,6 +367,107 @@ Plano completo documentado em ADR-016. 3 fases implementadas:
 
 
 
+### Sprint 12 — Correções Checkpoint 28 Mai (2026-05-29)
+
+**P0 — Logout no mobile (SameSite):**
+- Cookie `refresh_token` alterado de `SameSite=Strict` para `SameSite=Lax` em ambos endpoints (`/auth/login` e `/auth/refresh`)
+- `access_token` e CSRF mantêm `Strict` (vida curta, CSRF via header)
+- Resolve logout falso ao retornar de outros apps no mobile
+- Arquivo: `app/api/routes/auth.py` (2 cookies alterados)
+
+**P1 — OportunidadeBDetector: mediana + filtro margem:**
+- Helper `_mediana()` adicionado (imune a outliers)
+- Helper `_calcular_referencia_a()`: filtra produtos A com `margem > 0`, calcula mediana
+- Se classe A inteira tiver margem negativa (dado sujo), aborta com warning
+- Aplicado em ambos os paths (aggregates + `_calcular_manual`)
+- Arquivo: `app/application/intelligence/detectores/oportunidade_b.py`
+
+**P1 — Job lock em `solicitar_analise`:**
+- Antes de criar novo job, consulta se existe `processing` ativo
+- Se existir, reutiliza o job_id existente
+- Arquivo: `app/application/intelligence/service.py`
+
+**P2 — Hash frágil no `TemplateProvider`:**
+- Todos os 5 detectores (encalhe, taxa_troca, sazonalidade, erosao, oportunidade_b) incluem `hash(titulo)` no hash do insight
+- Elimina colisão semântica entre análises diferentes
+- Arquivo: `app/application/intelligence/providers/template.py`
+
+**Repo hygiene:**
+- `backend.json`, `frontend.json` removidos do tracking git
+- `.gitignore` atualizado: `/backend.json`, `/frontend.json`, `vitrine-checkpoint-*.md`
+- Duplicata de `.opencode` no `.gitignore` removida
+
+**Testes:** 334/334 passando, 0 regressões. Frontend build limpo.
+
+### Hotfixes Pós-Sprint 12 (2026-05-29)
+
+**H1 — Health endpoint público:**
+- `GET /api/admin/health` criado (sem auth). `GET /api/admin/scheduler/health` mantém auth admin.
+- Arquivo: `vitrine_backend/app/api/routes/admin.py` (linha 180-188)
+
+**H2 — Notification dropdown opacity:**
+- `bg-bg-card` → `bg-surface-modal` no NotificationCenter. Flagship `bg-bg-card` tem 45% opacity — texto ficava ilegível.
+- Arquivo: `vitrine_frontend/src/components/NotificationCenter.tsx`
+
+**H3 — "Baixar relatório" Excel (margem negativa):**
+- Antes: CSV gerado no client-side via `baixarCSVdeArray`. Problema: sem formatação, dados soltos.
+- Agora: Excel via `GET /bi/exportar/margem-negativa/{notificacao_id}` — mesmo design do `excel_inventario.py` (cabeçalho azul, linhas alternadas, vermelho para margem negativa, fórmulas de total/avg).
+- Novo módulo: `app/application/reporting/excel_margem_negativa.py`
+- Rota: `vitrine_backend/app/api/routes/bi.py` (linha 566-598)
+- Frontend: `NotificationCenter.tsx` — chama API com `responseType: 'blob'`.
+
+**H4 — Intelligence de 30d para 3 meses:**
+- Período: 30 → 90 dias. Cache key: `intel_30d` → `intel_{inicio}_{fim}`.
+- Arquivo: `vitrine_frontend/src/hooks/useIntelligence.ts`
+
+**H5 — Regenerar insights mantém conteúdo visível:**
+- overlay transparente + spinner durante regeneração, em vez de esconder o ready block.
+- Arquivo: `vitrine_frontend/src/pages/bi/Intelligence.tsx`
+
+**H6 — Export buttons: ghost → secondary:**
+- Botões "Exportar Excel" e "Exportar PDF" no Dashboard trocados de `variant="ghost"` para `variant="secondary"`.
+- Arquivo: `vitrine_frontend/src/pages/bi/Dashboard.tsx`
+
+**H7 — Scheduler primeira execução:**
+- Primeiro job agenda para 5s após startup, não mais `now + interval`.
+- Arquivo: `vitrine_backend/app/application/scheduler.py`
+
+**H8 — Timezone BRT em notificações:**
+- `formatDataBrasil()` criado com conversão UTC→BRT + fallback pt-BR.
+- Aplicado no `NotificationCenter.tsx` em vez de `new Date(n.criada_em).toLocaleString('pt-BR')`.
+- Arquivo: `vitrine_frontend/src/utils/formatters.ts`
+
+**H9 — Formatters robustos:**
+- `formatCurrency()` refatorado com `Intl.NumberFormat` singleton (não recria a cada chamada).
+- `formatDataBrasil()`, `formatDataCurta()`, `formatDataComDiaSemana()` — todos com timezone BRT.
+- Funções legadas `formatDate()`, `formatDateWithWeekday()` marcadas como `@deprecated`.
+- Arquivo: `vitrine_frontend/src/utils/formatters.ts`
+
+**H10 — Margem negativa: guard clause 90d + ignored_groups + adapter:**
+- Guard clause: produtos sem venda em 90d são excluídos (mortos/defasados). Revenue calculada em 30d.
+- Blacklist de grupos ignorados (mesma config do Intelligence) agora é respeitada.
+- SQL硬codado removido: usa `TransactionSource.get_dimensao_aggregates()` via adapter.
+- Funções `_buscar_ativos_90d()` e `_buscar_receita_30d()` removidas (violavam hexagonal).
+- Arquivo: `vitrine_backend/app/application/triggers_pos_sync.py`
+
+**H11 — Excel margem negativa com formatação monetária:**
+- `number_format = '#,##0.00'` em preço venda, preço custo, receita e impacto.
+- `round(x, 2)` em todos os valores.
+- Cabeçalho dinâmico: lê `DIAS_ANALISE` da trigger (mostra "Receita (30d)").
+- Arquivo: `vitrine_backend/app/application/reporting/excel_margem_negativa.py`
+
+**H12 — Excel margem negativa com formatação monetária (cont.):**
+- JOIN corrigido para schema real do Alterdata: `detalhe → idproduto → produto → idgrupo → grupo`, coluna `nmgrupo`.
+- Arquivo: `vitrine_backend/app/application/triggers_pos_sync.py`
+
+**H14 — Timestamps BRT vs UTC (causa raiz):**
+- **Causa raiz:** SQLite `func.now()` (`CURRENT_TIMESTAMP`) retorna hora **local** no Windows (BRT, UTC-3), não UTC como documentado. Frontend `toBrasiliaDate()` assumia UTC e subtraía 3h — dupla conversão → timestamp 3h atrás.
+- **Correção:** `func.now()` substituído por `_utcnow()` (`datetime.now(timezone.utc).replace(tzinfo=None)`) em `notificacao.py` e `scheduler_lock.py`.
+- `notificacao_service.py`: `datetime.now(timezone.utc)` → `.replace(tzinfo=None)` para garantir datetimes naive UTC.
+- **Nova migração:** `app/tasks/migrate_timestamps_utc.py` — adiciona 3h a todos os timestamps existentes (BRT→UTC).
+- **Necessário:** parar servidor, rodar `uv run python -m app.tasks.migrate_timestamps_utc`, depois iniciar servidor com novo código. Se pular a migração, notificações antigas continuarão com 3h de diferença. As novas serão UTC corretas.
+- Arquivos: `notificacao.py`, `scheduler_lock.py`, `notificacao_service.py`, `migrate_timestamps_utc.py`
+
 ### Backlog (Médio/Longo Prazo)
 
 21. ✅ JWT 8h + refresh token — **concluído** (Sprint 2 + Sprint 8: ACCESS_TOKEN_EXPIRE_MINUTES=30).
@@ -391,4 +491,4 @@ Plano completo documentado em ADR-016. 3 fases implementadas:
 | `debug-audit-2026-05-25.md` | **NOVO** — Relatório completo da auditoria debug (23 issues) |
 | `action-plan-2026-05-25.md` | **NOVO** — Plano de ação para resolução em 6 sprints |
 | `api-contracts.md` | Contratos formais da API |
-| `TUTORIAL_INVENTARIO.md` | Guia de uso do módulo de inventário (usuários finais) |
+| `TUTORIAL_INVENTARIO.md` (documentação existente, fora da raiz) | Guia de uso do módulo de inventário (usuários finais) |

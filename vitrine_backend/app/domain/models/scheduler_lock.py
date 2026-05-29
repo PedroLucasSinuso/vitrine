@@ -6,11 +6,16 @@ Mais robusto: auto-expira, visível via SQL, funciona em qualquer SO.
 
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import Column, DateTime, Integer, String, func
+from sqlalchemy import Column, DateTime, Integer, String
 
 from app.infrastructure.db.database import Base
 
 STALE_TIMEOUT_MINUTES = 10
+
+
+def _utcnow() -> datetime:
+    """Retorna datetime UTC naive para armazenamento consistente."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class SchedulerLock(Base):
@@ -19,8 +24,8 @@ class SchedulerLock(Base):
     id = Column(Integer, primary_key=True, default=1)  # singleton — sempre 1
     pid = Column(Integer, nullable=False)
     hostname = Column(String(128), nullable=False, default="")
-    acquired_at = Column(DateTime, default=func.now())
-    heartbeat_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    acquired_at = Column(DateTime, default=_utcnow)
+    heartbeat_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
     @property
     def is_stale(self) -> bool:

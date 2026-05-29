@@ -275,13 +275,24 @@ Toda prop inline (arrow functions, objetos literais) causa re-render em cascata.
 
 ---
 
-### 🔴 Novos (2026-05-27 — Sessão Atual)
+### ✅ Corrigidos (2026-05-29 — Sessão)
 
-| ID | Issue | Arquivo | Observação |
-|---|---|---|---|
-| **N1** | Console logs não aparecem no uvicorn | `logging_config.py` | `StreamHandler` configurado mas sem saída no terminal. File logging funciona. |
-| **N2** | `SchedulerJobsResponse` com `unknown[]` | `types/admin.ts` | Tipo existe (linha 16-18) mas `jobs: unknown[]` — contrato frágil. |
-| **N3** | Plugar `ProdutoPuro` nas rotas HTTP | `routes/produto.py` | Dataclass + RepositoryDomain existem mas rotas ainda usam service ORM. |
+| ID | Issue | Correção |
+|---|---|---|
+| **H1** | Health endpoint exigia admin | Criado `GET /api/admin/health` público (sem auth). O antigo `/admin/scheduler/health` mantém auth admin. |
+| **H2** | Notification dropdown transparente no tema Flagship | `bg-bg-card` (45% opacity in Flagship) → `bg-surface-modal` (opaco em ambos temas). |
+| **H3** | "Baixar relatório" gerava CSV no client-side | Mudado para download Excel via `GET /bi/exportar/margem-negativa/{notificacao_id}`. Backend gera .xlsx com openpyxl seguindo design do `excel_inventario.py`. |
+| **H4** | Intelligence usava período fixo de 30 dias | Alterado para 3 meses (90 dias). Cache key agora inclui data range (`intel_{inicio}_{fim}`) em vez de fixa `intel_30d`. |
+| **H5** | Botão "Regenerar insights" escondia conteúdo | Botão agora mantém overlay transparente + spinner durante regeneração em vez de ocultar o ready block. |
+| **H6** | Export buttons com ghost variant (pouco visíveis) | Mudados para `variant="secondary"` no Dashboard. |
+| **H7** | Scheduler primeira execução usava full interval | Primeiro job agenda para 5s após startup, não mais `now + interval`. |
+| **H8** | Notificações com timezone não-BRT (band-aid) | `formatDataBrasil()` criado com conversão UTC→BRT. Band-aid frontend — a causa raiz (SQLite `func.now()` retorna hora local) foi corrigida em **H14** no backend. |
+| **H9** | `formatCurrency()` sem cache e sem fallback | Refatorado `formatters.ts` com `Intl.NumberFormat` singleton + BRT helpers (`formatDataBrasil`, `formatDataCurta`, `formatDataComDiaSemana`). |
+| **H10** | Margem negativa ignorava blacklist de grupos | Adicionado `get_ignored_groups()` no fluxo — mesmos grupos ignorados do Intelligence são respeitados. |
+| **H11** | Margem negativa sem guard clause de 90 dias | Adicionado: produtos sem venda em 90d são excluídos (considerados mortos/defasados). Revenue calculada em 30d. |
+| **H12** | Margem negativa com SQL硬codado (violava hexagonal) | Refatorado para usar `TransactionSource.get_dimensao_aggregates()`. Zero SQL no trigger. Funções `_buscar_ativos_90d` e `_buscar_receita_30d` removidas. |
+| **H13** | Excel margem negativa sem formatação monetária | `number_format = '#,##0.00'` em preço venda, preço custo, receita e impacto. `round(x, 2)` em todos os valores. Cabeçalho dinâmico lendo `DIAS_ANALISE`. |
+| **H14** | Timestamps de notificações mostravam 3h atrás (11:08 em vez de 14:11) | **Causa raiz:** SQLite `func.now()` retorna hora LOCAL (BRT, UTC-3) no Windows, não UTC como documentado. Frontend `toBrasiliaDate()` assumia UTC e subtraía 3h duplicando a conversão. **Correção:** `func.now()` substituído por `_utcnow()` (Python `datetime.now(timezone.utc).replace(tzinfo=None)`) em `notificacao.py` e `scheduler_lock.py`. `notificacao_service.py` também passou a usar naive UTC. Migração `app/tasks/migrate_timestamps_utc.py` para corrigir dados existentes (BRT→UTC). **Necessário executar migração antes de iniciar o novo código (ver instruções).** |
 
 ---
 

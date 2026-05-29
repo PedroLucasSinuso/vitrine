@@ -13,7 +13,6 @@
 ├── .opencode/             # Agent config, skills, docs (architecture, decisions, context)
 ├── iniciar.ps1            # Dev launcher (backend + cloudflare tunnel, Q to quit, R to restart)
 ├── README.md              # Full documentation — read this first for architecture & features
-└── TUTORIAL_INVENTARIO.md # User tutorial for inventory module (operators + supervisors)
 ```
 
 ---
@@ -73,6 +72,16 @@ cd vitrine_frontend; npm install; npm run dev
 
 ```
 api/routes/ → api/deps.py (DI) → application/ → domain/ → infrastructure/
+↕                                  ↕
+core/ (config, logging, interfaces)  core/models/ (Pure Python DTOs)
+```
+
+**Novo endpoint público:** `GET /api/admin/health` — sem auth, retorna `{"status": "ok", "service": "vitrine-backend", "timestamp": ...}` usado como health check do Cloudflare tunnel / monitoração.
+
+**Novo módulo:** `app/application/reporting/excel_margem_negativa.py` — gera .xlsx com layout idêntico ao `excel_inventario.py` (cabeçalho azul `1E3A5F`, linhas alternadas `F4F7FB`, fonte vermelha para margem negativa, fórmulas de total/avg).
+```
+```
+api/routes/ → api/deps.py (DI) → application/ → domain/ → infrastructure/
                                                 → adapters/ → ERP (PostgreSQL)
 ↕                                                   ↕
 core/ (config, logging, interfaces)              core/models/ (Pure Python DTOs)
@@ -81,6 +90,8 @@ core/ (config, logging, interfaces)              core/models/ (Pure Python DTOs)
 **Critical:** Domain models (`domain/models/`) inherit from SQLAlchemy `declarative_base`. This means unit tests require a DB session. `core/models/` has Pure Python DTOs used by adapters — this creates duplication with `domain/models/`.
 
 **Good separation:** Adapters implement ABCs from `core/interfaces/source.py` (`ProductSource`, `TransactionSource`). BI domain is Pure Python, decoupled from ORM. Error handling centralized in `core/error_handler.py`.
+
+**Hexagonal compliance:** All ERP queries go through adapter interfaces (`TransactionSource.get_dimensao_aggregates()`, etc.). The post-sync triggers in `triggers_pos_sync.py` use `TransactionSource` — zero hardcoded SQL. If you see `engine.connect()`, `text("""SELECT""")`, or `fetchall()` outside `adapters/`, it's a violation.
 
 ### Frontend (`vitrine_frontend/src/`)
 
@@ -122,7 +133,7 @@ utils/ (formatters, colors)
 
 ### 🟡 P2 — Design Smells
 
-4. ~~**JWT 7-day expiry, no refresh, no revocation.**~~ ✅ **Resolvido Sprint 2** — Revogação implementada (blacklist + token_version + role change invalidation). Refresh token permanece pendente (backlog).
+4. ~~**JWT 7-day expiry, no refresh, no revocation.**~~ ✅ **Resolvido Sprint 2** — Revogação implementada (blacklist + token_version + role change invalidation). Refresh token com rotação implementado (Sprint 2 + Sprint 8: ACCESS_TOKEN_EXPIRE_MINUTES=30, 7 testes E2E).
 5. **`application/` is a catch-all** — ~12 submodules + loose service files (config_service.py, sync_service.py, scheduler.py, scheduler_manager.py).
 6. **Config has 4+ sources of truth** (`.env` → SQLite → backend cache → localStorage).
 7. **ETL is full DELETE+INSERT** (no incremental sync, not atomic).
@@ -132,7 +143,14 @@ utils/ (formatters, colors)
 
 9. ~~`RolesEnum.get_hierarchy()` defined but not used in backend authorization.~~ ✅ **Resolvido Sprint 4** — removed (dead code).
 10. `config_service.py` ~430 lines (SRP violation).
-11. `localStorage.removeItem('role')` still present in `src/api/client.ts` line 20 — dead code, `role` hasn't been stored separately since Sprint 4. 🟡 **Pendente limpeza** — inofensivo mas sujo.
+11. ~~`localStorage.removeItem('role')` em client.ts~~ ✅ **Removido** (já não existe no código — AGENTS.md desatualizado).
+12. **Scheduler/email tinha 2 bugs silenciosos** (session fora do `with` + assinatura `criar_dominio` errada) — ✅ **Corrigido Hotfix 2026-05-22**. Email chegava vazio (MIME order) — ✅ **Corrigido**.
+
+### 🟢 P3 — Minor Issues
+
+9. ~~`RolesEnum.get_hierarchy()` defined but not used in backend authorization.~~ ✅ **Resolvido Sprint 4** — removed (dead code).
+10. `config_service.py` ~430 lines (SRP violation).
+11. ~~`localStorage.removeItem('role')` em client.ts~~ ✅ **Removido** (já não existe no código — AGENTS.md desatualizado).
 12. **Scheduler/email tinha 2 bugs silenciosos** (session fora do `with` + assinatura `criar_dominio` errada) — ✅ **Corrigido Hotfix 2026-05-22**. Email chegava vazio (MIME order) — ✅ **Corrigido**.
 
 ### Operational Risks
@@ -151,7 +169,7 @@ utils/ (formatters, colors)
 - **Perms:** edit/write allowed, bash requires confirmation.
 - **Skills available (7):** adversarial-review, anti-overengineering, brainstorming, cross-layer-review, frontend-design, performance-review, security-review. Carregadas sob demanda via `/skill`.
 - **Stitch tools disponíveis:** `stitch_create_design_system`, `stitch_generate_screen_from_text`, `stitch_edit_screens`, `stitch_list_projects`, etc — para geração/edição de telas e temas.
-- **Docs in `.opencode/docs/`:** `architecture.md` (full audit), `decisions.md` (15 ADRs), `context.md` (current status + next steps), `api-contracts.md` (formal API contracts), `coding-standards.md` (keep it simple), `known-issues.md` (fix history + active bugs + all sprints corrections), `hotfix-resumo-dia-parcial.md` (partial day comparison fix).
+- **Docs in `.opencode/docs/`:** `architecture.md` (full audit), `decisions.md` (16 ADRs), `context.md` (current status + next steps), `api-contracts.md` (formal API contracts), `coding-standards.md` (keep it simple), `known-issues.md` (fix history + active bugs + all sprints corrections), `hotfix-resumo-dia-parcial.md` (partial day comparison fix), `sprint-12-correction-plan.md` (Sprint 12 — correções checkpoint 28 mai).
 
 ---
 

@@ -92,7 +92,7 @@ def marcar_todas_como_lidas(db: Session) -> int:
     qtd = (
         db.query(Notificacao)
         .filter(Notificacao.lida == False, Notificacao.resolvida == False)
-        .update({"lida": True, "lida_em": datetime.now(timezone.utc)})
+        .update({"lida": True, "lida_em": datetime.now(timezone.utc).replace(tzinfo=None)})
     )
     db.commit()
     return qtd
@@ -108,7 +108,7 @@ def resolver_notificacao(db: Session, tipo: str) -> int:
     qtd = (
         db.query(Notificacao)
         .filter(Notificacao.tipo == tipo, Notificacao.resolvida == False)
-        .update({"resolvida": True, "resolvida_em": datetime.now(timezone.utc)})
+        .update({"resolvida": True, "resolvida_em": datetime.now(timezone.utc).replace(tzinfo=None)})
     )
     db.commit()
     return qtd
