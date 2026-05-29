@@ -114,7 +114,7 @@ def login(request: Request, response: Response, dados: OAuth2PasswordRequestForm
         value=refresh_token,
         httponly=True,
         secure=secure,
-        samesite="strict",
+        samesite="lax",
         max_age=7 * 24 * 3600,
         path="/",
     )
@@ -159,7 +159,7 @@ def refresh(request: Request, response: Response, body: RefreshRequest, db: Sess
         value=new_refresh_token,
         httponly=True,
         secure=secure,
-        samesite="strict",
+        samesite="lax",
         max_age=7 * 24 * 3600,
         path="/",
     )

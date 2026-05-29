@@ -13,6 +13,36 @@ LIMITE_ITENS = 5
 LIMIAR_MARGEM_B = 0.30  # margem mínima para considerar "oportunidade"
 
 
+def _mediana(valores: list[float]) -> float:
+    """Retorna mediana de uma lista de floats. Lista vazia retorna 0."""
+    if not valores:
+        return 0.0
+    sorted_vals = sorted(valores)
+    n = len(sorted_vals)
+    if n % 2 == 1:
+        return sorted_vals[n // 2]
+    return (sorted_vals[n // 2 - 1] + sorted_vals[n // 2]) / 2.0
+
+
+def _calcular_referencia_a(classe_a: list[dict]) -> tuple[float | None, list[dict]]:
+    """Calcula margem de referência da classe A usando mediana.
+    
+    Filtra produtos com margem > 0 (elimina dados sujos do cadastro 
+    onde custo > preço de venda). Retorna (margem_ref, classe_a_valida).
+    Retorna (None, []) se classe_a ficar vazia após o filtro.
+    """
+    classe_a_valida = [x for x in classe_a if x["margem"] > 0]
+    if not classe_a_valida:
+        logger.warning(
+            "OportunidadeB: todos produtos A com margem negativa — "
+            "dados de custo suspeitos, abortando"
+        )
+        return (None, [])
+    
+    margens = [x["margem"] for x in classe_a_valida]
+    return (_mediana(margens), classe_a_valida)
+
+
 class OportunidadeBDetector(Detector):
     """Identifica itens classe B (curva ABC) que têm margem acima da média de A."""
 
@@ -62,12 +92,15 @@ class OportunidadeBDetector(Detector):
         if not classe_b:
             return []
 
-        margem_media_a = sum(x["margem"] for x in classe_a) / len(classe_a) if classe_a else 0
+        margem_ref, classe_a_valida = _calcular_referencia_a(classe_a)
+        if margem_ref is None:
+            return []
+        margem_ref_a = margem_ref
 
         resultado = []
         for item in classe_b:
-            if item["margem"] > margem_media_a and item["margem"] >= LIMIAR_MARGEM_B:
-                upside = item["margem"] - margem_media_a
+            if item["margem"] > margem_ref_a and item["margem"] >= LIMIAR_MARGEM_B:
+                upside = item["margem"] - margem_ref_a
                 resultado.append({
                     "codigo": item["codigo"],
                     "nome": item["nome"],
@@ -75,7 +108,7 @@ class OportunidadeBDetector(Detector):
                     "receita": item["receita"],
                     "participacao": item["participacao"],
                     "margem_atual": round(item["margem"] * 100, 2),
-                    "margem_media_a": round(margem_media_a * 100, 2),
+                    "margem_media_a": round(margem_ref_a * 100, 2),
                     "upside_margem": round(upside * 100, 2),
                     "potencial_ganho_mensal": round(item["receita"] * upside, 2),
                 })
@@ -167,12 +200,15 @@ class OportunidadeBDetector(Detector):
         if not classe_b:
             return []
 
-        margem_media_a = sum(x["margem"] for x in classe_a) / len(classe_a) if classe_a else 0
+        margem_ref, _classe_a_valida = _calcular_referencia_a(classe_a)
+        if margem_ref is None:
+            return []
+        margem_ref_a = margem_ref
 
         resultado = []
         for item in classe_b:
-            if item["margem"] > margem_media_a and item["margem"] >= LIMIAR_MARGEM_B:
-                upside = item["margem"] - margem_media_a
+            if item["margem"] > margem_ref_a and item["margem"] >= LIMIAR_MARGEM_B:
+                upside = item["margem"] - margem_ref_a
                 resultado.append({
                     "codigo": item["codigo"],
                     "nome": item["nome"],
@@ -180,7 +216,7 @@ class OportunidadeBDetector(Detector):
                     "receita": item["receita"],
                     "participacao": item["participacao"],
                     "margem_atual": round(item["margem"] * 100, 2),
-                    "margem_media_a": round(margem_media_a * 100, 2),
+                    "margem_media_a": round(margem_ref_a * 100, 2),
                     "upside_margem": round(upside * 100, 2),
                     "potencial_ganho_mensal": round(item["receita"] * upside, 2),
                 })

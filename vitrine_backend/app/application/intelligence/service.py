@@ -32,7 +32,17 @@ def solicitar_analise(
         response = IntelligenceResponse(**cached)
         return (response, True, None)
 
-    # 2. Cria job (sempre — mesmo sem IA, o service executa)
+    # 2. Verifica se já existe job em processamento (lock anti-duplicação)
+    job_existente = (
+        db.query(IntelligenceJob)
+        .filter(IntelligenceJob.status == "processing")
+        .first()
+    )
+    if job_existente:
+        logger.info("Job %s já está em processamento — reutilizando", job_existente.id)
+        return (None, False, job_existente.id)
+
+    # 3. Cria novo job
     job_id = str(uuid.uuid4())
     agora = utcnow()
     job = IntelligenceJob(

@@ -72,11 +72,12 @@ class TemplateProvider:
             valor_total = sum(e.get("valor_estimado", 0) for e in encalhes)
             top = encalhes[:3]
             nomes = ", ".join(e.get("nome", "?") for e in top)
+            titulo = f"Revise {total} produtos sem venda há mais de 30 dias"
             insights.append(Insight(
-                hash=f"encalhe_{total}_{int(valor_total)}",
+                hash=f"encalhe_{total}_{int(valor_total)}_{hash(titulo)}",
                 tipo="encalhe",
                 impacto="alto" if valor_total > 10000 else "medio",
-                titulo=f"Revise {total} produtos sem venda há mais de 30 dias",
+                titulo=titulo,
                 descricao=f"{nomes} lideram o valor encalhado, totalizando R$ {valor_total:,.2f} em estoque parado.",
                 sugestao="Considere promoção de queima de estoque ou devolução ao fornecedor.",
                 metricas=InsightMetricas(
@@ -91,11 +92,12 @@ class TemplateProvider:
         if trocas:
             top_troca = trocas[0]
             taxa_pct = top_troca.get("taxa", 0) * 100
+            titulo_troca = f"{len(trocas)} produtos com alta taxa de troca/devolução"
             insights.append(Insight(
-                hash=f"taxa_troca_{len(trocas)}_{int(taxa_pct*100)}",
+                hash=f"taxa_troca_{len(trocas)}_{int(taxa_pct*100)}_{hash(titulo_troca)}",
                 tipo="taxa_troca",
                 impacto="alto" if taxa_pct > 20 else "medio",
-                titulo=f"{len(trocas)} produtos com alta taxa de troca/devolução",
+                titulo=titulo_troca,
                 descricao=(
                     f"{top_troca.get('nome', '?')} lidera com {taxa_pct:.1f}% de trocas "
                     f"({int(top_troca.get('qtd_trocas', 0))} de {int(top_troca.get('qtd_vendas', 0))} vendas)."
@@ -114,11 +116,12 @@ class TemplateProvider:
         if sazonais:
             top_saz = sazonais[0]
             cresc_pct = top_saz.get("crescimento_qtd", 0) * 100
+            titulo_saz = f"{len(sazonais)} produtos com crescimento acima de 30%"
             insights.append(Insight(
-                hash=f"sazonalidade_{len(sazonais)}_{int(cresc_pct*100)}",
+                hash=f"sazonalidade_{len(sazonais)}_{int(cresc_pct*100)}_{hash(titulo_saz)}",
                 tipo="sazonalidade",
                 impacto="medio",
-                titulo=f"{len(sazonais)} produtos com crescimento acima de 30%",
+                titulo=titulo_saz,
                 descricao=(
                     f"{top_saz.get('nome', '?')} cresceu {cresc_pct:.0f}% nas vendas "
                     f"({int(top_saz.get('qtd_atual', 0))} uni. vs. {int(top_saz.get('qtd_anterior', 0))} uni. no período anterior)."
@@ -132,11 +135,12 @@ class TemplateProvider:
         erosoes = dados_detectores.get("erosao_margem", [])
         if erosoes:
             top_erosao = erosoes[0]
+            titulo_erosao = f"{len(erosoes)} produtos com margem em queda"
             insights.append(Insight(
-                hash=f"erosao_{len(erosoes)}_{int(abs(top_erosao.get('variacao_pp', 0)))}",
+                hash=f"erosao_{len(erosoes)}_{int(abs(top_erosao.get('variacao_pp', 0)))}_{hash(titulo_erosao)}",
                 tipo="margem_erosao",
                 impacto="alto" if abs(top_erosao.get("variacao_pp", 0)) > 10 else "medio",
-                titulo=f"{len(erosoes)} produtos com margem em queda",
+                titulo=titulo_erosao,
                 descricao=(
                     f"{top_erosao.get('nome', '?')} perdeu {abs(top_erosao.get('variacao_pp', 0)):.1f} pp de margem "
                     f"(de {top_erosao.get('margem_anterior', 0):.1f}% para {top_erosao.get('margem_atual', 0):.1f}%)."
@@ -154,11 +158,12 @@ class TemplateProvider:
         ops_b = dados_detectores.get("oportunidade_b", [])
         if ops_b:
             top_op = ops_b[0]
+            titulo_opb = f"{len(ops_b)} itens classe B com potencial de crescimento"
             insights.append(Insight(
-                hash=f"oportunidade_b_{len(ops_b)}_{int(top_op.get('potencial_ganho_mensal', 0))}",
+                hash=f"oportunidade_b_{len(ops_b)}_{int(top_op.get('potencial_ganho_mensal', 0))}_{hash(titulo_opb)}",
                 tipo="oportunidade_b",
                 impacto="medio",
-                titulo=f"{len(ops_b)} itens classe B com potencial de crescimento",
+                titulo=titulo_opb,
                 descricao=(
                     f"{top_op.get('nome', '?')} tem margem de {top_op.get('margem_atual', 0):.1f}% "
                     f"vs. {top_op.get('margem_media_a', 0):.1f}% da média A, "

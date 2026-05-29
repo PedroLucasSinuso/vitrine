@@ -37,7 +37,13 @@ iniciar.ps1
 *.exe
 *.pem
 dev_utils/
-.opencode
+
+# Dumps de contexto (gerados sob demanda)
+/backend.json
+/frontend.json
+
+# Checkpoints de sessão
+vitrine-checkpoint-*.md
 
 # Runtime
 .scheduler.lock
