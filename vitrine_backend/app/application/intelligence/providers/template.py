@@ -1,5 +1,5 @@
 """Fallback determinístico — gera resposta sem IA usando templates Jinja2."""
-from app.application.intelligence._utils import utcnow
+from app.application.intelligence._utils import format_brl, utcnow
 from app.schemas.intelligence_schema import (
     IntelligenceResponse,
     Insight,
@@ -78,7 +78,7 @@ class TemplateProvider:
                 tipo="encalhe",
                 impacto="alto" if valor_total > 10000 else "medio",
                 titulo=titulo,
-                descricao=f"{nomes} lideram o valor encalhado, totalizando R$ {valor_total:,.2f} em estoque parado.",
+                descricao=f"{nomes} lideram o valor encalhado, totalizando {format_brl(valor_total)} em estoque parado.",
                 sugestao="Considere promoção de queima de estoque ou devolução ao fornecedor.",
                 metricas=InsightMetricas(
                     total_encalhados=total,
@@ -167,7 +167,7 @@ class TemplateProvider:
                 descricao=(
                     f"{top_op.get('nome', '?')} tem margem de {top_op.get('margem_atual', 0):.1f}% "
                     f"vs. {top_op.get('margem_media_a', 0):.1f}% da média A, "
-                    f"com potencial de R$ {top_op.get('potencial_ganho_mensal', 0):,.2f}/mês."
+                    f"com potencial de {format_brl(top_op.get('potencial_ganho_mensal', 0))}/mês."
                 ),
                 sugestao="Invista em exposição, marketing ou treinamento para impulsionar este produto.",
                 metricas=InsightMetricas(
@@ -205,7 +205,7 @@ class TemplateProvider:
         # ── Resumo executivo ──
         linhas = []
         if dados_macro.get("faturamento"):
-            linhas.append(f"Faturamento de R$ {dados_macro['faturamento']:,.2f} nos últimos 30 dias.")
+            linhas.append(f"Faturamento de {format_brl(dados_macro['faturamento'])} nos últimos 30 dias.")
         if insights:
             linhas.append(f"Foram identificados {len(insights)} oportunidades de melhoria.")
         resumo = " ".join(linhas) or "Nenhum insight relevante identificado no período."

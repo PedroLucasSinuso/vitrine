@@ -13,6 +13,7 @@ from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 
+from app.application.intelligence._utils import format_brl
 from app.application.notificacao_service import (
     criar_notificacao,
     resolver_notificacao,
@@ -144,7 +145,7 @@ def verificar_margem_negativa(
         titulo = f"[ALERTA] {total_problematicos} produtos com margem negativa"
         mensagem = (
             f"{total_problematicos} produtos estão sendo vendidos com custo "
-            f"maior que o preço. Impacto estimado de R$ {valor_impacto:,.2f} "
+            f"maior que o preço. {format_brl(valor_impacto)} de impacto estimado por mês."
             f"por mês."
         )
         if top5:

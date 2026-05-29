@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
+from app.application.intelligence._utils import format_brl
 from app.core.interfaces.source import TransactionSource
 from app.application.bi.factory import criar_dominio
 from app.application.bi.reporting.relatorio import Relatorio
@@ -38,7 +39,8 @@ def construir_relatorio_semanal(nome_loja: str, source: TransactionSource) -> st
                     / kpis_ant.faturamento_bruto * 100)
         seta = "\u25b2" if variacao >= 0 else "\u25bc"
         variacao_str = f"{seta} {abs(variacao):.1f}%"
-        variacao_texto = f"Faturamento: {seta} R$ {abs(kpis.faturamento_bruto - kpis_ant.faturamento_bruto):,.2f} ({abs(variacao):.1f}% {'maior' if variacao >= 0 else 'menor'})"
+        diff = abs(kpis.faturamento_bruto - kpis_ant.faturamento_bruto)
+        variacao_texto = f"Faturamento: {seta} {format_brl(diff)} ({abs(variacao):.1f}% {'maior' if variacao >= 0 else 'menor'})"
     else:
         variacao_str = "\u2014"
         variacao_texto = ""
