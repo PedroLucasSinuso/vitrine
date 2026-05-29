@@ -1,6 +1,6 @@
 /** Página principal do Vitrine Intelligence — AI Command Center. */
 import { useCallback, useRef } from 'react'
-import { Sparkles, BarChart3, AlertTriangle, TrendingUp, Activity, RotateCw, FileDown, RefreshCw } from 'lucide-react'
+import { Sparkles, BarChart3, AlertTriangle, Activity, RotateCw, FileDown, RefreshCw } from 'lucide-react'
 import BiPageLayout from '../../components/bi/BiPageLayout'
 import Button from '../../components/ui/Button'
 import Skeleton from '../../components/ui/Skeleton'
@@ -12,14 +12,13 @@ import MacroStrip from '../../components/intelligence/MacroStrip'
 import { useIntelligence } from '../../hooks/useIntelligence'
 import { useMacroIndicators } from '../../hooks/useMacroIndicators'
 import type { IntelligenceResponse } from '../../types/intelligence'
-import { formatDataBrasil } from '../../utils/formatters'
+import { formatCurrency, formatDataBrasil } from '../../utils/formatters'
 
-/** KPI rápido para o hero */
-function HeroKpi({ icon, label, value, trend, color }: {
+/** KPI rápido para o hero — sem dados fake, sem trend enganosa. */
+function HeroKpi({ icon, label, value, color }: {
   icon: React.ReactNode
   label: string
   value: string
-  trend?: string
   color?: string
 }) {
   return (
@@ -33,12 +32,6 @@ function HeroKpi({ icon, label, value, trend, color }: {
       <p className="text-lg sm:text-xl font-bold text-text-primary font-display tracking-tight">
         {value}
       </p>
-      {trend && (
-        <span className="text-[10px] font-medium text-success inline-flex items-center gap-0.5 mt-0.5">
-          <TrendingUp size={10} />
-          {trend}
-        </span>
-      )}
     </div>
   )
 }
@@ -120,35 +113,31 @@ export default function Intelligence() {
               </Button>
             </div>
 
-            {/* KPI Strip */}
-            {status === 'ready' && resultado && (
+            {/* KPI Strip — dados reais do backend */}
+            {status === 'ready' && resultado?.kpis && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <HeroKpi
                   icon={<BarChart3 size={16} />}
                   label="Faturamento"
-                  value="R$ 780,5k"
-                  trend="12,3% vs. período anterior"
+                  value={resultado.kpis.faturamento != null ? formatCurrency(resultado.kpis.faturamento) : '\u2014'}
                   color="text-success"
                 />
                 <HeroKpi
                   icon={<AlertTriangle size={16} />}
-                  label="Produtos críticos"
-                  value="15"
-                  trend="3 novos desde última análise"
-                  color="text-danger"
+                  label="Alertas críticos"
+                  value={String(resultado.kpis.alertas_alto_impacto)}
+                  color={resultado.kpis.alertas_alto_impacto > 0 ? 'text-danger' : 'text-text-muted'}
                 />
                 <HeroKpi
                   icon={<Sparkles size={16} />}
                   label="Insights gerados"
-                  value={String(resultado.insights.length)}
-                  trend="Análise concluída"
+                  value={String(resultado.kpis.total_insights)}
                   color="text-primary"
                 />
                 <HeroKpi
                   icon={<Activity size={16} />}
-                  label="Score operacional"
-                  value="92"
-                  trend="Desempenho estável"
+                  label="Frentes analisadas"
+                  value={String(resultado.kpis.tipos_insight.length)}
                   color="text-info"
                 />
               </div>

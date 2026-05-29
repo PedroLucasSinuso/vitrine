@@ -77,10 +77,19 @@ class Insight(BaseModel):
     produtos: list[ProdutoInsight] | None = None
 
 
+class Kpis(BaseModel):
+    """Indicadores extraídos da análise para exibição no Command Center."""
+    faturamento: float | None = None
+    total_insights: int = 0
+    alertas_alto_impacto: int = 0
+    tipos_insight: list[str] = []
+
+
 class IntelligenceResponse(BaseModel):
     """Resposta completa da análise do Intelligence."""
     resumo_executivo: str
     insights: list[Insight]
+    kpis: Kpis | None = None
     fonte: Literal["claude", "gpt4o_mini", "deterministico"]
     gerado_em: datetime
 

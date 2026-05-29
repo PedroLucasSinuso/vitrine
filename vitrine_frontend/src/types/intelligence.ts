@@ -73,9 +73,17 @@ export interface Insight {
   produtos?: ProdutoInsight[] | null
 }
 
+export interface Kpis {
+  faturamento?: number | null
+  total_insights: number
+  alertas_alto_impacto: number
+  tipos_insight: string[]
+}
+
 export interface IntelligenceResponse {
   resumo_executivo: string
   insights: Insight[]
+  kpis?: Kpis | null
   fonte: Fonte
   gerado_em: string
 }

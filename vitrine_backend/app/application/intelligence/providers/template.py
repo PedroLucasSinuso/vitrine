@@ -4,6 +4,7 @@ from app.schemas.intelligence_schema import (
     IntelligenceResponse,
     Insight,
     InsightMetricas,
+    Kpis,
     ProdutoInsight,
 )
 
@@ -202,10 +203,19 @@ class TemplateProvider:
                 produtos=[],
             ))
 
+        # ── KPIs estruturados ──
+        faturamento = dados_macro.get("faturamento")
+        kpis = Kpis(
+            faturamento=round(faturamento, 2) if faturamento else None,
+            total_insights=len(insights),
+            alertas_alto_impacto=sum(1 for i in insights if i.impacto == "alto"),
+            tipos_insight=sorted({i.tipo for i in insights}),
+        )
+
         # ── Resumo executivo ──
         linhas = []
-        if dados_macro.get("faturamento"):
-            linhas.append(f"Faturamento de {format_brl(dados_macro['faturamento'])} nos últimos 30 dias.")
+        if faturamento:
+            linhas.append(f"Faturamento de {format_brl(faturamento)} nos últimos 30 dias.")
         if insights:
             linhas.append(f"Foram identificados {len(insights)} oportunidades de melhoria.")
         resumo = " ".join(linhas) or "Nenhum insight relevante identificado no período."
@@ -213,6 +223,7 @@ class TemplateProvider:
         return IntelligenceResponse(
             resumo_executivo=resumo,
             insights=insights,
+            kpis=kpis,
             fonte="deterministico",
             gerado_em=utcnow(),
         )
