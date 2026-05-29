@@ -60,12 +60,12 @@ export default function ResumoExecutivo({ texto, fonte, geradoEm }: Props) {
         {/* Coluna 1 — Texto + metadata */}
         <div className="lg:col-span-2 space-y-4">
           {/* Header */}
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/[0.12] text-primary shadow-sm">
+              <div className="p-2 rounded-xl bg-primary/[0.12] text-primary shadow-sm shrink-0">
                 <Sparkles size={22} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h2 className="text-lg font-bold text-text-primary font-display tracking-tight">
                   Resumo Executivo
                 </h2>
@@ -76,7 +76,7 @@ export default function ResumoExecutivo({ texto, fonte, geradoEm }: Props) {
             </div>
 
             {/* Fonte badge */}
-            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border border-border/40 ${meta.color} bg-bg-hover/50 shrink-0`}>
+            <div className={`self-start sm:self-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border border-border/40 ${meta.color} bg-bg-hover/50 shrink-0`}>
               {meta.icon}
               {meta.label}
             </div>
@@ -116,7 +116,7 @@ export default function ResumoExecutivo({ texto, fonte, geradoEm }: Props) {
           </div>
 
           {/* Cards KPI rápidos */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             {revenue && (
               <div className="bg-bg-hover/30 rounded-xl p-3 border border-border/20">
                 <span className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">

@@ -80,13 +80,13 @@ export default function InsightCard({ insight, onDismiss }: Props) {
       {/* Gradiente sutil de fundo no hover */}
       <div className={`absolute inset-0 bg-gradient-to-br ${config.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />
 
-      <div className="relative p-5">
+      <div className="relative p-4 sm:p-5">
         {/* Header row */}
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-start justify-between gap-2 sm:gap-3 mb-3">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
             {/* Ícone do tipo */}
             <div className={`
-              p-2 rounded-lg shrink-0
+              p-1.5 sm:p-2 rounded-lg shrink-0
               ${insight.impacto === 'alto' ? 'bg-danger/[0.1] text-danger' : ''}
               ${insight.impacto === 'medio' ? 'bg-warning/[0.1] text-warning' : ''}
               ${insight.impacto === 'baixo' ? 'bg-info/[0.1] text-info' : ''}
@@ -96,19 +96,19 @@ export default function InsightCard({ insight, onDismiss }: Props) {
 
             <div className="min-w-0">
               {/* Categoria + impacto + confiança */}
-              <div className="flex items-center gap-2 flex-wrap mb-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-1">
                 <Badge variant={config.badge}>{config.label}</Badge>
-                <span className="text-[10px] text-text-muted uppercase font-mono tracking-wider">
+                <span className="text-[9px] sm:text-[10px] text-text-muted uppercase font-mono tracking-wider">
                   {insight.tipo.replace(/_/g, ' ')}
                 </span>
                 {insight.confianca === 'hipotese' && (
-                  <span className="text-[10px] text-warning bg-warning/[0.08] px-1.5 py-0.5 rounded-full font-medium inline-flex items-center gap-1">
-                    <Sparkles size={10} />
+                  <span className="text-[9px] sm:text-[10px] text-warning bg-warning/[0.08] px-1.5 py-0.5 rounded-full font-medium inline-flex items-center gap-1">
+                    <Sparkles size={9} />
                     Hipótese
                   </span>
                 )}
                 {insight.confianca === 'alta' && (
-                  <span className="text-[10px] text-success bg-success/[0.08] px-1.5 py-0.5 rounded-full font-medium">
+                  <span className="text-[9px] sm:text-[10px] text-success bg-success/[0.08] px-1.5 py-0.5 rounded-full font-medium">
                     Confiança alta
                   </span>
                 )}
@@ -160,13 +160,13 @@ export default function InsightCard({ insight, onDismiss }: Props) {
         )}
 
         {/* Footer actions */}
-        <div className="flex items-center justify-between gap-3 pt-2 border-t border-border/20">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 pt-2 border-t border-border/20">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* Ver produtos */}
             {insight.produtos && insight.produtos.length > 0 && (
               <button
                 onClick={() => setShowProdutos(true)}
-                className="inline-flex items-center gap-1 text-xs font-medium text-text-muted hover:text-primary transition-colors group/btn"
+                className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-medium text-text-muted hover:text-primary transition-colors group/btn"
               >
                 <List size={12} />
                 <span>Ver {insight.produtos.length} produtos</span>

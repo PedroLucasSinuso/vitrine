@@ -18,7 +18,7 @@ function formatarData(iso: string): string {
 export default function MacroCard({ indicador }: Props) {
   if (!indicador.disponivel) {
     return (
-      <div className="shrink-0 w-[170px] bg-danger/[0.06] rounded-xl border border-danger/20 p-3 text-center">
+      <div className="shrink-0 w-[170px] bg-danger/[0.06] rounded-xl border border-danger/20 p-3 text-center snap-start">
         {/* Rótulo */}
         <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider block mb-1">
           {indicador.rotulo}
@@ -50,7 +50,7 @@ export default function MacroCard({ indicador }: Props) {
   const trendColor = isElevado ? 'text-danger' : (indicador.valor !== null && indicador.valor < 2 ? 'text-success' : 'text-text-muted')
 
   return (
-    <div className="shrink-0 w-[170px] bg-bg-card rounded-xl border border-border/40 p-3 hover:border-border/70 transition-colors text-center">
+    <div className="shrink-0 w-[170px] bg-bg-card rounded-xl border border-border/40 p-3 hover:border-border/70 transition-colors text-center snap-start">
       {/* Rótulo */}
       <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider block mb-1">
         {indicador.rotulo}

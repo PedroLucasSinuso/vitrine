@@ -206,25 +206,29 @@ export default function Intelligence() {
             />
 
             {/* Quick Actions */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mr-1">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-2">
+              <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider sm:mr-1">
                 Ações rápidas
               </span>
-              <Button
-                variant="secondary" size="sm"
-                onClick={exportarRelatorio}
-                disabled={!resultado}
-              >
-                <FileDown size={12} />
-                Exportar relatório
-              </Button>
-              <Button
-                variant="secondary" size="sm"
-                onClick={gerarAnalise}
-              >
-                <RefreshCw size={12} />
-                Regenerar insights
-              </Button>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Button
+                  variant="secondary" size="sm"
+                  onClick={exportarRelatorio}
+                  disabled={!resultado}
+                  className="flex-1 sm:flex-initial"
+                >
+                  <FileDown size={12} />
+                  Exportar relatório
+                </Button>
+                <Button
+                  variant="secondary" size="sm"
+                  onClick={gerarAnalise}
+                  className="flex-1 sm:flex-initial"
+                >
+                  <RefreshCw size={12} />
+                  Regenerar insights
+                </Button>
+              </div>
             </div>
 
             {/* Insights */}
@@ -255,7 +259,7 @@ export default function Intelligence() {
                   {resultado.insights.map((insight, i) => (
                     <div
                       key={insight.hash}
-                      className="animate-fade-in-up"
+                      className="motion-safe:animate-fade-in-up"
                       style={{ animationDelay: `${i * 60}ms` }}
                     >
                       <InsightCard

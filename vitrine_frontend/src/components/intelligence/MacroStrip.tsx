@@ -51,7 +51,7 @@ export default function MacroStrip({ indicadores, loading, erro }: Props) {
       </div>
 
       {/* Strip com scroll horizontal */}
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin snap-x snap-mandatory -mx-1 px-1 scroll-smooth">
         {indicadores.map(ind => (
           <MacroCard key={ind.chave} indicador={ind} />
         ))}
