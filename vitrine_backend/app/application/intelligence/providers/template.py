@@ -205,7 +205,7 @@ class TemplateProvider:
         # ── Resumo executivo ──
         linhas = []
         if dados_macro.get("faturamento"):
-            linhas.append(f"Faturamento de R$ {dados_macro['faturamento']:,.2f} no período.")
+            linhas.append(f"Faturamento de R$ {dados_macro['faturamento']:,.2f} nos últimos 30 dias.")
         if insights:
             linhas.append(f"Foram identificados {len(insights)} oportunidades de melhoria.")
         resumo = " ".join(linhas) or "Nenhum insight relevante identificado no período."

@@ -11,10 +11,12 @@ from app.domain.models.intelligence_job import IntelligenceJob
 from app.domain.models.intelligence_usage import IntelligenceUsage
 from app.domain.models.intelligence_dismissed import InsightsDismissed
 from app.domain.models.macro_cache import MacroCache
+from app.domain.models.scheduler_lock import SchedulerLock
+from app.domain.models.notificacao import Notificacao
 
 __all__ = [
     "Base", "Produto", "ProdutoCodigo", "CacheStatus", "SyncJob",
     "TokenBlacklist", "TentativaLogin", "GrupoFamilia",
     "IntelligenceCache", "IntelligenceJob", "IntelligenceUsage", "InsightsDismissed",
-    "MacroCache",
+    "MacroCache", "SchedulerLock", "Notificacao",
 ]

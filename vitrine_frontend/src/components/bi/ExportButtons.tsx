@@ -18,13 +18,13 @@ export default function ExportButtons({ onExcel, onCsv, onPdf, disabled }: Props
         </Button>
       )}
       {onPdf && (
-        <Button size="sm" variant="ghost" onClick={onPdf} disabled={disabled}>
+        <Button size="sm" variant="secondary" onClick={onPdf} disabled={disabled}>
           <FileText size={14} />
           PDF
         </Button>
       )}
       {onCsv && (
-        <Button size="sm" variant="ghost" onClick={onCsv} disabled={disabled}>
+        <Button size="sm" variant="secondary" onClick={onCsv} disabled={disabled}>
           <FileDown size={14} />
           CSV
         </Button>

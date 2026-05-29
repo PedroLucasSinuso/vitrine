@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 def solicitar_analise(
     db: Session,
+    data_inicio: date,
+    data_fim: date,
 ) -> tuple[IntelligenceResponse | None, bool, str | None]:
     """Ponto de entrada principal.
     
@@ -27,7 +29,7 @@ def solicitar_analise(
     - Cache miss + bucket cheio: (fallback, False, None)
     """
     # 1. Verifica cache
-    cached = obter_cache(db)
+    cached = obter_cache(db, data_inicio, data_fim)
     if cached:
         response = IntelligenceResponse(**cached)
         return (response, True, None)
@@ -113,7 +115,7 @@ def _executar_analise(
             response = _sintetizar_fallback(dados_macro, dados_detectores)
 
         # 4. Salva cache
-        salvar_cache(db, response.model_dump(), response.fonte)
+        salvar_cache(db, response.model_dump(), response.fonte, data_inicio, data_fim)
 
         # 5. Atualiza job
         job = db.query(IntelligenceJob).filter(IntelligenceJob.id == job_id).first()
@@ -175,7 +177,7 @@ def _sintetizar_fallback(
     return provider.sintetizar(dados_macro, dados_detectores)
 
 
-def consultar_job(db: Session, job_id: str) -> IntelligenceJobStatus | None:
+def consultar_job(db: Session, job_id: str, data_inicio: date | None = None, data_fim: date | None = None) -> IntelligenceJobStatus | None:
     """Retorna status do job para polling."""
     job = db.query(IntelligenceJob).filter(IntelligenceJob.id == job_id).first()
     if not job:
@@ -183,7 +185,10 @@ def consultar_job(db: Session, job_id: str) -> IntelligenceJobStatus | None:
 
     resultado = None
     if job.status == "ready":
-        cached = obter_cache(db)
+        if data_inicio and data_fim:
+            cached = obter_cache(db, data_inicio, data_fim)
+        else:
+            cached = obter_cache(db, date(2026, 1, 1), date(2026, 12, 31))  # fallback amplo
         if cached:
             resultado = IntelligenceResponse(**cached)
 

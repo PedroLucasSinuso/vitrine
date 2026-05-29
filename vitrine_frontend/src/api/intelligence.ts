@@ -20,8 +20,16 @@ export async function fetchIntelligence(signal?: AbortSignal): Promise<Intellige
 /**
  * Polling de status do job.
  */
-export async function fetchIntelligenceStatus(jobId: string, signal?: AbortSignal): Promise<IntelligenceJobStatus> {
-  const r = await api.get(`/bi/intelligence/status/${jobId}`, { signal })
+export async function fetchIntelligenceStatus(
+  jobId: string,
+  data_inicio: string,
+  data_fim: string,
+  signal?: AbortSignal
+): Promise<IntelligenceJobStatus> {
+  const r = await api.get(`/bi/intelligence/status/${jobId}`, {
+    params: { data_inicio, data_fim },
+    signal,
+  })
   return r.data
 }
 

@@ -1,17 +1,21 @@
 """Tests for intelligence cache module."""
 import json
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from app.domain.models.intelligence_cache import IntelligenceCache
 from app.application.intelligence.cache import obter_cache, salvar_cache, limpar_expirados
 from app.application.intelligence._utils import utcnow
+
+
+_DATA_INICIO = date(2026, 5, 1)
+_DATA_FIM = date(2026, 5, 29)
 
 
 class TestCache:
     def test_salvar_e_obter_cache(self, db_session):
         """Salva cache e recupera com sucesso."""
         dados = {"resumo_executivo": "teste", "insights": []}
-        salvar_cache(db_session, dados, "deterministico")
-        resultado = obter_cache(db_session)
+        salvar_cache(db_session, dados, "deterministico", _DATA_INICIO, _DATA_FIM)
+        resultado = obter_cache(db_session, _DATA_INICIO, _DATA_FIM)
         assert resultado is not None
         assert resultado["resumo_executivo"] == "teste"
 
@@ -19,7 +23,7 @@ class TestCache:
         """Cache expirado não deve ser retornado."""
         expirado = IntelligenceCache(
             tenant_id="default",
-            periodo_key="30d",
+            periodo_key="28d",
             resultado_json=json.dumps({"x": 1}),
             fonte="deterministico",
             gerado_em=utcnow() - timedelta(days=10),
@@ -27,13 +31,13 @@ class TestCache:
         )
         db_session.add(expirado)
         db_session.commit()
-        assert obter_cache(db_session) is None
+        assert obter_cache(db_session, _DATA_INICIO, _DATA_FIM) is None
 
     def test_cache_valido_retorna_dict(self, db_session):
         """Cache dentro do prazo deve ser retornado."""
         valido = IntelligenceCache(
             tenant_id="default",
-            periodo_key="30d",
+            periodo_key="28d",
             resultado_json=json.dumps({"y": 2}),
             fonte="deterministico",
             gerado_em=utcnow(),
@@ -41,7 +45,7 @@ class TestCache:
         )
         db_session.add(valido)
         db_session.commit()
-        resultado = obter_cache(db_session)
+        resultado = obter_cache(db_session, _DATA_INICIO, _DATA_FIM)
         assert resultado is not None
         assert resultado["y"] == 2
 
@@ -49,9 +53,9 @@ class TestCache:
         """Merge deve substituir cache existente."""
         dados1 = {"resumo_executivo": "primeiro"}
         dados2 = {"resumo_executivo": "segundo"}
-        salvar_cache(db_session, dados1, "deterministico")
-        salvar_cache(db_session, dados2, "deterministico")
-        resultado = obter_cache(db_session)
+        salvar_cache(db_session, dados1, "deterministico", _DATA_INICIO, _DATA_FIM)
+        salvar_cache(db_session, dados2, "deterministico", _DATA_INICIO, _DATA_FIM)
+        resultado = obter_cache(db_session, _DATA_INICIO, _DATA_FIM)
         assert resultado["resumo_executivo"] == "segundo"
 
     def test_limpar_expirados_remove_apenas_expirados(self, db_session):
@@ -82,7 +86,7 @@ class TestCache:
         """Cache sem data de expiração não deve ser retornado."""
         sem_expira = IntelligenceCache(
             tenant_id="default",
-            periodo_key="30d",
+            periodo_key="28d",
             resultado_json=json.dumps({"z": 3}),
             fonte="teste",
             gerado_em=utcnow(),
@@ -90,8 +94,8 @@ class TestCache:
         )
         db_session.add(sem_expira)
         db_session.commit()
-        assert obter_cache(db_session) is None
+        assert obter_cache(db_session, _DATA_INICIO, _DATA_FIM) is None
 
     def test_cache_vazio_retorna_none(self, db_session):
         """Nenhum cache salvo retorna None."""
-        assert obter_cache(db_session) is None
+        assert obter_cache(db_session, _DATA_INICIO, _DATA_FIM) is None

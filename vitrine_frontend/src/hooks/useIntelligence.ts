@@ -48,6 +48,13 @@ export function useIntelligence() {
     setErro(null)
     setJobId(null)
 
+    // Calcula período para reuso no polling (análise de 30 dias)
+    const hoje = new Date()
+    const dataFimStr = hoje.toISOString().split('T')[0]
+    const dataInicioAtras = new Date(hoje)
+    dataInicioAtras.setDate(dataInicioAtras.getDate() - 30)
+    const dataInicioStr = dataInicioAtras.toISOString().split('T')[0]
+
     try {
       const data = await fetchIntelligence(signal)
 
@@ -61,7 +68,7 @@ export function useIntelligence() {
         pollingRef.current = setInterval(async () => {
           try {
             const pollSignal = controller.signal
-            const jobStatus = await fetchIntelligenceStatus(jobIdVal, pollSignal)
+            const jobStatus = await fetchIntelligenceStatus(jobIdVal, dataInicioStr, dataFimStr, pollSignal)
 
             if (jobStatus.status === 'ready' && jobStatus.resultado) {
               pararPolling()

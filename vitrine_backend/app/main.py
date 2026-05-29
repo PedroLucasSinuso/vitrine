@@ -18,6 +18,7 @@ from app.api.routes import inventario
 from app.api.routes import whatsapp
 from app.api.routes import email as email_routes
 from app.api.routes import macro
+from app.api.routes import notificacoes
 from app.core.logging_config import setup_logging
 from app.core.config import settings
 from app.application.scheduler import iniciar_scheduler, parar_scheduler
@@ -30,7 +31,9 @@ from app.application.notifications.scheduler_notifications import (
     ler_config_etl_interval,
 )
 from app.application.sync_service import run_sync_scheduled
-from app.infrastructure.db.bootstrap import init_db, acquire_scheduler_lock
+from app.infrastructure.db.bootstrap import (
+    init_db, acquire_scheduler_lock, release_scheduler_lock, heartbeat_scheduler_lock,
+)
 
 setup_logging()
 
@@ -44,12 +47,22 @@ async def lifespan(app: FastAPI):
     setup_logging()
     init_db()
 
-    # Scheduler lock: apenas um worker por vez agenda jobs.
-    # Evita execução duplicada de sync/notificações com --workers N.
+    # Scheduler lock via SQLite: singleton row na tabela scheduler_lock.
+    # Auto-expira se heartbeat parar por mais de 10 min.
     scheduler = None
     if acquire_scheduler_lock():
         scheduler = iniciar_scheduler()
         init_scheduler_manager(scheduler)
+
+        # Heartbeat a cada 5 min — mantém lock ativo
+        scheduler.add_job(
+            heartbeat_scheduler_lock,
+            "interval",
+            minutes=5,
+            id="scheduler_heartbeat",
+            name="Scheduler lock heartbeat",
+            replace_existing=True,
+        )
 
         etl_min = ler_config_etl_interval()
         reagendar_etl(etl_min, run_sync_scheduled)
@@ -61,6 +74,7 @@ async def lifespan(app: FastAPI):
     yield
     if scheduler:
         parar_scheduler()
+        release_scheduler_lock()
 
 
 app = FastAPI(title="Vitrine", lifespan=lifespan)
@@ -87,6 +101,7 @@ app.include_router(inventario.router)
 app.include_router(whatsapp.router)
 app.include_router(email_routes.router)
 app.include_router(macro.router)
+app.include_router(notificacoes.router)
 
 if settings.intelligence_enabled:
     from app.api.routes import intelligence as intelligence_router

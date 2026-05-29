@@ -29,6 +29,10 @@ def _run_sync_background(job_id: str):
     from app.infrastructure.db.bootstrap import init_db
     from app.infrastructure.db.session import SqliteSession
     from app.application.erp_factory import run_sync_common
+    from app.application.triggers_pos_sync import (
+        verificar_margem_negativa,
+        verificar_erro_sync,
+    )
 
     init_db()
     session = SqliteSession()
@@ -61,6 +65,10 @@ def _run_sync_background(job_id: str):
             job_id, result.produtos_count, result.codigos_count
         )
 
+        # Triggers pós-sync
+        verificar_margem_negativa(session)
+        verificar_erro_sync(session)
+
     except Exception as e:
         session.rollback()
         logar_erro_interno(f"Sync job {job_id} falhou", e)
@@ -71,6 +79,11 @@ def _run_sync_background(job_id: str):
                 job.finished_at = datetime.now(timezone.utc)
                 job.error_message = sanitizar_erro(e)
                 session.commit()
+        except Exception:
+            pass
+        # Notificação de erro (sessão pode estar parcial)
+        try:
+            verificar_erro_sync(session, erro=sanitizar_erro(e))
         except Exception:
             pass
     finally:
@@ -162,3 +175,44 @@ def get_scheduler_jobs(
     _admin: Usuario = Depends(require_admin),
 ):
     return {"jobs": listar_jobs()}
+
+
+@router.get("/health")
+def health_check():
+    """Health check público — sem auth. Retorna status básico do servidor."""
+    from datetime import datetime, timezone
+    return {
+        "status": "ok",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "service": "vitrine-backend",
+    }
+
+
+@router.get("/scheduler/health")
+def get_scheduler_health(
+    db: Session = Depends(get_db),
+    _admin: Usuario = Depends(require_admin),
+):
+    """Status do scheduler: lock ativo? jobs registrados? heartbeat recente?"""
+    from app.domain.models.scheduler_lock import SchedulerLock, STALE_LOCK_MINUTES
+    from datetime import datetime, timezone
+
+    lock = db.query(SchedulerLock).filter(SchedulerLock.id == 1).first()
+    jobs = listar_jobs()
+
+    lock_status = "ausente"
+    if lock:
+        idade = (datetime.now(timezone.utc) - lock.heartbeat_at.replace(tzinfo=timezone.utc)).total_seconds()
+        lock_status = "ativo" if idade < STALE_LOCK_MINUTES * 60 else "stale"
+
+    return {
+        "lock": {
+            "status": lock_status,
+            "pid": lock.pid if lock else None,
+            "hostname": lock.hostname if lock else None,
+            "heartbeat_at": lock.heartbeat_at.isoformat() if lock and lock.heartbeat_at else None,
+            "stale_timeout_minutos": STALE_LOCK_MINUTES,
+        },
+        "jobs": jobs,
+        "etl_sync_registrado": any(j.get("id") == "etl_sync" for j in jobs),
+    }

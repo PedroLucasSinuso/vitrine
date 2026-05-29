@@ -1,5 +1,5 @@
 /** Página principal do Vitrine Intelligence — AI Command Center. */
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { Sparkles, BarChart3, AlertTriangle, TrendingUp, Activity, RotateCw, FileDown, RefreshCw } from 'lucide-react'
 import BiPageLayout from '../../components/bi/BiPageLayout'
 import Button from '../../components/ui/Button'
@@ -11,6 +11,8 @@ import InsightCard from '../../components/intelligence/InsightCard'
 import MacroStrip from '../../components/intelligence/MacroStrip'
 import { useIntelligence } from '../../hooks/useIntelligence'
 import { useMacroIndicators } from '../../hooks/useMacroIndicators'
+import type { IntelligenceResponse } from '../../types/intelligence'
+import { formatDataBrasil } from '../../utils/formatters'
 
 /** KPI rápido para o hero */
 function HeroKpi({ icon, label, value, trend, color }: {
@@ -44,9 +46,18 @@ function HeroKpi({ icon, label, value, trend, color }: {
 export default function Intelligence() {
   const { status, resultado, erro, gerarAnalise, dismissInsight } = useIntelligence()
   const { indicadores: macroIndicadores, status: macroStatus, erro: macroErro } = useMacroIndicators()
+  /** Preserva o último resultado bem-sucedido para manter UI visível durante regeneração. */
+  const ultimoResultadoRef = useRef<IntelligenceResponse | null>(null)
+  /** Usa resultado atual ou o preservado (fallback durante loading/error de regeneração). */
+  const exibicao = resultado ?? ultimoResultadoRef.current
+
+  // Atualiza o ref sempre que um resultado novo chega
+  if (resultado && resultado !== ultimoResultadoRef.current) {
+    ultimoResultadoRef.current = resultado
+  }
 
   const exportarRelatorio = useCallback(() => {
-    if (!resultado) return
+    if (!exibicao) return
     const blob = new Blob([JSON.stringify(resultado, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -83,7 +94,7 @@ export default function Intelligence() {
                     Command Center
                   </h1>
                   <p className="text-xs text-text-muted mt-0.5">
-                    Análise estratégica dos últimos 30 dias — dados conectados com contexto macroeconômico
+                    Análise estratégica dos últimos 30 dias — apenas produtos ativos (com venda em 90d) com contexto macroeconômico
                   </p>
                 </div>
               </div>
@@ -149,9 +160,9 @@ export default function Intelligence() {
                 <span className="w-1.5 h-1.5 rounded-full bg-success animate-status-pulse" />
                 {status === 'ready' ? 'Análise disponível' : status === 'loading' ? 'Processando...' : 'Sistema online'}
               </span>
-              {resultado && (
+              {exibicao && (
                 <span>
-                  · Última análise: {new Date(resultado.gerado_em).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  · Última análise: {formatDataBrasil(exibicao.gerado_em)}
                 </span>
               )}
             </div>
@@ -165,8 +176,8 @@ export default function Intelligence() {
           erro={macroErro}
         />
 
-        {/* ── Loading ── */}
-        {status === 'loading' && (
+        {/* ── Loading (primeira vez — sem resultado anterior) ── */}
+        {status === 'loading' && !exibicao && (
           <div className="space-y-4">
             <Skeleton className="h-32 w-full rounded-xl" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -179,10 +190,17 @@ export default function Intelligence() {
           </div>
         )}
 
-        {/* ── Error ── */}
-        {status === 'error' && (
+        {/* ── Error (sem resultado anterior — primeira tentativa) ── */}
+        {status === 'error' && !exibicao && (
           <ErrorBanner
             message={erro?.message || 'Não foi possível gerar a análise. Tente novamente.'}
+          />
+        )}
+
+        {/* ── Error (regeneração falhou — manter resultado anterior visível) ── */}
+        {status === 'error' && exibicao && (
+          <ErrorBanner
+            message={erro?.message || 'Erro ao regenerar insights. Exibindo última análise disponível.'}
           />
         )}
 
@@ -195,14 +213,14 @@ export default function Intelligence() {
           />
         )}
 
-        {/* ── Ready ── */}
-        {status === 'ready' && resultado && (
+        {/* ── Ready / regenerando / erro regeneração (mantém conteúdo visível) ── */}
+        {(status === 'ready' || (status === 'loading' && exibicao) || (status === 'error' && exibicao)) && exibicao && (
           <>
             {/* Resumo Executivo */}
             <ResumoExecutivo
-              texto={resultado.resumo_executivo}
-              fonte={resultado.fonte}
-              geradoEm={resultado.gerado_em}
+              texto={exibicao.resumo_executivo}
+              fonte={exibicao.fonte}
+              geradoEm={exibicao.gerado_em}
             />
 
             {/* Quick Actions */}
@@ -214,7 +232,7 @@ export default function Intelligence() {
                 <Button
                   variant="secondary" size="sm"
                   onClick={exportarRelatorio}
-                  disabled={!resultado}
+                  disabled={status === 'loading'}
                   className="flex-1 sm:flex-initial"
                 >
                   <FileDown size={12} />
@@ -223,16 +241,33 @@ export default function Intelligence() {
                 <Button
                   variant="secondary" size="sm"
                   onClick={gerarAnalise}
+                  disabled={status === 'loading'}
                   className="flex-1 sm:flex-initial"
                 >
-                  <RefreshCw size={12} />
-                  Regenerar insights
+                  {status === 'loading' ? (
+                    <RotateCw size={12} className="animate-spin" />
+                  ) : (
+                    <RefreshCw size={12} />
+                  )}
+                  {status === 'loading' ? 'Regenerando...' : 'Regenerar insights'}
                 </Button>
               </div>
             </div>
 
+            {/* Overlay de regeneração (só quando está carregando) */}
+            {status === 'loading' && (
+              <div className="relative">
+                <div className="absolute inset-0 bg-bg-card/40 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-xl min-h-[120px]">
+                  <div className="flex items-center gap-2 text-sm text-text-muted">
+                    <RotateCw size={16} className="animate-spin" />
+                    Atualizando insights...
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Insights */}
-            {resultado.insights.length === 0 ? (
+            {exibicao.insights.length === 0 ? (
               <EmptyState
                 icon={<Sparkles size={24} />}
                 title="Nenhum insight relevante"
@@ -246,7 +281,7 @@ export default function Intelligence() {
                       Insights Estratégicos
                     </h3>
                     <span className="text-[10px] font-medium text-text-muted bg-bg-hover/50 px-2 py-0.5 rounded-full">
-                      {resultado.insights.length} análises
+                      {exibicao.insights.length} análises
                     </span>
                   </div>
                   <div className="flex items-center gap-1 text-[10px] text-text-muted">
@@ -256,7 +291,7 @@ export default function Intelligence() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {resultado.insights.map((insight, i) => (
+                  {exibicao.insights.map((insight, i) => (
                     <div
                       key={insight.hash}
                       className="motion-safe:animate-fade-in-up"

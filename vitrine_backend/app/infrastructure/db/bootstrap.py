@@ -1,7 +1,8 @@
 ﻿import os
-import atexit
+import socket
 import threading
 import logging
+from datetime import datetime, timedelta, timezone
 
 from app.infrastructure.db.database import Base
 from app.infrastructure.db.session import sqlite_engine
@@ -57,58 +58,102 @@ def init_db():
         _migration_feita = True
 
 
-_SCHEDULER_LOCK_FILE = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".scheduler.lock"
-)
-_SCHEDULER_LOCK_FILE = os.path.abspath(_SCHEDULER_LOCK_FILE)
+STALE_LOCK_MINUTES = 10
 
 
 def acquire_scheduler_lock() -> bool:
-    """Tenta adquirir lock exclusivo para o scheduler multi-worker.
+    """Adquire lock do scheduler via SQLite.
 
-    Cria um arquivo PID lock (.scheduler.lock). Se outro worker já
-    criou o lock e o processo ainda está vivo, retorna False.
-    Se o processo morreu (stale lock), remove e tenta novamente.
+    Usa tabela scheduler_lock (singleton row, id=1).
+    - Se não existe → INSERT (lock adquirido)
+    - Se existe e heartbeat recente → False (outro worker ativo)
+    - Se existe e heartbeat expirado → UPDATE (lock roubado)
+
+    Mais robusto que PID file: funciona em qualquer SO, auto-expira
+    após STALE_LOCK_MINUTES sem heartbeat, visível via SQL.
     """
+    from app.infrastructure.db.session import SqliteSession
+    from app.domain.models.scheduler_lock import SchedulerLock
+
+    hostname = socket.gethostname()
+    pid = os.getpid()
+
+    session = SqliteSession()
     try:
-        fd = os.open(_SCHEDULER_LOCK_FILE, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        os.write(fd, str(os.getpid()).encode())
-        os.close(fd)
-        atexit.register(lambda: os.unlink(_SCHEDULER_LOCK_FILE) if os.path.exists(_SCHEDULER_LOCK_FILE) else None)
-        logger.info("Scheduler lock adquirido | pid=%s", os.getpid())
-        return True
-    except FileExistsError:
-        # Lock existe — verifica se processo ainda está vivo
-        try:
-            with open(_SCHEDULER_LOCK_FILE) as f:
-                pid = int(f.read().strip())
-            if os.name == "nt":
-                import ctypes
-                kernel32 = ctypes.windll.kernel32
-                handle = kernel32.OpenProcess(0x100000, False, pid)
-                if handle:
-                    kernel32.CloseHandle(handle)
-                    logger.warning("Scheduler lock ocupado por pid=%s", pid)
-                    return False
-                # Processo morto — lock stale
-            else:
-                import errno
-                try:
-                    os.kill(pid, 0)
-                    logger.warning("Scheduler lock ocupado por pid=%s", pid)
-                    return False
-                except OSError as e:
-                    if e.errno != errno.ESRCH:
-                        raise
-                    # Processo morto
-        except (ValueError, OSError, FileNotFoundError):
-            pass
-        # Stale lock — remove e tenta novamente
-        try:
-            os.unlink(_SCHEDULER_LOCK_FILE)
-            return acquire_scheduler_lock()
-        except OSError:
+        lock = session.get(SchedulerLock, 1)
+        now = datetime.now(timezone.utc)
+
+        if lock is None:
+            # Nenhum lock — cria
+            session.add(SchedulerLock(
+                id=1, pid=pid, hostname=hostname,
+                acquired_at=now, heartbeat_at=now,
+            ))
+            session.commit()
+            logger.info("Scheduler lock adquirido | pid=%s hostname=%s", pid, hostname)
+            return True
+
+        # Lock existe — verifica se é stale
+        idade_heartbeat = now - lock.heartbeat_at.replace(tzinfo=timezone.utc)
+        if idade_heartbeat < timedelta(minutes=STALE_LOCK_MINUTES):
+            logger.warning(
+                "Scheduler lock ocupado por pid=%s hostname=%s "
+                "(heartbeat há %.0f min)",
+                lock.pid, lock.hostname, idade_heartbeat.total_seconds() / 60,
+            )
             return False
+
+        # Lock stale — rouba
+        lock.pid = pid
+        lock.hostname = hostname
+        lock.acquired_at = now
+        lock.heartbeat_at = now
+        session.commit()
+        logger.info(
+            "Scheduler lock roubado de pid=%s hostname=%s | pid=%s",
+            lock.pid, lock.hostname, pid,
+        )
+        return True
+    except Exception:
+        logger.exception("Erro ao adquirir scheduler lock")
+        return False
+    finally:
+        session.close()
+
+
+def heartbeat_scheduler_lock() -> None:
+    """Atualiza heartbeat do lock. Chamado pelo scheduler a cada 5 min."""
+    from app.infrastructure.db.session import SqliteSession
+    from app.domain.models.scheduler_lock import SchedulerLock
+
+    session = SqliteSession()
+    try:
+        lock = session.get(SchedulerLock, 1)
+        if lock and lock.pid == os.getpid():
+            lock.heartbeat_at = datetime.now(timezone.utc)
+            session.commit()
+    except Exception:
+        logger.warning("Falha ao atualizar heartbeat do scheduler lock", exc_info=True)
+    finally:
+        session.close()
+
+
+def release_scheduler_lock() -> None:
+    """Remove lock do scheduler. Chamado no shutdown."""
+    from app.infrastructure.db.session import SqliteSession
+    from app.domain.models.scheduler_lock import SchedulerLock
+
+    session = SqliteSession()
+    try:
+        lock = session.get(SchedulerLock, 1)
+        if lock and lock.pid == os.getpid():
+            session.delete(lock)
+            session.commit()
+            logger.info("Scheduler lock liberado | pid=%s", os.getpid())
+    except Exception:
+        logger.warning("Falha ao liberar scheduler lock", exc_info=True)
+    finally:
+        session.close()
 
 
 def _warn_fernet_key_rotation():

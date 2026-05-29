@@ -561,6 +561,43 @@ def exportar_pdf(
     )
 
 
+# ── Margem Negativa (relatório pós-sync) ─────────────────────────────────────
+
+@router.get("/exportar/margem-negativa/{notificacao_id}")
+@limiter.limit("10/minute")
+def exportar_excel_margem_negativa(
+    request: Request,
+    notificacao_id: int,
+    db: Session = Depends(get_db),
+    _usuario: Usuario = Depends(require_supervisor),
+):
+    """Exporta Excel com produtos de margem negativa de uma notificação."""
+    from app.domain.models.notificacao import Notificacao
+    from app.application.reporting.excel_margem_negativa import build_excel_margem_negativa
+
+    notif = db.query(Notificacao).filter(Notificacao.id == notificacao_id).first()
+    if not notif:
+        raise HTTPException(status_code=404, detail="Notificação não encontrada")
+
+    import json
+    dados = json.loads(notif.dados_json) if notif.dados_json else {}
+    itens = dados.get("itens", [])
+    if not itens:
+        raise HTTPException(status_code=404, detail="Nenhum item nesta notificação")
+
+    excel_bytes = build_excel_margem_negativa(itens)
+
+    nome_arquivo = f"margem_negativa_{notificacao_id}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    return StreamingResponse(
+        BytesIO(excel_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="{nome_arquivo}"',
+            "Content-Length": str(len(excel_bytes)),
+        },
+    )
+
+
 # ── Tabela de Preços ──────────────────────────────────────────────────────────
 
 @router.get("/tabela-produtos", response_model=TabelaProdutosResponse)

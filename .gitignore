@@ -41,6 +41,8 @@ dev_utils/
 # Dumps de contexto (gerados sob demanda)
 /backend.json
 /frontend.json
+/backend_*_dump.json
+/frontend_*_dump.json
 
 # Checkpoints de sessão
 vitrine-checkpoint-*.md

@@ -31,7 +31,7 @@ async def get_intelligence(
     para evitar que falhas no PostgreSQL impeçam a criação do job.
     """
     try:
-        resultado, is_cached, job_id = solicitar_analise(db)
+        resultado, is_cached, job_id = solicitar_analise(db, data_inicio, data_fim)
     except Exception as e:
         logger.exception("solicitar_analise falhou")
         raise HTTPException(status_code=500, detail=f"Erro ao solicitar análise: {e}")
@@ -62,11 +62,13 @@ async def get_intelligence(
 def get_intelligence_status(
     request: Request,
     job_id: str,
+    data_inicio: date = Query(...),
+    data_fim: date = Query(...),
     db: Session = Depends(get_db),
     _usuario: Usuario = Depends(require_supervisor),
 ):
     """Polling de status do job."""
-    status = consultar_job(db, job_id)
+    status = consultar_job(db, job_id, data_inicio, data_fim)
     if not status:
         raise HTTPException(status_code=404, detail="Job não encontrado")
     return status

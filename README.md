@@ -26,11 +26,14 @@ O Vitrine nasceu de um problema prático de supermercado: operadores precisam co
 Além da consulta, o sistema faz:
 
 - **BI** — relatórios de vendas com comparação ano contra ano (YoY)
+- **Intelligence** — análise semanal com detectores de encalhe, erosão de margem, sazonalidade, taxa de troca, oportunidade B e contexto macroeconômico (IPCA, Selic, IGPM, desemprego)
 - **Inventário** — contagem colaborativa com sessões e consolidação
 - **Etiquetas** — formatação para impressão profissional
 - **Leitor de código de barras via câmera** — sem hardware dedicado
 - **Configurações via UI** — 6 abas com encriptação das senhas e fallback para `.env`
+- **Notificações em tempo real** — dropdown no header com alertas de margem negativa, erros de sync e insights prontos
 - **Notificações agendadas** — relatórios por WhatsApp e email
+- **Triggers pós-sync** — detecção automática de margem negativa com guard clause de 90 dias + análise de 30 dias, respeitando blacklist de grupos
 - **Enriquecimento de endereço** — consulta automática a BrasilAPI + ViaCEP
 
 ---
@@ -81,14 +84,15 @@ Além da consulta, o sistema faz:
 | **Inventário** | Sessões multi-usuário, código de convite, consolidado geral |
 | **BI** | Dashboard com meta/projeção, receita, ranking, curva ABC, análise SKU, trocas, perdas, consumo, distribuição temporal, tendências (ticket médio + tickets) |
 | **YoY** | Comparação ano contra ano com alinhamento de dia da semana (offset ±3d) e fallback 29/fev |
-| **Exportação** | Excel (.xlsx) para relatórios de BI e inventário (com abas: Contagem, Delta, Observações) |
+| **Intelligence** | Análise semanal automática com 6 detectores (encalhe, erosão, sazonalidade, taxa de troca, oportunidade B, macro contexto). Guard clause de 90 dias + análise de 30 dias |
+| **Exportação** | Excel (.xlsx) para relatórios de BI, inventário (abas: Contagem, Delta, Observações) e margem negativa |
 | **Câmera** | Leitura única de código de barras via câmera do dispositivo (cooldown 2s entre leituras) |
-| **Configurações** | 6 abas (Geral, Endereço, ERP, WhatsApp, Email, Sistema) com encriptação Fernet + fallback `.env` |
+| **Configurações** | 6 abas (Geral, Endereço, ERP, WhatsApp, Email, Sistema) + blacklist de grupos ignorados + encriptação Fernet + fallback `.env` |
 | **Teste de conexão** | Testa ERP, WhatsApp, Email, Anthropic com feedback visual |
 | **Endereço** | Enriquecimento automático via BrasilAPI + ViaCEP |
-| **Notificações** | Relatórios agendados via WhatsApp (Twilio) e Email (SMTP) com templates Jinja2 |
-| **Sync** | Sincronização de produtos via adapter com agendamento configurável (mín. 10 min) |
-| **Auth** | JWT com 3 roles (operador, supervisor, admin) |
+| **Notificações** | Dropdown em tempo real (margem negativa, erro de sync, insights) + relatórios agendados via WhatsApp e Email com templates Jinja2 |
+| **Sync** | Sincronização de produtos via adapter + triggers pós-sync (margem negativa com guard clause 90d/30d + blacklist) |
+| **Auth** | JWT com 3 roles (operador, supervisor, admin), refresh token rotacionado, revogação por blacklist + token_version |
 
 ---
 
@@ -141,8 +145,12 @@ app/
 ├── application/         # Casos de uso
 │   ├── services/        # Regras de negócio (auth, produto, config)
 │   ├── bi/              # Business Intelligence (factory, analytics, reporting)
+│   ├── intelligence/    # Intelligence: detectores, cache, cost control, providers, macro_fetcher
+│   ├── reporting/       # Geração de Excel (inventário, margem negativa)
 │   ├── sync_service.py  # Sincronização de produtos (substitui ETL)
+│   ├── triggers_pos_sync.py  # Triggers pós-sync (margem negativa via TransactionSource)
 │   ├── scheduler.py     # Agendamento dinâmico (APScheduler)
+│   ├── notificacao_service.py  # Serviço de notificações internas
 │   └── notifications/   # Email (SMTP), WhatsApp (Twilio), templates (Jinja2)
 ├── infrastructure/      # Banco (SQLite), repositórios
 ├── api/                 # Rotas FastAPI + injeção de dependência
@@ -241,6 +249,15 @@ http://localhost:8000/docs
 | `GET` | `/admin/inventario/sessoes` | Listar sessões de inventário |
 | `POST` | `/admin/inventario/sessoes` | Criar sessão |
 | `GET` | `/admin/inventario/sessoes/{id}/exportar-excel` | Exportar inventário |
+| `GET` | `/admin/health` | Health check público (Cloudflare tunnel) |
+| `GET` | `/admin/notificacoes` | Listar notificações |
+| `GET` | `/admin/notificacoes/nao-lidas` | Contagem de não lidas |
+| `POST` | `/admin/notificacoes/{id}/ler` | Marcar como lida |
+| `POST` | `/admin/notificacoes/ler-todas` | Marcar todas como lidas |
+| `GET` | `/bi/intelligence` | Gerar análise Intelligence (30d) |
+| `GET` | `/bi/intelligence/status/{job_id}` | Polling de status do job |
+| `POST` | `/bi/intelligence/{hash}/dismiss` | Ignorar insight |
+| `GET` | `/bi/exportar/margem-negativa/{notificacao_id}` | Exportar .xlsx de margem negativa |
 | `GET` | `/status/` | Status do cache |
 
 > Documentação completa em `http://localhost:8000/docs` (Swagger UI).
@@ -267,26 +284,27 @@ uv run python -m app.cli admin "Admin" sua_senha
 
 ```bash
 cd vitrine_backend
-uv run pytest          # 184+ testes
+uv run pytest          # 334+ testes
 ```
 
-> Estado atual: **184 testes passando**, 0 erros TypeScript, 0 lint warnings.
+> Estado atual: **334 testes passando**, 0 erros TypeScript, 0 lint warnings. Build frontend limpo.
 
 | Categoria | Casos |
 |-----------|-------|
-| Autenticação | Token, credenciais, registro, permissões, logout, revogação |
-| Produtos | Busca por código/nome, paginação, detalhes |
-| Códigos | Validação EAN-13/8/12, PLU-6, checksum |
-| BI | KPIs, receita, ranking, curva ABC, SKU, trocas, exportação, comparativo YoY |
-| Inventário | Sessões, itens, consolidado multi-usuário |
-| Sync | Sincronização de produtos |
+| Autenticação | Token, credenciais, registro, permissões, logout, revogação, refresh E2E, lockout |
+| Produtos | Busca por código/nome, paginação, detalhes, cache |
+| Códigos | Validação EAN-13/8/12, PLU-6, checksum, normalização |
+| BI | KPIs, receita, ranking, curva ABC, SKU, trocas, exportação Excel, comparativo YoY diário |
+| Intelligence | Cache, cost control, dismiss, encalhe, erosão margem, sazonalidade, taxa troca, oportunidade B, macro contexto, template provider |
+| Inventário | Sessões, itens, consolidado multi-usuário, exportação Excel |
+| Sync | Sincronização de produtos, erro/cache |
 | CORS | Headers em requisições OPTIONS |
-| Config Service | CRUD, encriptação Fernet, fallback `.env`, chaves somente-env |
+| Config Service | CRUD, encriptação Fernet, fallback `.env`, chaves somente-env, cache, sentinel |
 | Cache Status | Admin com/sem registro, supervisor 403, operador 403, sem auth 401 |
-| Contatos Email | CRUD completo |
-| Contatos WhatsApp | CRUD completo |
-| Value Objects | Endereco (CEP, UF, formatação, 3 níveis de dados) |
+| Contatos Email/WhatsApp | CRUD completo |
+| Value Objects | Endereco (CEP, UF, formatação, 3 níveis de dados, prompt IA) |
 | Bootstrap | Init DB idempotente, migrations |
+| Performance | BI large volume (10k/100k itens) |
 
 ---
 
@@ -335,6 +353,12 @@ uv run python -m app.etl.run_etl
 ```
 
 Pode ser executado manualmente, via scheduler interno (intervalo configurável pela UI, mínimo 10 min) ou via API (`POST /admin/sync`).
+
+---
+
+### Hexagonal compliance
+
+Consultas ao PostgreSQL **sempre** passam pelo `TransactionSource` / `ProductSource` do adapter — nunca por `engine.connect()` ou `text("""SELECT""")` fora de `adapters/`. O trigger pós-sync de margem negativa (`triggers_pos_sync.py`) segue esta regra. Se você encontrar SQL硬codado fora do adapter, é uma violação.
 
 ---
 

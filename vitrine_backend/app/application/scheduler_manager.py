@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.base import JobLookupError
 import logging
@@ -5,6 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 _scheduler: BackgroundScheduler | None = None
+_TZ = ZoneInfo("America/Sao_Paulo")
 
 
 def init_scheduler_manager(scheduler: BackgroundScheduler):
@@ -36,10 +39,12 @@ def _reschedule_or_add(job_id: str, trigger: str, func, **trigger_args):
     if existing:
         sched.reschedule_job(job_id, trigger=trigger, **trigger_args)
     elif func is not None:
+        # Primeira execução imediata (5s) para não perder ciclos após restart
         sched.add_job(
             func, trigger=trigger,
             id=job_id, replace_existing=True,
             misfire_grace_time=3600,
+            next_run_time=datetime.now(_TZ) + timedelta(seconds=5),
             **trigger_args
         )
     else:

@@ -129,12 +129,16 @@ class SyncService:
 
 def run_sync_scheduled():
     """Função para ser chamada pelo scheduler (sem argumentos).
-    Cria sua própria sessão, executa o sync via run_sync_common e invalida cache.
-    O engine é gerenciado internamente por run_sync_common.
+    Cria sua própria sessão, executa o sync via run_sync_common, invalida cache
+    e dispara triggers pós-sync (margem negativa, erro).
     """
     from app.infrastructure.db.bootstrap import init_db
     from app.infrastructure.db.session import SqliteSession
     from app.application.erp_factory import run_sync_common
+    from app.application.triggers_pos_sync import (
+        verificar_margem_negativa,
+        verificar_erro_sync,
+    )
 
     init_db()
     session = SqliteSession()
@@ -142,7 +146,17 @@ def run_sync_scheduled():
         result = run_sync_common(session, pool_size=1)
         logger.info("Sync agendado concluido | produtos=%s codigos=%s",
                      result.produtos_count, result.codigos_count)
+
+        # Triggers pós-sync bem-sucedido
+        verificar_margem_negativa(session)
+        verificar_erro_sync(session)  # resolve notificações de erro
     except Exception as e:
-        logger.error("Sync agendado falhou: %s", sanitizar_erro(e))
+        erro_msg = sanitizar_erro(e)
+        logger.error("Sync agendado falhou: %s", erro_msg)
+        # Trigger de notificação de erro (só se houver sessão válida)
+        try:
+            verificar_erro_sync(session, erro=erro_msg)
+        except Exception:
+            logger.warning("Falha ao criar notificação de erro", exc_info=True)
     finally:
         session.close()
