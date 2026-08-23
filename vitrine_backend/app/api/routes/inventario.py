@@ -10,6 +10,14 @@ Mudanças em relação ao original:
   • GET /admin/inventario/consolidado-geral/exportar-excel  (NOVO)
     Mesmo formato, mas consolida TODAS as sessões ativas.
   • Todo o resto permanece idêntico ao original.
+
+Multi-tenant (Fase 1): toda query neste arquivo agora filtra por
+``usuario.empresa_id`` — sessão de inventário é dado operacional de UMA
+loja; sem esse filtro um usuário de qualquer tenant conseguia listar,
+entrar e exportar sessões de qualquer outro (ver checklist da Fase 1 no
+plano de SaaS). Em particular, ``entrar_sessao`` agora exige que o código
+de convite pertença à MESMA empresa de quem está entrando — um código
+vazado/adivinhado de outra loja não abre mais a sessão.
 """
 
 import io
@@ -73,9 +81,12 @@ def gerar_codigo_convite() -> str:
     return secrets.token_hex(3).upper()
 
 
-def get_session_or_404(sessao_id: int, db: Session) -> SessaoInventario:
+def get_session_or_404(sessao_id: int, empresa_id: int, db: Session) -> SessaoInventario:
     sessao = db.execute(
-        select(SessaoInventario).where(SessaoInventario.id == sessao_id)
+        select(SessaoInventario).where(
+            SessaoInventario.id == sessao_id,
+            SessaoInventario.empresa_id == empresa_id,
+        )
     ).scalar_one_or_none()
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
@@ -84,7 +95,7 @@ def get_session_or_404(sessao_id: int, db: Session) -> SessaoInventario:
 
 def require_sessao_ativa(sessao: SessaoInventario) -> None:
     """Levanta 400 se a sessão não estiver ativa.
-    
+
     Chamado pelas rotas que modificam itens (adicionar, listar, atualizar, limpar)
     para impedir operações em sessões encerradas. A rota entrar_sessao faz esta
     verificação diretamente; as demais usam este helper."""
@@ -120,7 +131,11 @@ def _build_sessao_response(sessao: SessaoInventario, db: Session) -> SessaoRespo
 
 
 def _consolidar_itens_sessao(sessao_id: int, db: Session) -> list[dict]:
-    """Retorna itens consolidados (sum por código) de UMA sessão."""
+    """Retorna itens consolidados (sum por código) de UMA sessão.
+
+    Sem filtro de empresa aqui de propósito: sessao_id já veio validado
+    contra o tenant do usuário em get_session_or_404 — todo item desta
+    sessão já pertence à mesma empresa por construção (_upsert_item)."""
     rows = db.execute(
         select(
             ItemInventario.codigo,
@@ -144,8 +159,8 @@ def _consolidar_itens_sessao(sessao_id: int, db: Session) -> list[dict]:
     ]
 
 
-def _consolidar_itens_todas_sessoes(db: Session) -> list[dict]:
-    """Retorna itens consolidados de TODAS as sessões ativas."""
+def _consolidar_itens_todas_sessoes(db: Session, empresa_id: int) -> list[dict]:
+    """Retorna itens consolidados de TODAS as sessões ativas — DA EMPRESA do usuário."""
     rows = db.execute(
         select(
             ItemInventario.codigo,
@@ -155,7 +170,10 @@ def _consolidar_itens_todas_sessoes(db: Session) -> list[dict]:
             func.sum(ItemInventario.quantidade).label("quantidade"),
         )
         .join(SessaoInventario, ItemInventario.sessao_id == SessaoInventario.id)
-        .where(SessaoInventario.status == "ativa")
+        .where(
+            SessaoInventario.status == "ativa",
+            SessaoInventario.empresa_id == empresa_id,
+        )
         .group_by(
             ItemInventario.codigo,
             ItemInventario.nome,
@@ -173,6 +191,7 @@ def _consolidar_itens_todas_sessoes(db: Session) -> list[dict]:
 def _get_estoque_db(
     codigos: list[str],
     db: Session,
+    empresa_id: int,
 ) -> dict[str, float]:
     """
     Busca o estoque atual dos produtos no SQLite.
@@ -188,7 +207,7 @@ def _get_estoque_db(
         # Passo 1: busca direta por codigo_chamada
         rows = db.execute(
             select(Produto.codigo_chamada, Produto.estoque)
-            .where(Produto.codigo_chamada.in_(codigos))
+            .where(Produto.codigo_chamada.in_(codigos), Produto.empresa_id == empresa_id)
         ).all()
         resultado = {r.codigo_chamada: float(r.estoque) for r in rows}
 
@@ -198,8 +217,12 @@ def _get_estoque_db(
         if faltantes:
             ean_rows = db.execute(
                 select(Produto.codigo_chamada, Produto.estoque)
-                .join(ProdutoCodigo, Produto.codigo_chamada == ProdutoCodigo.codigo_chamada)
-                .where(ProdutoCodigo.codigo.in_(faltantes))
+                .join(
+                    ProdutoCodigo,
+                    (Produto.codigo_chamada == ProdutoCodigo.codigo_chamada)
+                    & (Produto.empresa_id == ProdutoCodigo.empresa_id),
+                )
+                .where(ProdutoCodigo.codigo.in_(faltantes), Produto.empresa_id == empresa_id)
             ).all()
             for r in ean_rows:
                 resultado[r.codigo_chamada] = float(r.estoque)
@@ -215,6 +238,7 @@ def _upsert_item(
     usuario_id: int,
     body: ItemInventarioSubmit,
     db: Session,
+    empresa_id: int,
 ) -> None:
     """Adiciona ou atualiza um item no inventário (upsert).
 
@@ -246,6 +270,7 @@ def _upsert_item(
                 )
         else:
             db.add(ItemInventario(
+                empresa_id=empresa_id,
                 sessao_id=sessao_id,
                 usuario_id=usuario_id,
                 codigo=body.codigo,
@@ -282,7 +307,10 @@ def listar_sessoes(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
-    stmt = select(SessaoInventario).where(SessaoInventario.status == "ativa")
+    stmt = select(SessaoInventario).where(
+        SessaoInventario.status == "ativa",
+        SessaoInventario.empresa_id == usuario.empresa_id,
+    )
     sessoes = db.execute(stmt).scalars().all()
     return [_build_sessao_response(s, db) for s in sessoes]
 
@@ -300,6 +328,7 @@ def criar_sessao(
         codigo = gerar_codigo_convite()
 
     sessao = SessaoInventario(
+        empresa_id=usuario.empresa_id,
         nome=body.nome,
         criado_por_id=usuario.id,
         status="ativa",
@@ -318,9 +347,13 @@ def entrar_sessao(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
-
+    # Código de convite só abre sessão DA MESMA empresa de quem está
+    # entrando — um código adivinhado/vazado de outra loja não funciona.
     sessao = db.execute(
-        select(SessaoInventario).where(SessaoInventario.codigo_convite == body.codigo_convite)
+        select(SessaoInventario).where(
+            SessaoInventario.codigo_convite == body.codigo_convite,
+            SessaoInventario.empresa_id == usuario.empresa_id,
+        )
     ).scalar_one_or_none()
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
@@ -336,7 +369,7 @@ def encerrar_sessao(
     usuario: Usuario = Depends(require_supervisor),
 ):
 
-    sessao = get_session_or_404(sessao_id, db)
+    sessao = get_session_or_404(sessao_id, usuario.empresa_id, db)
     if sessao.criado_por_id != usuario.id:
         raise HTTPException(status_code=403, detail="Apenas o criador pode encerrar a sessão")
     sessao.status = "encerrada"
@@ -354,7 +387,7 @@ def listar_itens(
     usuario: Usuario = Depends(get_current_user),
 ):
 
-    sessao = get_session_or_404(sessao_id, db)
+    sessao = get_session_or_404(sessao_id, usuario.empresa_id, db)
 
     # Sessões encerradas: operador não pode listar itens (apenas supervisor/admin)
     if sessao.status != "ativa" and usuario.role not in ("supervisor", "admin"):
@@ -408,10 +441,10 @@ def adicionar_item(
     usuario: Usuario = Depends(get_current_user),
 ):
 
-    sessao = get_session_or_404(sessao_id, db)
+    sessao = get_session_or_404(sessao_id, usuario.empresa_id, db)
     require_sessao_ativa(sessao)
 
-    _upsert_item(sessao_id, usuario.id, body, db)
+    _upsert_item(sessao_id, usuario.id, body, db, empresa_id=usuario.empresa_id)
 
     return {"ok": True}
 
@@ -431,7 +464,10 @@ def consolidado_geral(
             func.sum(ItemInventario.quantidade).label("quantidade"),
         )
         .join(SessaoInventario, ItemInventario.sessao_id == SessaoInventario.id)
-        .where(SessaoInventario.status == "ativa")
+        .where(
+            SessaoInventario.status == "ativa",
+            SessaoInventario.empresa_id == usuario.empresa_id,
+        )
         .group_by(
             ItemInventario.codigo,
             ItemInventario.nome,
@@ -457,7 +493,7 @@ def atualizar_item(
     usuario: Usuario = Depends(get_current_user),
 ):
 
-    sessao = get_session_or_404(sessao_id, db)
+    sessao = get_session_or_404(sessao_id, usuario.empresa_id, db)
     require_sessao_ativa(sessao)
 
     item = db.execute(
@@ -488,7 +524,7 @@ def limpar_itens(
     usuario: Usuario = Depends(get_current_user),
 ):
 
-    sessao = get_session_or_404(sessao_id, db)
+    sessao = get_session_or_404(sessao_id, usuario.empresa_id, db)
     require_sessao_ativa(sessao)
 
     db.execute(
@@ -517,14 +553,14 @@ def exportar_excel_sessao(
     Apenas supervisores e admins.
     """
 
-    sessao = get_session_or_404(sessao_id, db)
+    sessao = get_session_or_404(sessao_id, usuario.empresa_id, db)
 
     itens = _consolidar_itens_sessao(sessao_id, db)
     if not itens:
         raise HTTPException(status_code=404, detail="Nenhum item nesta sessão")
 
     codigos = [i["codigo"] for i in itens]
-    estoque_db = _get_estoque_db(codigos, db)
+    estoque_db = _get_estoque_db(codigos, db, empresa_id=usuario.empresa_id)
 
     # Observações desta sessão
     obs_rows = db.execute(
@@ -561,18 +597,21 @@ def exportar_excel_consolidado_geral(
     Mesmo formato de duas abas.
     """
 
-    itens = _consolidar_itens_todas_sessoes(db)
+    itens = _consolidar_itens_todas_sessoes(db, empresa_id=usuario.empresa_id)
     if not itens:
         raise HTTPException(status_code=404, detail="Nenhum item nas sessões ativas")
 
     codigos = [i["codigo"] for i in itens]
-    estoque_db = _get_estoque_db(codigos, db)
+    estoque_db = _get_estoque_db(codigos, db, empresa_id=usuario.empresa_id)
 
-    # Observações de todas as sessões ativas
+    # Observações de todas as sessões ativas (da empresa do usuário)
     obs_rows = db.execute(
         select(ItemInventario.codigo, ItemInventario.nome, ItemInventario.observacao)
         .join(SessaoInventario, ItemInventario.sessao_id == SessaoInventario.id)
-        .where(SessaoInventario.status == "ativa")
+        .where(
+            SessaoInventario.status == "ativa",
+            SessaoInventario.empresa_id == usuario.empresa_id,
+        )
         .where(ItemInventario.observacao.isnot(None))
         .where(ItemInventario.observacao != "")
     ).all()

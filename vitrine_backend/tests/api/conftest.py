@@ -12,6 +12,7 @@ from app.api.deps import get_db
 from app.infrastructure.db.database import Base
 from app.application.utils.security import hash_password
 from app.domain.models.usuario import Usuario
+from app.domain.models.empresa import Empresa
 
 
 SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"
@@ -51,13 +52,27 @@ def client(db_session):
 
 
 @pytest.fixture
-def usuario_operador(db_session):
+def empresa_padrao(db_session):
+    """Empresa (tenant) padrão usada por todos os fixtures de usuário —
+    sem isso, Usuario.empresa_id fica None (reservado para super_admin) e
+    todo o código escopado por tenant (repositórios, config_service, ...)
+    não encontra nada."""
+    empresa = Empresa(nome="Empresa Teste", slug="empresa-teste", status="ativa")
+    db_session.add(empresa)
+    db_session.commit()
+    db_session.refresh(empresa)
+    return empresa
+
+
+@pytest.fixture
+def usuario_operador(db_session, empresa_padrao):
     user = Usuario(
         username="operador1",
         nome_exibicao="Operador Um",
         role="operador",
         hashed_password=hash_password("senha123"),
         token_version=0,
+        empresa_id=empresa_padrao.id,
     )
     db_session.add(user)
     db_session.commit()
@@ -66,13 +81,14 @@ def usuario_operador(db_session):
 
 
 @pytest.fixture
-def usuario_supervisor(db_session):
+def usuario_supervisor(db_session, empresa_padrao):
     user = Usuario(
         username="supervisor1",
         nome_exibicao="Supervisor Um",
         role="supervisor",
         hashed_password=hash_password("senha123"),
         token_version=0,
+        empresa_id=empresa_padrao.id,
     )
     db_session.add(user)
     db_session.commit()
@@ -81,13 +97,14 @@ def usuario_supervisor(db_session):
 
 
 @pytest.fixture
-def usuario_admin(db_session):
+def usuario_admin(db_session, empresa_padrao):
     user = Usuario(
         username="admin1",
         nome_exibicao="Admin Um",
         role="admin",
         hashed_password=hash_password("senha123"),
         token_version=0,
+        empresa_id=empresa_padrao.id,
     )
     db_session.add(user)
     db_session.commit()

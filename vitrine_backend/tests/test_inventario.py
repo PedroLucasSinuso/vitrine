@@ -11,6 +11,7 @@ from app.api.routes.inventario import router
 from app.infrastructure.db.database import Base
 from app.application.utils.security import hash_password
 from app.domain.models.usuario import Usuario
+from app.domain.models.empresa import Empresa
 
 SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(
@@ -38,12 +39,22 @@ def db_session(reset_db):
 
 
 @pytest.fixture
-def usuario_admin(db_session):
+def empresa_padrao(db_session):
+    empresa = Empresa(nome="Empresa Teste", slug="empresa-teste", status="ativa")
+    db_session.add(empresa)
+    db_session.commit()
+    db_session.refresh(empresa)
+    return empresa
+
+
+@pytest.fixture
+def usuario_admin(db_session, empresa_padrao):
     user = Usuario(
         username="admin1",
         nome_exibicao="Admin",
         role="admin",
         hashed_password=hash_password("senha123"),
+        empresa_id=empresa_padrao.id,
     )
     db_session.add(user)
     db_session.commit()
@@ -52,12 +63,13 @@ def usuario_admin(db_session):
 
 
 @pytest.fixture
-def usuario_operador(db_session):
+def usuario_operador(db_session, empresa_padrao):
     user = Usuario(
         username="oper1",
         nome_exibicao="Operador",
         role="operador",
         hashed_password=hash_password("senha123"),
+        empresa_id=empresa_padrao.id,
     )
     db_session.add(user)
     db_session.commit()
@@ -193,7 +205,7 @@ class TestInventario:
         client.post(f"/admin/inventario/sessoes/{sid}/itens", json={"codigo": "ABC", "nome": "Item", "grupo": "G", "familia": "F", "quantidade": 2})
 
         from app.domain.models.inventario import ItemInventario as ItemInventarioModel
-        item_oper = ItemInventarioModel(sessao_id=sid, usuario_id=usuario_operador.id, codigo="ABC", nome="Item", grupo="G", familia="F", quantidade=3)
+        item_oper = ItemInventarioModel(empresa_id=usuario_operador.empresa_id, sessao_id=sid, usuario_id=usuario_operador.id, codigo="ABC", nome="Item", grupo="G", familia="F", quantidade=3)
         db_session.add(item_oper)
         db_session.commit()
 

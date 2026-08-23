@@ -51,23 +51,41 @@ def _reschedule_or_add(job_id: str, trigger: str, func, **trigger_args):
         logger.info("Job %s | proxima_execucao=%s", job_id, job.next_run_time)
 
 
-def reagendar_etl(intervalo_minutos: int, func=None):
-    _reschedule_or_add("etl_sync", "interval", func, minutes=intervalo_minutos)
-    logger.info("ETL job atualizado | intervalo=%d min", intervalo_minutos)
+# ── Jobs por empresa (multi-tenant) ──────────────────────────────────
+#
+# Cada empresa tem seu próprio job de ETL e de relatórios, com seu próprio
+# horário/intervalo configurado (Configuracao é por tenant desde a Fase 1
+# do plano de SaaS). Job IDs seguem o padrão "{tipo}_{empresa_id}" — sem
+# isso, a última empresa a salvar sua configuração sobrescreveria o
+# horário de todas as outras (um único job global compartilhado).
+
+def reagendar_etl(empresa_id: int, intervalo_minutos: int, func=None):
+    _reschedule_or_add(f"etl_sync_{empresa_id}", "interval", func, minutes=intervalo_minutos)
+    logger.info("ETL job atualizado | empresa_id=%s intervalo=%d min", empresa_id, intervalo_minutos)
 
 
-def reagendar_relatorio_whatsapp(dia: str, hora: int, minuto: int, func=None):
+def reagendar_relatorio_whatsapp(empresa_id: int, dia: str, hora: int, minuto: int, func=None):
     _reschedule_or_add(
-        "relatorio_whatsapp", "cron", func,
+        f"relatorio_whatsapp_{empresa_id}", "cron", func,
         day_of_week=dia_para_cron(dia), hour=hora, minute=minuto,
     )
 
 
-def reagendar_relatorio_email(dia: str, hora: int, minuto: int, func=None):
+def reagendar_relatorio_email(empresa_id: int, dia: str, hora: int, minuto: int, func=None):
     _reschedule_or_add(
-        "relatorio_email", "cron", func,
+        f"relatorio_email_{empresa_id}", "cron", func,
         day_of_week=dia_para_cron(dia), hour=hora, minute=minuto,
     )
+
+
+def remover_jobs_da_empresa(empresa_id: int) -> None:
+    """Remove os 3 jobs de uma empresa (usado ao suspender/excluir um tenant)."""
+    sched = get_scheduler()
+    for job_id in (f"etl_sync_{empresa_id}", f"relatorio_whatsapp_{empresa_id}", f"relatorio_email_{empresa_id}"):
+        try:
+            sched.remove_job(job_id)
+        except JobLookupError:
+            pass
 
 
 def listar_jobs() -> list[dict]:

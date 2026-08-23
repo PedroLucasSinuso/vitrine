@@ -8,7 +8,7 @@ A normalização é aplicada no momento da leitura (query time) ou na
 carga (ETL time), conforme decisão arquitetural.
 """
 
-from sqlalchemy import Integer, String
+from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infrastructure.db.database import Base
 
@@ -27,6 +27,9 @@ class GrupoFamilia(Base):
     __tablename__ = "grupos_familias"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    empresa_id: Mapped[int] = mapped_column(
+        ForeignKey("empresas.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     grupo_original: Mapped[str] = mapped_column(String, nullable=False, index=True)
     familia_original: Mapped[str] = mapped_column(String, nullable=False, index=True)
     grupo_normalizado: Mapped[str] = mapped_column(String, nullable=False)

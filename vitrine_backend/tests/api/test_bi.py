@@ -3,12 +3,13 @@
 import pytest
 
 
-def test_tabela_produtos_shape(client, db_session, token_admin):
+def test_tabela_produtos_shape(client, db_session, token_admin, empresa_padrao):
     """Verifica shape da resposta de /bi/tabela-produtos."""
     from app.domain.models.produto import Produto
 
     # Arrange: cria um produto
     p = Produto(
+        empresa_id=empresa_padrao.id,
         codigo_chamada="001",
         nome="Produto Teste",
         grupo="ALIMENTOS",

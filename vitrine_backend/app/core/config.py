@@ -50,9 +50,16 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     email_from: str = ""
 
-    # Chave Fernet para criptografar senhas sensíveis no banco (ex: erp_password)
+    # Chave Fernet PRIMÁRIA para criptografar senhas sensíveis no banco
+    # (ex: erp_password) — usada tanto para criptografar quanto descriptografar.
     # Gere com: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     erps_encryption_key: str = ""
+
+    # Chaves Fernet ANTIGAS, separadas por vírgula (opcional). Usadas apenas
+    # para DEScriptografar valores gravados com uma chave anterior durante
+    # uma rotação — nunca para criptografar valores novos. Ver o processo de
+    # rotação em app/application/config_crypto.py e scripts/rotate_encryption_key.py.
+    erps_encryption_key_old: str = ""
 
     @model_validator(mode="after")
     def validar_jwt_secret(self):

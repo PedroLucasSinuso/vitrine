@@ -24,13 +24,23 @@ _SORT_MAP = {
 
 
 class ProdutoRepository(IProdutoRepository):
-    def __init__(self, session) -> None:
+    def __init__(self, session, empresa_id: int) -> None:
+        """``empresa_id`` é obrigatório e vem sempre do usuário autenticado
+        (ver app/api/deps.get_produto_repository) — nunca de input do
+        cliente. Toda query deste repositório filtra por ele; é assim que
+        se garante que um tenant nunca lê/escreve dado de outro."""
         self._session = session
+        self._empresa_id = empresa_id
 
     def listar_paginado(self, limit: int = 50, offset: int = 0):
         logger.debug("Query listar_paginado | limit=%s offset=%s", limit, offset)
         with temporizador("SQL listar_paginado", logger):
-            stmt = select(Produto).offset(offset).limit(limit)
+            stmt = (
+                select(Produto)
+                .where(Produto.empresa_id == self._empresa_id)
+                .offset(offset)
+                .limit(limit)
+            )
             resultado = self._session.execute(stmt).scalars().all()
         logger.info("SQL listar_paginado | limit=%s offset=%s rows=%s", limit, offset, len(resultado))
         return resultado
@@ -40,8 +50,12 @@ class ProdutoRepository(IProdutoRepository):
         with temporizador("SQL obter_por_codigo", logger):
             stmt = (
                 select(Produto)
-                .join(ProdutoCodigo)
-                .where(ProdutoCodigo.codigo == codigo)
+                .join(ProdutoCodigo, ProdutoCodigo.codigo_chamada == Produto.codigo_chamada)
+                .where(
+                    ProdutoCodigo.codigo == codigo,
+                    Produto.empresa_id == self._empresa_id,
+                    ProdutoCodigo.empresa_id == self._empresa_id,
+                )
             )
             resultado = self._session.execute(stmt).scalars().first()
         logger.info("SQL obter_por_codigo | codigo=%s encontrado=%s", codigo, resultado is not None)
@@ -52,7 +66,10 @@ class ProdutoRepository(IProdutoRepository):
         with temporizador("SQL buscar_por_nome", logger):
             stmt = (
                 select(Produto)
-                .where(Produto.nome.ilike(f"%{nome}%"))
+                .where(
+                    Produto.nome.ilike(f"%{nome}%"),
+                    Produto.empresa_id == self._empresa_id,
+                )
                 .offset(offset)
                 .limit(limit)
             )
@@ -75,8 +92,12 @@ class ProdutoRepository(IProdutoRepository):
             grupo, familia, search, sort_by, sort_order, limit, offset,
         )
         with temporizador("SQL listar_tabela", logger):
-            stmt = select(Produto).where(Produto.ativo == True)
-            count_stmt = select(func.count(Produto.codigo_chamada)).where(Produto.ativo == True)
+            stmt = select(Produto).where(
+                Produto.ativo == True, Produto.empresa_id == self._empresa_id
+            )
+            count_stmt = select(func.count(Produto.codigo_chamada)).where(
+                Produto.ativo == True, Produto.empresa_id == self._empresa_id
+            )
 
             if grupo:
                 stmt = stmt.where(Produto.grupo == grupo)
@@ -116,14 +137,20 @@ class ProdutoRepository(IProdutoRepository):
         with temporizador("SQL obter_grupos_e_familias", logger):
             grupos = (
                 self._session.execute(
-                    select(Produto.grupo).distinct().where(Produto.ativo == True).order_by(Produto.grupo)
+                    select(Produto.grupo)
+                    .distinct()
+                    .where(Produto.ativo == True, Produto.empresa_id == self._empresa_id)
+                    .order_by(Produto.grupo)
                 )
                 .scalars()
                 .all()
             )
             familias = (
                 self._session.execute(
-                    select(Produto.familia).distinct().where(Produto.ativo == True).order_by(Produto.familia)
+                    select(Produto.familia)
+                    .distinct()
+                    .where(Produto.ativo == True, Produto.empresa_id == self._empresa_id)
+                    .order_by(Produto.familia)
                 )
                 .scalars()
                 .all()
@@ -154,6 +181,7 @@ class ProdutoRepository(IProdutoRepository):
             )
             self._session.add(
                 HistoricoPreco(
+                    empresa_id=self._empresa_id,
                     codigo_chamada=codigo,
                     preco_custo=preco_custo,
                     preco_venda=preco_venda,

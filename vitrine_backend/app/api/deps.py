@@ -22,11 +22,6 @@ def get_db():
         session.close()
 
 
-def get_produto_repository(db=Depends(get_db)):
-    """Retorna o repositório de produtos."""
-    return ProdutoRepository(db)
-
-
 def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_db)) -> Usuario:
     """Valida o token JWT e retorna o usuário autenticado.
 
@@ -66,6 +61,24 @@ def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_db)) ->
     return usuario
 
 
+def get_produto_repository(db=Depends(get_db), usuario: Usuario = Depends(get_current_user)):
+    """Retorna o repositório de produtos escopado à empresa do usuário logado.
+
+    ``usuario.empresa_id`` vem sempre da linha fresca do banco (não do JWT
+    decodificado direto) — ver get_current_user. Para super_admin
+    (empresa_id None) isso levanta erro alto e claro em vez de silenciosamente
+    devolver um repositório sem filtro: nenhuma rota de produto hoje é
+    acessível por super_admin (não há caso de uso), então chegar aqui com
+    empresa_id None é sempre um bug de roteamento, não um caso válido.
+    """
+    if usuario.empresa_id is None:
+        raise HTTPException(
+            status_code=403,
+            detail="Este recurso é por empresa — não disponível para super_admin.",
+        )
+    return ProdutoRepository(db, empresa_id=usuario.empresa_id)
+
+
 def require_role(usuario: Usuario, allowed_roles: list[RolesEnum], detail: str) -> Usuario:
     """Verifica se o usuário tem um dos roles permitidos, senão levanta 403."""
     if usuario.role not in [r.value for r in allowed_roles]:
@@ -83,11 +96,26 @@ def require_supervisor(usuario: Usuario = Depends(get_current_user)) -> Usuario:
 
 
 def require_admin(usuario: Usuario = Depends(get_current_user)) -> Usuario:
-    """Garante que o usuário seja administrador."""
+    """Garante que o usuário seja administrador (da própria empresa).
+
+    Intencionalmente NÃO inclui SUPER_ADMIN: rotas de admin operam sobre
+    dados de uma empresa (usuario.empresa_id), e super_admin não pertence
+    a nenhuma. Área de super_admin usa require_super_admin, separada.
+    """
     return require_role(
         usuario,
         [RolesEnum.ADMIN],
         "Acesso restrito a administradores"
+    )
+
+
+def require_super_admin(usuario: Usuario = Depends(get_current_user)) -> Usuario:
+    """Garante que o usuário seja super_admin (administra a plataforma,
+    não uma empresa específica — usuario.empresa_id é None aqui)."""
+    return require_role(
+        usuario,
+        [RolesEnum.SUPER_ADMIN],
+        "Acesso restrito à administração da plataforma"
     )
 
 
@@ -131,9 +159,9 @@ from app.adapters.alterdata.transaction_source import AlterdataTransactionSource
 register_adapter("alterdata", AlterdataProductSource, AlterdataTransactionSource)
 
 
-def _get_erp_adapter_name(db) -> str:
-    """Lê o nome do adapter configurado (ex: 'alterdata')."""
-    return get_config(db, "erp_adapter", "alterdata")
+def _get_erp_adapter_name(db, empresa_id: int) -> str:
+    """Lê o nome do adapter configurado (ex: 'alterdata') DA EMPRESA."""
+    return get_config(db, empresa_id, "erp_adapter", "alterdata")
 
 
 def get_produto_service(produto_repo=Depends(get_produto_repository)):
@@ -142,13 +170,16 @@ def get_produto_service(produto_repo=Depends(get_produto_repository)):
     return ProdutoService(produto_repo)
 
 
-def get_product_source(db=Depends(get_db)) -> ProductSource:
-    """Retorna a fonte de produtos conforme o ERP configurado.
+def get_product_source(
+    db=Depends(get_db), usuario: Usuario = Depends(get_current_user)
+) -> ProductSource:
+    """Retorna a fonte de produtos conforme o ERP configurado DA EMPRESA do usuário.
 
     Consulta o ``_ADAPTER_REGISTRY`` pelo nome do ERP configurado.
     Se o adapter não estiver registrado, levanta ``ValueError``.
     """
-    erp = _get_erp_adapter_name(db)
+    empresa_id = usuario.empresa_id
+    erp = _get_erp_adapter_name(db, empresa_id)
     if erp not in _ADAPTER_REGISTRY:
         disponiveis = ", ".join(_ADAPTER_REGISTRY.keys()) or "nenhum"
         raise ValueError(
@@ -157,20 +188,27 @@ def get_product_source(db=Depends(get_db)) -> ProductSource:
             f"Use register_adapter() para registrar novos adapters."
         )
     with _ADAPTER_LOCK:
-        cache_key = f"product_source:{erp}"
+        # A chave do cache PRECISA incluir empresa_id: sem isso, a fonte
+        # de dados (com a conexão/credenciais do ERP de UMA empresa)
+        # seria reusada para servir requests de QUALQUER outra empresa
+        # que use o mesmo tipo de adapter (ex: duas empresas "alterdata").
+        cache_key = f"product_source:{erp}:{empresa_id}"
         if cache_key not in _ADAPTER_CACHE:
             from app.application.erp_factory import create_product_source
-            _ADAPTER_CACHE[cache_key] = create_product_source(db)
+            _ADAPTER_CACHE[cache_key] = create_product_source(db, empresa_id)
         return _ADAPTER_CACHE[cache_key]  # type: ignore[return-value]
 
 
-def get_transaction_source(db=Depends(get_db)) -> TransactionSource:
-    """Retorna a fonte de transações conforme o ERP configurado.
+def get_transaction_source(
+    db=Depends(get_db), usuario: Usuario = Depends(get_current_user)
+) -> TransactionSource:
+    """Retorna a fonte de transações conforme o ERP configurado DA EMPRESA do usuário.
 
     Consulta o ``_ADAPTER_REGISTRY`` pelo nome do ERP configurado.
     Se o adapter não estiver registrado, levanta ``ValueError``.
     """
-    erp = _get_erp_adapter_name(db)
+    empresa_id = usuario.empresa_id
+    erp = _get_erp_adapter_name(db, empresa_id)
     if erp not in _ADAPTER_REGISTRY:
         disponiveis = ", ".join(_ADAPTER_REGISTRY.keys()) or "nenhum"
         raise ValueError(
@@ -179,8 +217,10 @@ def get_transaction_source(db=Depends(get_db)) -> TransactionSource:
             f"Use register_adapter() para registrar novos adapters."
         )
     with _ADAPTER_LOCK:
-        cache_key = f"transaction_source:{erp}"
+        # Mesma razão do cache_key em get_product_source: precisa incluir
+        # empresa_id, senão a conexão do ERP de uma empresa vaza para outra.
+        cache_key = f"transaction_source:{erp}:{empresa_id}"
         if cache_key not in _ADAPTER_CACHE:
             from app.application.erp_factory import create_transaction_source
-            _ADAPTER_CACHE[cache_key] = create_transaction_source(db)
+            _ADAPTER_CACHE[cache_key] = create_transaction_source(db, empresa_id)
         return _ADAPTER_CACHE[cache_key]  # type: ignore[return-value]

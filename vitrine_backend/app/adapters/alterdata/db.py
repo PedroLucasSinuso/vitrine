@@ -20,12 +20,16 @@ def _make_cache_key(url: str, pool_size: int) -> str:
     return f"{url}::pool{pool_size}"
 
 
-def get_alterdata_engine(db: Session, pool_size: int = 2) -> Engine:
-    """Retorna um engine SQLAlchemy para o PostgreSQL do Alterdata.
+def get_alterdata_engine(db: Session, empresa_id: int, pool_size: int = 2) -> Engine:
+    """Retorna um engine SQLAlchemy para o PostgreSQL do Alterdata DA EMPRESA.
 
     A URL de conexão é montada dinamicamente a partir das configurações
-    do ERP armazenadas no SQLite (erp_host, erp_port, etc.) via
-    montar_url_postgres().
+    de ERP DAQUELA EMPRESA (armazenadas no SQLite — erp_host, erp_port,
+    etc.) via montar_url_postgres(). Cada empresa tem seu próprio ERP,
+    então a URL — e portanto o engine cacheado — é sempre por tenant
+    (a chave do cache já inclui a URL inteira, que já embute o host/db/
+    usuário daquela empresa, então não há risco de um tenant reusar o
+    pool de conexão de outro).
 
     O engine é cacheado em memória por até 1h (chave = url + pool_size)
     para evitar recriação do pool de conexões a cada request. Se a config
@@ -33,10 +37,11 @@ def get_alterdata_engine(db: Session, pool_size: int = 2) -> Engine:
 
     Args:
         db: Sessão SQLAlchemy para ler config do ERP.
+        empresa_id: tenant cujo ERP será conectado.
         pool_size: Tamanho do pool de conexões. Sync usa pool_size=1
                    para não disputar conexões com BI (C2).
     """
-    url = montar_url_postgres(db)
+    url = montar_url_postgres(db, empresa_id)
     if not url:
         raise RuntimeError(
             "ERP não configurado. "

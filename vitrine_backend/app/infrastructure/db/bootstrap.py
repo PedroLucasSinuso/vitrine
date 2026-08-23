@@ -4,13 +4,14 @@ import importlib
 import pkgutil
 import logging
 import threading
-from sqlalchemy import text
-from app.infrastructure.db.database import Base
+from pathlib import Path
+from sqlalchemy import inspect
 from app.infrastructure.db.session import sqlite_engine
 
-# Auto-scan de models: todo .py em app/domain/models/ é importado
-# para registrar no Base.metadata (M11). Isso evita esquecer de
-# adicionar imports manuais quando um novo model é criado.
+# Auto-scan de models: todo .py em app/domain/models/ é importado para
+# registrar no Base.metadata (M11; ver app.infrastructure.db.database.Base,
+# usado por migrations/env.py). Isso evita esquecer de adicionar imports
+# manuais quando um novo model é criado.
 import app.domain.models as _models_pkg
 for _module_info in pkgutil.iter_modules(_models_pkg.__path__):
     importlib.import_module(f"app.domain.models.{_module_info.name}")
@@ -20,65 +21,43 @@ logger = logging.getLogger(__name__)
 _migration_feita = False
 _init_db_lock = threading.Lock()
 
+_ALEMBIC_INI = Path(__file__).resolve().parents[3] / "alembic.ini"
 
-def _run_migrations():
-    """Executa migrações incrementais (ALTER TABLE) que o create_all não cobre."""
-    # Migration: coluna 'observacao' em itens_inventario
-    try:
-        with sqlite_engine.connect() as conn:
-            conn.execute(text("ALTER TABLE itens_inventario ADD COLUMN observacao TEXT"))
-            conn.commit()
-            logger.info("Migration: coluna 'observacao' adicionada a itens_inventario")
-    except Exception as e:
-        logger.warning("Migration (esperado se já existe): coluna 'observacao' — %s", e)
 
-    # Migration: coluna 'token_version' em usuarios (JWT revogação)
-    try:
-        with sqlite_engine.connect() as conn:
-            conn.execute(text("ALTER TABLE usuarios ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0"))
-            conn.commit()
-            logger.info("Migration: coluna 'token_version' adicionada a usuarios")
-    except Exception as e:
-        logger.warning("Migration (esperado se já existe): coluna 'token_version' — %s", e)
+def _run_alembic_migrations():
+    """Aplica o schema via Alembic — substitui create_all() + as antigas
+    migrações manuais (ALTER TABLE em try/except).
 
-    # Migration: limpar jwt_secret do banco (agora é somente .env)
-    try:
-        with sqlite_engine.connect() as conn:
-            conn.execute(text("DELETE FROM configuracoes WHERE chave = 'jwt_secret'"))
-            conn.commit()
-            logger.info("Migration: jwt_secret removido da tabela configuracoes")
-    except Exception as e:
-        logger.warning("Migration (esperado se já existe): jwt_secret — %s", e)
+    A revisão baseline (migrations/versions/..._baseline...) foi gerada por
+    autogenerate a partir dos models atuais, então é equivalente ao schema
+    que create_all() + as migrações ad-hoc antigas já produziam.
 
-    # Migration: cleanup de tokens expirados na blacklist (+30 dias)
-    try:
-        with sqlite_engine.connect() as conn:
-            conn.execute(text("DELETE FROM token_blacklist WHERE expires_at < datetime('now', '-30 days')"))
-            conn.commit()
-            logger.info("Migration: token_blacklist limpa (entradas >30 dias)")
-    except Exception as e:
-        logger.warning("Migration (esperado se já existe): token_blacklist cleanup — %s", e)
+    Bancos que já existiam ANTES da introdução do Alembic não têm a tabela
+    'alembic_version' — nesse caso, em vez de tentar recriar tabelas que já
+    existem, o banco é "carimbado" na revisão baseline primeiro (stamp),
+    e só então 'upgrade head' roda (como no-op, já que baseline == head).
+    Bancos novos simplesmente rodam 'upgrade head' e recebem o schema
+    completo pela migração baseline.
+    """
+    from alembic.config import Config
+    from alembic import command
 
-    # Migration: índice composto para historico_precos
-    try:
-        with sqlite_engine.connect() as conn:
-            conn.execute(text(
-                "CREATE INDEX IF NOT EXISTS idx_hp_codigo_data "
-                "ON historico_precos(codigo_chamada, data_coleta)"
-            ))
-            conn.commit()
-            logger.info("Migration: índice idx_hp_codigo_data criado")
-    except Exception as e:
-        logger.warning("Migration (esperado se já existe): índice idx_hp_codigo_data — %s", e)
+    cfg = Config(str(_ALEMBIC_INI))
 
-    # Migration: coluna 'ativo' em produtos
-    try:
-        with sqlite_engine.connect() as conn:
-            conn.execute(text("ALTER TABLE produtos ADD COLUMN ativo BOOLEAN NOT NULL DEFAULT 1"))
-            conn.commit()
-            logger.info("Migration: coluna 'ativo' adicionada a produtos")
-    except Exception as e:
-        logger.warning("Migration (esperado se já existe): coluna 'ativo' — %s", e)
+    inspector = inspect(sqlite_engine)
+    tabelas_existentes = set(inspector.get_table_names())
+    tem_schema_anterior_ao_alembic = (
+        "usuarios" in tabelas_existentes and "alembic_version" not in tabelas_existentes
+    )
+
+    if tem_schema_anterior_ao_alembic:
+        logger.info(
+            "Banco existente sem controle do Alembic — carimbando na revisão "
+            "baseline antes de aplicar novas migrações"
+        )
+        command.stamp(cfg, "head")
+
+    command.upgrade(cfg, "head")
 
 
 def init_db():
@@ -87,8 +66,7 @@ def init_db():
         if _migration_feita:
             return
         _warn_fernet_key_rotation()
-        Base.metadata.create_all(bind=sqlite_engine)
-        _run_migrations()
+        _run_alembic_migrations()
 
         # Migração de chaves criptografadas (config_crypto / config_service)
         try:
@@ -160,18 +138,23 @@ def acquire_scheduler_lock() -> bool:
 
 
 def _warn_fernet_key_rotation():
-    """Previne rotação da chave Fernet após o primeiro uso.
-    
-    Se ERPS_ENCRYPTION_KEY for alterada depois que senhas já foram
-    criptografadas no banco, as senhas existentes se tornam ilegíveis
-    permanentemente (a chave antiga é necessária para descriptografar).
+    """Avisa sobre o processo correto de rotação da chave Fernet.
+
+    ERPS_ENCRYPTION_KEY agora suporta rotação segura via
+    ERPS_ENCRYPTION_KEY_OLD (ver app/application/config_crypto.py):
+    trocar a chave primária SEM antes mover a chave anterior para
+    ERPS_ENCRYPTION_KEY_OLD ainda torna as senhas já criptografadas
+    ilegíveis, então o aviso permanece — mas agora existe um caminho
+    de saída (scripts/rotate_encryption_key.py) em vez de perda
+    permanente.
     """
     from app.core.config import settings
     if settings.erps_encryption_key:
         logger.warning(
-            "ERPS_ENCRYPTION_KEY está configurada. ATENÇÃO: "
-            "NÃO altere esta chave após o primeiro uso — senhas "
-            "criptografadas no banco se tornarão ilegíveis "
-            "permanentemente. Consulte a documentação em README.md "
-            "para mais detalhes."
+            "ERPS_ENCRYPTION_KEY está configurada. Para trocar esta chave "
+            "com segurança, NÃO edite ERPS_ENCRYPTION_KEY diretamente: "
+            "mova o valor atual para ERPS_ENCRYPTION_KEY_OLD, defina a "
+            "chave nova em ERPS_ENCRYPTION_KEY e rode "
+            "'uv run python scripts/rotate_encryption_key.py'. "
+            "Consulte a documentação em README.md para mais detalhes."
         )

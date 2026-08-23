@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import DateTime, Integer, String
+from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.db.database import Base
@@ -9,6 +9,9 @@ class SyncJob(Base):
     __tablename__ = "sync_jobs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    empresa_id: Mapped[int] = mapped_column(
+        ForeignKey("empresas.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     job_id: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
     status: Mapped[str] = mapped_column(String, nullable=False, default="pendente")
     started_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)

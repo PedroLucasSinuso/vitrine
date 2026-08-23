@@ -59,7 +59,7 @@ def test_registrar_novo_usuario():
         password="senha123",
         role="operador",
     )
-    usuario = AuthService(repo).registrar(dados)
+    usuario = AuthService(repo).registrar(dados, empresa_id=1)
     assert usuario.username == "op1"
     assert usuario.role == "operador"
     assert usuario.hashed_password != "senha123"
@@ -74,4 +74,4 @@ def test_registrar_username_duplicado(usuario_existente):
         role="operador",
     )
     with pytest.raises(ValueError):
-        AuthService(repo).registrar(dados)
+        AuthService(repo).registrar(dados, empresa_id=1)
