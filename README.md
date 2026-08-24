@@ -183,25 +183,171 @@ Usuário (câmera / input)
 
 ---
 
-## Quick start (desenvolvimento)
+## Rodar em outro computador
+
+Duas formas. **Docker é a recomendada** para uma máquina nova: não exige
+Python, Node, nem as bibliotecas de sistema do PostgreSQL/WeasyPrint.
+
+### Pré-requisitos
+
+| Forma | Precisa de |
+|---|---|
+| Docker | Docker Engine + Docker Compose v2 |
+| Local | Python 3.11+, [uv](https://docs.astral.sh/uv/), Node 22+, `libpq-dev` |
+
+No Linux, depois de instalar o Docker, adicione seu usuário ao grupo para
+não precisar de `sudo` (exige logout/login para valer):
 
 ```bash
-# Clone
+sudo usermod -aG docker $USER
+```
+
+### 1. Clone e configure o `.env`
+
+O `.env` **não é versionado** e o backend não sobe sem ele:
+
+```bash
 git clone https://github.com/PedroLucasSinuso/vitrine.git
 cd vitrine
+cp vitrine_backend/.env.example vitrine_backend/.env
+```
 
+Três valores são obrigatórios. Gere a chave de criptografia com:
+
+```bash
+python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+E preencha no `vitrine_backend/.env`:
+
+```ini
+JWT_SECRET=uma-string-aleatoria-de-32-caracteres-ou-mais
+ALLOWED_ORIGINS=["http://localhost:5173"]
+ERPS_ENCRYPTION_KEY=<a chave gerada acima>
+```
+
+> A `ERPS_ENCRYPTION_KEY` criptografa as senhas de ERP no banco. Trocá-la
+> sem seguir o processo de rotação torna ilegível o que já foi salvo — ver
+> a seção sobre ela no fim deste arquivo.
+
+As configurações de ERP (host, base, usuário, senha) **não precisam ir no
+`.env`**: são preenchidas pela interface em Admin > Configurações, por
+empresa. E no modo demonstração não são necessárias.
+
+### 2. Suba com Docker
+
+```bash
+docker compose up -d --build
+```
+
+- Frontend: <http://localhost>
+- API + Swagger: <http://localhost:8000/docs>
+
+O banco da aplicação é um arquivo SQLite dentro de um volume Docker
+(`vitrine_backend_data`), fora da árvore do projeto — ele sobrevive a
+`docker compose down`, mas **não** a `docker compose down -v`.
+
+### 3. Crie um usuário
+
+Ainda não há tela de cadastro (o onboarding é assistido, por decisão de
+projeto). Use um dos comandos abaixo **dentro do container**:
+
+```bash
+# Modo demonstração: dados sintéticos, nenhum ERP necessário (ver adiante)
+docker compose exec backend provisionar-demo
+
+# Ou um cliente real: cria a empresa e o primeiro admin dela
+docker compose exec backend provisionar-empresa \
+    "Mercado Boa Vista" mercado-boa-vista admin.boavista "Admin" "senha-forte"
+```
+
+### Comandos do dia a dia
+
+```bash
+docker compose ps                  # o que está rodando
+docker compose logs -f backend     # acompanhar os logs
+docker compose exec backend bash   # shell dentro do container
+docker compose down                # derruba (preserva os dados)
+docker compose up -d --build       # rebuild após mudar código
+```
+
+> Mudou o código? Precisa rebuildar — a imagem congela o código no momento
+> do build. Para desenvolver com recarga automática, use o modo local
+> abaixo.
+
+### Problemas comuns
+
+| Sintoma | Causa |
+|---|---|
+| `address already in use` na porta 80 | Algo já ocupa a porta. Mude para `"8080:80"` no `docker-compose.yml` |
+| `permission denied ... docker.sock` | Falta o grupo `docker` (veja pré-requisitos) ou faltou relogar |
+| Backend sobe e morre | `.env` faltando ou sem `JWT_SECRET`/`ERPS_ENCRYPTION_KEY` |
+| Extensão de SQLite não acha o banco | Ele vive no volume Docker, não no projeto. Copie com `docker compose cp backend:/app/data/price_checker.db ./banco.db` |
+
+---
+
+## Modo demonstração
+
+Permite rodar o Vitrine **inteiro sem nenhum ERP** — útil para avaliar o
+sistema, demonstrar, ou desenvolver sem acesso ao banco de um cliente.
+
+```bash
+docker compose exec backend provisionar-demo    # ou: uv run provisionar-demo
+```
+
+Cria uma empresa `demo` com três usuários (senha `demo1234`), um para cada
+papel, e popula o catálogo:
+
+| Usuário | Papel |
+|---|---|
+| `demo` | admin |
+| `demo.supervisor` | supervisor |
+| `demo.operador` | operador |
+
+Os dados são **sintéticos e determinísticos**: cerca de dois anos de
+vendas, trocas, perdas e consumo interno, gerados sob demanda a partir da
+data — com sazonalidade por dia da semana, picos de horário, feriados e
+crescimento ano a ano. Ninguém precisa configurar ERP, e as telas de BI
+aparecem cheias.
+
+Como o visitante pode alterar coisas (criar inventário, editar
+configurações), há um comando para devolver o tenant ao estado inicial:
+
+```bash
+docker compose exec backend resetar-demo
+```
+
+O reset se recusa a rodar sobre uma empresa que não seja de demonstração.
+Para resetar periodicamente, agende esse comando no cron da máquina.
+
+---
+
+## Quick start (desenvolvimento local)
+
+Sem Docker, com recarga automática:
+
+```bash
 # Backend
 cd vitrine_backend
-cp .env.example .env        # Configure suas credenciais
-uv sync                     # Instala dependências
-uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-# Após iniciar, crie um admin:
-# uv run python -m app.cli admin "Nome" minha_senha
+cp .env.example .env             # preencha as 3 chaves obrigatórias
+uv sync                          # precisa de libpq-dev instalado
+uv run uvicorn app.main:app --reload --port 8000
+uv run provisionar-demo          # popula tudo, sem ERP
 
 # Frontend (outro terminal)
 cd vitrine_frontend
 npm install
-npm run dev                 # → http://localhost:5173
+npm run dev                      # → http://localhost:5173
+```
+
+O Vite já faz proxy de `/api` e `/static` para a porta 8000, então não é
+preciso configurar CORS nem `VITE_API_URL` em desenvolvimento.
+
+Se o `uv sync` falhar em `psycopg2` com `pg_config executable not found`,
+falta a biblioteca de sistema do PostgreSQL:
+
+```bash
+sudo apt install libpq-dev      # Debian/Ubuntu
 ```
 
 ---
