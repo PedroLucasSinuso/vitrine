@@ -65,6 +65,21 @@ def _cleanup_mock():
     app.dependency_overrides.pop(get_transaction_source, None)
 
 
+@pytest.fixture(autouse=True)
+def _sem_erp_real(client):
+    """Garante que NENHUM teste deste módulo abra conexão com o ERP.
+
+    get_transaction_source é uma dependência do FastAPI, resolvida antes do
+    corpo da rota — então até os testes que só checam validação de período
+    ou permissão (que nem olham dados) tentavam conectar no Postgres do ERP
+    e falhavam com "ERP não configurado". Aqui o default é uma fonte vazia;
+    os testes que precisam de dados chamam _setup_mock() e sobrescrevem.
+    """
+    _setup_mock({})
+    yield
+    _cleanup_mock()
+
+
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
 class TestDiarioComparativoCompleto:

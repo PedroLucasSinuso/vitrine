@@ -1,4 +1,6 @@
-﻿import pytest
+﻿from datetime import date
+
+import pytest
 from app.domain.models.produto import Produto
 
 
@@ -645,9 +647,16 @@ class TestBiExcelExport:
     """BI exportar/excel endpoint (T5)."""
 
     def test_exportar_excel_ranking(
-        self, client, token_admin, db_session
+        self, client, token_admin, transaction_source, criar_item
     ):
-        """Chama /bi/exportar/excel e verifica status 200 + Content-Type Excel."""
+        """Com vendas no periodo, /bi/exportar/excel devolve 200 + planilha."""
+        transaction_source.items_por_data = {
+            date(2024, 1, 10): [
+                criar_item("DOC1", date(2024, 1, 10), 10, 100.0),
+                criar_item("DOC2", date(2024, 1, 10), 14, 200.0, qtd=2.0),
+            ],
+        }
+
         resp = client.get(
             "/bi/exportar/excel",
             params={
@@ -657,23 +666,28 @@ class TestBiExcelExport:
             },
             headers={"Authorization": f"Bearer {token_admin}"},
         )
-        # Pode retornar 400 se não houver transações no período,
-        # mas o importante é testar a rota (alguns cenários retornam 200
-        # com Excel vazio). Vamos aceitar 200 ou 422/400.
-        assert resp.status_code in (200, 400, 422)
-        if resp.status_code == 200:
-            assert resp.headers["content-type"] == (
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+
+        assert resp.status_code == 200
+        assert resp.headers["content-type"] == (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        # Assinatura de arquivo .xlsx (zip) - garante que veio planilha de verdade.
+        assert resp.content[:2] == b"PK"
 
 
 class TestAuthRoleChange:
     """Token válido após role change + novo login (T7)."""
 
     def test_novo_token_funciona_apos_role_change(
-        self, client, db_session, usuario_operador, usuario_admin
+        self, client, db_session, usuario_operador, usuario_admin,
+        transaction_source, criar_item,
     ):
         """Altera role, faz login novamente e verifica que novo token funciona."""
+        # A rota do passo 4 e' so' o veiculo para checar a autorizacao, mas
+        # ela precisa de vendas no periodo para chegar ate' o 200.
+        transaction_source.items_por_data = {
+            date(2024, 1, 10): [criar_item("DOC1", date(2024, 1, 10), 10, 100.0)],
+        }
         # 1. Fazer login como admin para alterar role
         resp = client.post(
             "/auth/token",
@@ -707,5 +721,6 @@ class TestAuthRoleChange:
             },
             headers={"Authorization": f"Bearer {novo_token}"},
         )
-        # Aceita 200 ou 400 (sem dados), mas NÃO 401/403
-        assert resp.status_code in (200, 400, 422)
+        # O que importa aqui e' a autorizacao: com o novo role o acesso
+        # e' liberado (200), nao mais 401/403.
+        assert resp.status_code == 200
