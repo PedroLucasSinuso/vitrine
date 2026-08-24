@@ -94,12 +94,58 @@ def provisionar_empresa(
         print("     (Admin > Configurações > ERP no frontend)")
 
 
+def provisionar_demo_cli(senha: str | None = None) -> None:
+    """Cria o tenant de demonstração (dados sintéticos, sem ERP)."""
+    from app.application.demo_provisioner import DemoError, provisionar_demo, senha_padrao
+
+    try:
+        empresa_id = provisionar_demo(senha or senha_padrao())
+    except DemoError as e:
+        print(f"Erro: {e}")
+        sys.exit(1)
+
+    from app.application.demo_provisioner import USUARIOS_DEMO
+
+    print(f"Tenant de demonstração criado — empresa_id={empresa_id}")
+    print(f"Senha de todos os usuários: {senha or senha_padrao()}")
+    for username, _, role in USUARIOS_DEMO:
+        print(f"  {username} ({role})")
+    print()
+    print("A demo não precisa de ERP configurado: os dados são sintéticos.")
+
+
+def resetar_demo_cli() -> None:
+    """Devolve o tenant de demonstração ao estado inicial."""
+    from app.application.demo_provisioner import DemoError, resetar_demo
+
+    try:
+        empresa_id = resetar_demo()
+    except DemoError as e:
+        print(f"Erro: {e}")
+        sys.exit(1)
+    print(f"Tenant de demonstração resetado — empresa_id={empresa_id}")
+
+
 def main():
     if len(sys.argv) != 4:
         print("Uso: create-admin <username> <nome> <senha>")
         print("(cria um admin na empresa padrão — para uma empresa nova, use provisionar-empresa)")
         sys.exit(1)
     create_admin(sys.argv[1], sys.argv[2], sys.argv[3])
+
+
+def main_provisionar_demo():
+    if len(sys.argv) > 2:
+        print("Uso: provisionar-demo [senha]")
+        sys.exit(1)
+    provisionar_demo_cli(sys.argv[1] if len(sys.argv) == 2 else None)
+
+
+def main_resetar_demo():
+    if len(sys.argv) != 1:
+        print("Uso: resetar-demo")
+        sys.exit(1)
+    resetar_demo_cli()
 
 
 def main_provisionar_empresa():
@@ -118,12 +164,17 @@ def main_provisionar_empresa():
 
 if __name__ == "__main__":
     # Suporta `python -m app.cli <subcomando> ...` além dos entry points
-    # instalados (`create-admin`, `provisionar-empresa`) — funciona em
-    # qualquer ambiente, inclusive dentro do container Docker, onde `uv`
-    # não instala os console_scripts do próprio projeto por não haver
-    # [build-system] declarado no pyproject.toml.
-    if len(sys.argv) > 1 and sys.argv[1] == "provisionar-empresa":
+    # instalados (create-admin, provisionar-empresa, provisionar-demo,
+    # resetar-demo). Útil dentro do container, onde chamar o módulo direto
+    # dispensa depender do PATH do ambiente virtual.
+    _SUBCOMANDOS = {
+        "provisionar-empresa": main_provisionar_empresa,
+        "provisionar-demo": main_provisionar_demo,
+        "resetar-demo": main_resetar_demo,
+    }
+    if len(sys.argv) > 1 and sys.argv[1] in _SUBCOMANDOS:
+        comando = _SUBCOMANDOS[sys.argv[1]]
         sys.argv = [sys.argv[0]] + sys.argv[2:]
-        main_provisionar_empresa()
+        comando()
     else:
         main()

@@ -41,3 +41,5 @@ packages = ["app"]
 [project.scripts]
 create-admin = "app.cli:main"
 provisionar-empresa = "app.cli:main_provisionar_empresa"
+provisionar-demo = "app.cli:main_provisionar_demo"
+resetar-demo = "app.cli:main_resetar_demo"
