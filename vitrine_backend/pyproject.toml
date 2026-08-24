@@ -28,6 +28,13 @@ dependencies = [
     "alembic>=1.13",
 ]
 
+# Sem um build-system declarado, o uv trata o projeto como "nao empacotado"
+# e PULA a instalacao dos entry points de [project.scripts] — ou seja,
+# `uv run create-admin` / `uv run provisionar-empresa` nao existiriam.
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
 [tool.setuptools]
 packages = ["app"]
 
