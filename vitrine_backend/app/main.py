@@ -45,8 +45,21 @@ async def lifespan(app: FastAPI):
         scheduler = iniciar_scheduler()
         init_scheduler_manager(scheduler)
 
-        etl_min = ler_config_etl_interval()
-        reagendar_etl(etl_min, run_sync_scheduled)
+        # Um job de ETL por empresa ativa, cada um com seu próprio
+        # intervalo configurado (ver app/application/scheduler_manager.py).
+        from app.infrastructure.db.session import SqliteSession
+        from app.domain.models.empresa import Empresa
+        with SqliteSession() as _session:
+            _empresa_ids = [
+                e.id for e in
+                _session.query(Empresa).filter(Empresa.status == "ativa").all()
+            ]
+        for _empresa_id in _empresa_ids:
+            etl_min = ler_config_etl_interval(_empresa_id)
+            reagendar_etl(
+                _empresa_id, etl_min,
+                lambda eid=_empresa_id: run_sync_scheduled(empresa_id=eid),
+            )
 
         iniciar_scheduler_notificacoes(scheduler)
     else:

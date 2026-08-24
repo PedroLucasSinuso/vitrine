@@ -53,3 +53,9 @@ coverage/
 # Lixo de SO
 .DS_Store
 Thumbs.db
+
+# IA (documentos de handoff/config de agentes — não versionados)
+CLAUDE.md
+CONTEXTO.md
+.claude
+.opencode

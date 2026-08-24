@@ -26,6 +26,7 @@ from app.application.notifications.scheduler_notifications import (
     _enviar_relatorio_whatsapp,
     _enviar_relatorio_email,
 )
+from app.application.sync_service import run_sync_scheduled
 from app.application.config_service import (
     set_many,
     invalidar_cache,
@@ -50,7 +51,7 @@ def listar_configuracoes(
     _admin: Usuario = Depends(require_admin),
 ):
     init_db()
-    stmt = select(Configuracao)
+    stmt = select(Configuracao).where(Configuracao.empresa_id == _admin.empresa_id)
     results = db.execute(stmt).scalars().all()
     return ConfiguracaoResponse(
         configuracoes={
@@ -78,35 +79,45 @@ def atualizar_configuracoes(
     except ValidationError as e:
         raise HTTPException(status_code=422, detail=e.errors())
 
-    ignoradas = set_many(db, body.valores)
+    ignoradas = set_many(db, _admin.empresa_id, body.valores)
 
     valores = body.valores
 
     if "etl_interval_minutes" in valores:
         try:
-            reagendar_etl(max(10, int(valores["etl_interval_minutes"])))
+            reagendar_etl(
+                _admin.empresa_id,
+                max(10, int(valores["etl_interval_minutes"])),
+                lambda eid=_admin.empresa_id: run_sync_scheduled(empresa_id=eid),
+            )
         except Exception as e:
             logger.error("Erro ao reagendar ETL: %s", e)
 
     if "report_day" in valores or "report_time" in valores:
         try:
-            dia = get_config(db, "report_day", "fri")
-            time_str = get_config(db, "report_time", "18:00")
+            dia = get_config(db, _admin.empresa_id, "report_day", "fri")
+            time_str = get_config(db, _admin.empresa_id, "report_time", "18:00")
             hora, minuto = map(int, time_str.split(":"))
-            reagendar_relatorio_whatsapp(dia, hora, minuto, _enviar_relatorio_whatsapp)
+            reagendar_relatorio_whatsapp(
+                _admin.empresa_id, dia, hora, minuto,
+                lambda eid=_admin.empresa_id: _enviar_relatorio_whatsapp(eid),
+            )
         except Exception as e:
             logger.error("Erro ao reagendar WhatsApp: %s", e)
 
     if "report_email_day" in valores or "report_email_time" in valores:
         try:
-            dia = get_config(db, "report_email_day", "fri")
-            time_str = get_config(db, "report_email_time", "18:00")
+            dia = get_config(db, _admin.empresa_id, "report_email_day", "fri")
+            time_str = get_config(db, _admin.empresa_id, "report_email_time", "18:00")
             hora, minuto = map(int, time_str.split(":"))
-            reagendar_relatorio_email(dia, hora, minuto, _enviar_relatorio_email)
+            reagendar_relatorio_email(
+                _admin.empresa_id, dia, hora, minuto,
+                lambda eid=_admin.empresa_id: _enviar_relatorio_email(eid),
+            )
         except Exception as e:
             logger.error("Erro ao reagendar Email: %s", e)
 
-    stmt = select(Configuracao)
+    stmt = select(Configuracao).where(Configuracao.empresa_id == _admin.empresa_id)
     results = db.execute(stmt).scalars().all()
     return ConfiguracaoResponse(
         configuracoes={
@@ -127,7 +138,7 @@ def testar_conexao_erp(
     _admin: Usuario = Depends(require_admin),
 ):
     """Testa a conexão com o banco do ERP com as credenciais atuais."""
-    url = montar_url_postgres(db)
+    url = montar_url_postgres(db, _admin.empresa_id)
     if not url:
         raise HTTPException(status_code=400, detail="URL do ERP não configurada")
     try:
@@ -145,8 +156,8 @@ def testar_whatsapp(
     _admin: Usuario = Depends(require_admin),
 ):
     """Envia um relatório de teste via WhatsApp para os contatos configurados."""
-    sid = get_config(db, "twilio_account_sid")
-    token = get_config(db, "twilio_auth_token")
+    sid = get_config(db, _admin.empresa_id, "twilio_account_sid")
+    token = get_config(db, _admin.empresa_id, "twilio_auth_token")
     if not sid or not token:
         raise HTTPException(status_code=400, detail="WhatsApp não configurado")
     _enviar_relatorio_whatsapp()
@@ -159,7 +170,7 @@ def testar_email(
     _admin: Usuario = Depends(require_admin),
 ):
     """Envia um relatório de teste por e-mail para os contatos configurados."""
-    smtp_host = get_config(db, "smtp_host")
+    smtp_host = get_config(db, _admin.empresa_id, "smtp_host")
     if not smtp_host:
         raise HTTPException(status_code=400, detail="SMTP não configurado")
     _enviar_relatorio_email()
@@ -174,8 +185,11 @@ def upload_logo(
 ):
     os.makedirs(STATIC_DIR, exist_ok=True)
 
-    # Força extensão .png independente do que o usuário enviar
-    filename = "logo.png"
+    # Força extensão .png independente do que o usuário enviar. Nome
+    # inclui empresa_id — antes era um "logo.png" fixo e compartilhado,
+    # então a última empresa a fazer upload sobrescrevia o logo de todas
+    # as outras.
+    filename = f"logo_{_admin.empresa_id}.png"
     filepath = os.path.join(STATIC_DIR, filename)
 
     content = file.file.read()
@@ -184,7 +198,7 @@ def upload_logo(
 
     logo_url = f"/static/{filename}"
 
-    set_many(db, {"logo_url": logo_url})
+    set_many(db, _admin.empresa_id, {"logo_url": logo_url})
 
     return {"logo_url": logo_url}
 
@@ -198,7 +212,11 @@ def get_cache_status(
     _admin: Usuario = Depends(require_admin),
 ):
     """Retorna o status do cache de produtos (última sincronia ETL)."""
-    stmt = select(CacheStatus).order_by(CacheStatus.id.desc())
+    stmt = (
+        select(CacheStatus)
+        .where(CacheStatus.empresa_id == _admin.empresa_id)
+        .order_by(CacheStatus.id.desc())
+    )
     result = db.execute(stmt).scalars().first()
     return {
         "produtos_cached": result is not None,
@@ -216,7 +234,7 @@ def testar_anthropic(
     _admin: Usuario = Depends(require_admin),
 ):
     """Testa a conexão com a API da Anthropic usando a chave configurada."""
-    api_key = get_decrypted(db, "anthropic_api_key")
+    api_key = get_decrypted(db, _admin.empresa_id, "anthropic_api_key")
     if not api_key:
         raise HTTPException(status_code=400, detail="Anthropic API Key não configurada")
 

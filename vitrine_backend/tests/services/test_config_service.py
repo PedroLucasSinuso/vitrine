@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.domain.models.configuracao import Configuracao
+from app.domain.models.empresa import Empresa
 from app.infrastructure.db.database import Base
 from app.application.config_service import (
     get,
@@ -32,6 +33,11 @@ engine = create_engine(
 )
 Base.metadata.create_all(bind=engine)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+EMPRESA_ID = 1
+with SessionLocal() as _s:
+    _s.add(Empresa(id=EMPRESA_ID, nome="Empresa Teste", slug="empresa-teste", status="ativa"))
+    _s.commit()
 
 
 @pytest.fixture
@@ -87,20 +93,20 @@ class TestIsSensitive:
 
 class TestGet:
     def test_retorna_valor_do_banco(self, db):
-        db.add(Configuracao(chave="nome_estabelecimento", valor="Minha Loja"))
+        db.add(Configuracao(empresa_id=EMPRESA_ID, chave="nome_estabelecimento", valor="Minha Loja"))
         db.commit()
-        assert get(db, "nome_estabelecimento") == "Minha Loja"
+        assert get(db, EMPRESA_ID, "nome_estabelecimento") == "Minha Loja"
 
     def test_retorna_default_quando_nao_existe(self, db):
-        assert get(db, "chave_inexistente", "padrao") == "padrao"
+        assert get(db, EMPRESA_ID, "chave_inexistente", "padrao") == "padrao"
 
     def test_retorna_vazio_quando_sem_default(self, db):
-        assert get(db, "chave_inexistente") == ""
+        assert get(db, EMPRESA_ID, "chave_inexistente") == ""
 
     def test_cache_funciona(self, db):
-        db.add(Configuracao(chave="foo", valor="original"))
+        db.add(Configuracao(empresa_id=EMPRESA_ID, chave="foo", valor="original"))
         db.commit()
-        assert get(db, "foo") == "original"
+        assert get(db, EMPRESA_ID, "foo") == "original"
 
         # Muda no banco diretamente (sem invalidar cache)
         row = db.execute(
@@ -110,12 +116,12 @@ class TestGet:
         db.commit()
 
         # Cache ainda retorna o valor antigo (TTL de 30s)
-        assert get(db, "foo") == "original"
+        assert get(db, EMPRESA_ID, "foo") == "original"
 
     def test_cache_ignorado_apos_invalidar(self, db):
-        db.add(Configuracao(chave="foo", valor="original"))
+        db.add(Configuracao(empresa_id=EMPRESA_ID, chave="foo", valor="original"))
         db.commit()
-        assert get(db, "foo") == "original"
+        assert get(db, EMPRESA_ID, "foo") == "original"
 
         invalidar_cache()
 
@@ -125,7 +131,7 @@ class TestGet:
         row.valor = "alterado"
         db.commit()
 
-        assert get(db, "foo") == "alterado"
+        assert get(db, EMPRESA_ID, "foo") == "alterado"
 
 
 # ── set_many ───────────────────────────────────────────────────────────────
@@ -133,24 +139,24 @@ class TestGet:
 
 class TestSetMany:
     def test_salva_novas_configs(self, db):
-        set_many(db, {"nome_estabelecimento": "Loja Teste"})
+        set_many(db, EMPRESA_ID, {"nome_estabelecimento": "Loja Teste"})
         row = db.execute(
             select(Configuracao).where(Configuracao.chave == "nome_estabelecimento")
         ).scalar_one()
         assert row.valor == "Loja Teste"
 
     def test_atualiza_config_existente(self, db):
-        db.add(Configuracao(chave="nome_estabelecimento", valor="Antigo"))
+        db.add(Configuracao(empresa_id=EMPRESA_ID, chave="nome_estabelecimento", valor="Antigo"))
         db.commit()
 
-        set_many(db, {"nome_estabelecimento": "Novo"})
+        set_many(db, EMPRESA_ID, {"nome_estabelecimento": "Novo"})
         row = db.execute(
             select(Configuracao).where(Configuracao.chave == "nome_estabelecimento")
         ).scalar_one()
         assert row.valor == "Novo"
 
     def test_rejeita_chave_nao_editavel(self, db):
-        set_many(db, {"jwt_secret": "hack123"})
+        set_many(db, EMPRESA_ID, {"jwt_secret": "hack123"})
         row = db.execute(
             select(Configuracao).where(Configuracao.chave == "jwt_secret")
         ).scalar_one_or_none()
@@ -158,32 +164,32 @@ class TestSetMany:
 
     def test_rejeita_jwt_secret_retorna_lista(self, db):
         """set_many com jwt_secret retorna ['jwt_secret'] na lista de ignoradas (T2)."""
-        ignoradas = set_many(db, {"jwt_secret": "novo_valor"})
+        ignoradas = set_many(db, EMPRESA_ID, {"jwt_secret": "novo_valor"})
         assert ignoradas == ["jwt_secret"]
 
     def test_mistura_chaves_validas_e_invalidas(self, db):
-        set_many(db, {
+        set_many(db, EMPRESA_ID, {
             "nome_estabelecimento": "Loja",
             "jwt_secret": "hack123",
             "smtp_host": "smtp.teste.com",
         })
-        assert get(db, "nome_estabelecimento") == "Loja"
-        assert get(db, "smtp_host") == "smtp.teste.com"
+        assert get(db, EMPRESA_ID, "nome_estabelecimento") == "Loja"
+        assert get(db, EMPRESA_ID, "smtp_host") == "smtp.teste.com"
         # jwt_secret é _CHAVES_SOMENTE_ENV — sempre retorna do .env, ignora DB
-        assert get(db, "jwt_secret") == settings.jwt_secret
+        assert get(db, EMPRESA_ID, "jwt_secret") == settings.jwt_secret
 
     def test_invalida_cache_ao_salvar(self, db):
-        set_many(db, {"nome_estabelecimento": "Primeiro"})
-        assert get(db, "nome_estabelecimento") == "Primeiro"
+        set_many(db, EMPRESA_ID, {"nome_estabelecimento": "Primeiro"})
+        assert get(db, EMPRESA_ID, "nome_estabelecimento") == "Primeiro"
 
-        set_many(db, {"nome_estabelecimento": "Segundo"})
-        assert get(db, "nome_estabelecimento") == "Segundo"
+        set_many(db, EMPRESA_ID, {"nome_estabelecimento": "Segundo"})
+        assert get(db, EMPRESA_ID, "nome_estabelecimento") == "Segundo"
 
     def test_sentinel_preserva_valor_existente(self, db):
-        db.add(Configuracao(chave="nome_estabelecimento", valor="Minha Loja"))
+        db.add(Configuracao(empresa_id=EMPRESA_ID, chave="nome_estabelecimento", valor="Minha Loja"))
         db.commit()
 
-        set_many(db, {"nome_estabelecimento": SENTINEL_MASCARADO})
+        set_many(db, EMPRESA_ID, {"nome_estabelecimento": SENTINEL_MASCARADO})
         row = db.execute(
             select(Configuracao).where(Configuracao.chave == "nome_estabelecimento")
         ).scalar_one()
@@ -191,7 +197,7 @@ class TestSetMany:
 
     def test_sentinel_em_chave_inexistente_salva_literal(self, db):
         """Se a chave não existe, o sentinel é salvo como valor literal."""
-        set_many(db, {"chave_teste": SENTINEL_MASCARADO})
+        set_many(db, EMPRESA_ID, {"chave_teste": SENTINEL_MASCARADO})
         row = db.execute(
             select(Configuracao).where(Configuracao.chave == "chave_teste")
         ).scalar_one_or_none()
@@ -199,7 +205,7 @@ class TestSetMany:
 
     def test_sentinel_em_chave_editavel_inexistente_salva_literal(self, db):
         """Chave editável que não existe: sentinel vira valor literal."""
-        set_many(db, {"logo_url": SENTINEL_MASCARADO})
+        set_many(db, EMPRESA_ID, {"logo_url": SENTINEL_MASCARADO})
         row = db.execute(
             select(Configuracao).where(Configuracao.chave == "logo_url")
         ).scalar_one()
@@ -287,13 +293,13 @@ class TestChavesSomenteEnv:
         # 1. Inserir jwt_secret no banco via SQL direto (simulando inserção manual)
         db.execute(
             Configuracao.__table__.insert().values(
-                chave="jwt_secret", valor="valor_malicioso_no_db"
+                empresa_id=EMPRESA_ID, chave="jwt_secret", valor="valor_malicioso_no_db"
             )
         )
         db.commit()
 
         # 2. get() deve ignorar o banco e retornar o valor do .env
-        result = get(db, "jwt_secret")
+        result = get(db, EMPRESA_ID, "jwt_secret")
         assert result == settings.jwt_secret
         assert result != "valor_malicioso_no_db"
 
@@ -310,7 +316,7 @@ class TestCriptografia:
 
         # Salva com cipher = None (simula ambiente sem chave)
         with patch("app.application.config_crypto._cipher", None):
-            ignoradas = set_many(db, {"erp_password": "minha_senha"})
+            ignoradas = set_many(db, EMPRESA_ID, {"erp_password": "minha_senha"})
             assert "erp_password" not in ignoradas
 
         # Lê direto do banco — deve estar em texto plano
@@ -324,7 +330,7 @@ class TestCriptografia:
         from app.application.config_crypto import _cipher, CHAVES_CRIPTOGRAFADAS
 
         # Usa a chave já configurada no .env
-        ignoradas = set_many(db, {"erp_password": "senha_secreta"})
+        ignoradas = set_many(db, EMPRESA_ID, {"erp_password": "senha_secreta"})
         assert "erp_password" not in ignoradas
 
         # Lê direto do banco — deve estar criptografada (não é texto plano)
@@ -342,18 +348,18 @@ class TestCriptografia:
         """get_decrypted retorna valor descriptografado."""
         from app.application.config_service import get_decrypted
 
-        set_many(db, {"erp_password": "outra_senha"})
+        set_many(db, EMPRESA_ID, {"erp_password": "outra_senha"})
 
-        valor = get_decrypted(db, "erp_password")
+        valor = get_decrypted(db, EMPRESA_ID, "erp_password")
         assert valor == "outra_senha"
 
     def test_get_sem_decrypt_retorna_criptografado(self, db):
         """get() sem decrypt retorna o valor criptografado (não o original)."""
         from app.application.config_crypto import _cipher
 
-        set_many(db, {"erp_password": "senha_oculta"})
+        set_many(db, EMPRESA_ID, {"erp_password": "senha_oculta"})
 
-        valor = get(db, "erp_password")
+        valor = get(db, EMPRESA_ID, "erp_password")
         assert valor != "senha_oculta"  # está criptografado
         # O valor retornado por get() deve ser criptografado
         assert _cipher is not None
@@ -362,10 +368,10 @@ class TestCriptografia:
 
     def test_chave_nao_criptografada_retorna_literal(self, db):
         """Chave não criptografada retorna o valor literal."""
-        set_many(db, {"nome_estabelecimento": "Minha Loja"})
+        set_many(db, EMPRESA_ID, {"nome_estabelecimento": "Minha Loja"})
         from app.application.config_service import get_decrypted
 
-        valor = get_decrypted(db, "nome_estabelecimento")
+        valor = get_decrypted(db, EMPRESA_ID, "nome_estabelecimento")
         assert valor == "Minha Loja"
 
     def test_jwt_secret_somente_env_mantido(self, db):
@@ -374,16 +380,16 @@ class TestCriptografia:
         # 1. Inserir jwt_secret malicioso no banco
         db.execute(
             Configuracao.__table__.insert().values(
-                chave="jwt_secret", valor="valor_falso"
+                empresa_id=EMPRESA_ID, chave="jwt_secret", valor="valor_falso"
             )
         )
         db.commit()
 
         # 2. get() deve ignorar e retornar do .env
-        result = get(db, "jwt_secret")
+        result = get(db, EMPRESA_ID, "jwt_secret")
         assert result == settings.jwt_secret
         assert result != "valor_falso"
 
         # 3. set_many com jwt_secret é ignorado
-        ignoradas = set_many(db, {"jwt_secret": "tentativa_hack"})
+        ignoradas = set_many(db, EMPRESA_ID, {"jwt_secret": "tentativa_hack"})
         assert "jwt_secret" in ignoradas

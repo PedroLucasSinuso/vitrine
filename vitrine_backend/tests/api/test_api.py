@@ -1,4 +1,6 @@
-﻿import pytest
+﻿from datetime import date
+
+import pytest
 from app.domain.models.produto import Produto
 
 
@@ -26,11 +28,12 @@ def generate_valid_ean13() -> str:
 
 
 @pytest.fixture
-def produto_existente(db_session):
+def produto_existente(db_session, empresa_padrao):
     from app.domain.models.produto import ProdutoCodigo
 
     valid_code = generate_valid_ean13()
     prod = Produto(
+        empresa_id=empresa_padrao.id,
         codigo_chamada=valid_code,
         grupo="Eletrônicos",
         familia="Celulares",
@@ -43,6 +46,7 @@ def produto_existente(db_session):
     db_session.flush()
 
     prod_codigo = ProdutoCodigo(
+        empresa_id=empresa_padrao.id,
         codigo=valid_code,
         codigo_chamada=valid_code,
     )
@@ -230,11 +234,17 @@ class TestProdutosCompleto:
 
 
 class TestCacheStatus:
-    def test_obter_status_cache(self, client):
-        response = client.get("/status/")
+    def test_obter_status_cache(self, client, token_admin):
+        # /status/ agora exige autenticação (multi-tenant: sem usuário
+        # logado não há como saber de qual empresa mostrar o status).
+        response = client.get("/status/", headers={"Authorization": f"Bearer {token_admin}"})
         assert response.status_code == 200
         data = response.json()
         assert "last_updated" in data
+
+    def test_status_sem_autenticacao_retorna_401(self, client):
+        response = client.get("/status/")
+        assert response.status_code == 401
 
 
 class TestAdminSync:
@@ -291,11 +301,12 @@ class TestAdminSync:
         )
         assert response.status_code == 404
 
-    def test_listar_sync_history(self, client, token_admin, db_session):
+    def test_listar_sync_history(self, client, token_admin, db_session, empresa_padrao):
         from app.domain.models.sync_job import SyncJob
         from datetime import datetime, timezone
 
         job = SyncJob(
+            empresa_id=empresa_padrao.id,
             job_id="teste-history",
             status="sucesso",
             started_at=datetime.now(timezone.utc),
@@ -313,7 +324,7 @@ class TestAdminSync:
         assert "total" in data
         assert data["total"] >= 1
 
-    def test_sync_list_total_deve_ser_count_real(self, client, token_admin, db_session):
+    def test_sync_list_total_deve_ser_count_real(self, client, token_admin, db_session, empresa_padrao):
         """total deve refletir o número real de registros, não o limit (T6)."""
         from app.domain.models.sync_job import SyncJob
         from datetime import datetime, timezone
@@ -321,6 +332,7 @@ class TestAdminSync:
         # Cria 15 jobs (mais que o default limit=10)
         for i in range(15):
             db_session.add(SyncJob(
+                empresa_id=empresa_padrao.id,
                 job_id=f"job-{i:03d}",
                 status="sucesso",
                 started_at=datetime.now(timezone.utc),
@@ -366,13 +378,13 @@ class TestAdminCacheStatus:
             "ttl_seconds": 30,
         }
 
-    def test_cache_status_como_admin_com_registro(self, client, token_admin, db_session):
+    def test_cache_status_como_admin_com_registro(self, client, token_admin, db_session, empresa_padrao):
         """Com um registro de cache, retorna produtos_cached=True e last_refresh."""
         from datetime import datetime, timezone
         from app.domain.models.cache_status import CacheStatus
 
         now = datetime.now(timezone.utc)
-        db_session.add(CacheStatus(last_updated=now, status="sucesso"))
+        db_session.add(CacheStatus(empresa_id=empresa_padrao.id, last_updated=now, status="sucesso"))
         db_session.commit()
 
         response = client.get(
@@ -509,9 +521,10 @@ class TestAuthLogout:
 
 
 class TestPublicStatusEndpoint:
-    def test_status_endpoint_funciona(self, client):
-        """Endpoint público /status/ deve retornar 200 com last_updated."""
-        response = client.get("/status/")
+    def test_status_endpoint_funciona(self, client, token_operador):
+        """/status/ agora exige autenticação (ver TestCacheStatus) — qualquer
+        role autenticado (aqui operador) já é suficiente."""
+        response = client.get("/status/", headers={"Authorization": f"Bearer {token_operador}"})
         assert response.status_code == 200
         data = response.json()
         assert "last_updated" in data
@@ -560,6 +573,7 @@ class TestInventarioAdicionarItem:
         db_session.autoflush = False
         try:
             db_session.add(ItemInventario(
+                empresa_id=usuario_admin.empresa_id,
                 sessao_id=sid, usuario_id=usuario_admin.id,
                 codigo="RETRY01", nome="Produto",
                 grupo="G", familia="F", quantidade=99,
@@ -633,9 +647,16 @@ class TestBiExcelExport:
     """BI exportar/excel endpoint (T5)."""
 
     def test_exportar_excel_ranking(
-        self, client, token_admin, db_session
+        self, client, token_admin, transaction_source, criar_item
     ):
-        """Chama /bi/exportar/excel e verifica status 200 + Content-Type Excel."""
+        """Com vendas no periodo, /bi/exportar/excel devolve 200 + planilha."""
+        transaction_source.items_por_data = {
+            date(2024, 1, 10): [
+                criar_item("DOC1", date(2024, 1, 10), 10, 100.0),
+                criar_item("DOC2", date(2024, 1, 10), 14, 200.0, qtd=2.0),
+            ],
+        }
+
         resp = client.get(
             "/bi/exportar/excel",
             params={
@@ -645,23 +666,28 @@ class TestBiExcelExport:
             },
             headers={"Authorization": f"Bearer {token_admin}"},
         )
-        # Pode retornar 400 se não houver transações no período,
-        # mas o importante é testar a rota (alguns cenários retornam 200
-        # com Excel vazio). Vamos aceitar 200 ou 422/400.
-        assert resp.status_code in (200, 400, 422)
-        if resp.status_code == 200:
-            assert resp.headers["content-type"] == (
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+
+        assert resp.status_code == 200
+        assert resp.headers["content-type"] == (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        # Assinatura de arquivo .xlsx (zip) - garante que veio planilha de verdade.
+        assert resp.content[:2] == b"PK"
 
 
 class TestAuthRoleChange:
     """Token válido após role change + novo login (T7)."""
 
     def test_novo_token_funciona_apos_role_change(
-        self, client, db_session, usuario_operador, usuario_admin
+        self, client, db_session, usuario_operador, usuario_admin,
+        transaction_source, criar_item,
     ):
         """Altera role, faz login novamente e verifica que novo token funciona."""
+        # A rota do passo 4 e' so' o veiculo para checar a autorizacao, mas
+        # ela precisa de vendas no periodo para chegar ate' o 200.
+        transaction_source.items_por_data = {
+            date(2024, 1, 10): [criar_item("DOC1", date(2024, 1, 10), 10, 100.0)],
+        }
         # 1. Fazer login como admin para alterar role
         resp = client.post(
             "/auth/token",
@@ -695,5 +721,6 @@ class TestAuthRoleChange:
             },
             headers={"Authorization": f"Bearer {novo_token}"},
         )
-        # Aceita 200 ou 400 (sem dados), mas NÃO 401/403
-        assert resp.status_code in (200, 400, 422)
+        # O que importa aqui e' a autorizacao: com o novo role o acesso
+        # e' liberado (200), nao mais 401/403.
+        assert resp.status_code == 200

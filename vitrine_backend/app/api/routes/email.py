@@ -18,7 +18,11 @@ def listar_contatos(
     _admin: Usuario = Depends(require_supervisor),
 ):
     init_db()
-    stmt = select(EmailContato).order_by(EmailContato.nome)
+    stmt = (
+        select(EmailContato)
+        .where(EmailContato.empresa_id == _admin.empresa_id)
+        .order_by(EmailContato.nome)
+    )
     return db.execute(stmt).scalars().all()
 
 
@@ -29,7 +33,7 @@ def criar_contato(
     _admin: Usuario = Depends(require_supervisor),
 ):
     init_db()
-    contato = EmailContato(email=body.email, nome=body.nome)
+    contato = EmailContato(email=body.email, nome=body.nome, empresa_id=_admin.empresa_id)
     db.add(contato)
     db.commit()
     db.refresh(contato)
@@ -44,7 +48,9 @@ def atualizar_contato(
     _admin: Usuario = Depends(require_supervisor),
 ):
     contato = db.execute(
-        select(EmailContato).where(EmailContato.id == contato_id)
+        select(EmailContato).where(
+            EmailContato.id == contato_id, EmailContato.empresa_id == _admin.empresa_id
+        )
     ).scalar_one_or_none()
     if not contato:
         from fastapi import HTTPException
@@ -63,7 +69,9 @@ def remover_contato(
     _admin: Usuario = Depends(require_supervisor),
 ):
     contato = db.execute(
-        select(EmailContato).where(EmailContato.id == contato_id)
+        select(EmailContato).where(
+            EmailContato.id == contato_id, EmailContato.empresa_id == _admin.empresa_id
+        )
     ).scalar_one_or_none()
     if not contato:
         from fastapi import HTTPException
@@ -74,8 +82,9 @@ def remover_contato(
 
 @router.post("/teste")
 def testar_email(
+    db: Session = Depends(get_db),
     _admin: Usuario = Depends(require_admin),
 ):
     from app.application.notifications.scheduler_notifications import _enviar_relatorio_email
-    _enviar_relatorio_email()
+    _enviar_relatorio_email(empresa_id=_admin.empresa_id)
     return {"ok": True, "mensagem": "Relatório de teste enviado por email"}

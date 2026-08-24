@@ -1,0 +1,37 @@
+# Paridade de dev/self-host para o Vitrine (backend + frontend).
+#
+# Uso:
+#   cp vitrine_backend/.env.example vitrine_backend/.env   # preencha JWT_SECRET, etc.
+#   docker compose up --build
+#
+# O banco da aplicação continua SQLite (arquivo em ./vitrine_backend/data/,
+# persistido via volume) — não há Postgres neste compose porque o Postgres
+# de cada cliente é o ERP dele, externo, não algo para simular aqui. Um
+# serviço Postgres só entra quando a Fase 1 do plano de SaaS (multi-tenant)
+# migrar o banco central da aplicação para Postgres.
+
+services:
+  backend:
+    build:
+      context: ./vitrine_backend
+    env_file:
+      - ./vitrine_backend/.env
+    volumes:
+      - vitrine_backend_data:/app/data
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./vitrine_frontend
+      args:
+        VITE_API_URL: /api
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    restart: unless-stopped
+
+volumes:
+  vitrine_backend_data:

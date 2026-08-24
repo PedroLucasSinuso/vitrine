@@ -28,7 +28,11 @@ class AlterdataTransactionSource(TransactionSource):
         return path.read_text(encoding="utf-8")
 
     def get_items(self, start: date, end: date) -> list[TransactionItem]:
-        key = (start.isoformat(), end.isoformat())
+        # A chave do cache PRECISA incluir a URL do engine (que já embute
+        # host/db/usuário daquela empresa) — sem isso, duas empresas
+        # consultando o mesmo intervalo de datas leriam os dados de
+        # transação uma da outra (cache global, keyed só por data).
+        key = (str(self._engine.url), start.isoformat(), end.isoformat())
         if key in _cache:
             return _cache[key]
 

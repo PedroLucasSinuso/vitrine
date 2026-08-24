@@ -8,6 +8,9 @@ class SessaoInventario(Base):
     __tablename__ = "sessoes_inventario"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    empresa_id: Mapped[int] = mapped_column(
+        ForeignKey("empresas.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     nome: Mapped[str] = mapped_column(String, nullable=False)
     criado_por_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"), nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False, default="ativa", index=True)
@@ -22,6 +25,12 @@ class ItemInventario(Base):
     __tablename__ = "itens_inventario"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    # Denormalizado: já vem via sessao_id -> SessaoInventario.empresa_id,
+    # mas ter a coluna direta evita depender de join para filtrar por
+    # tenant (mesmo raciocínio de ProdutoCodigo.empresa_id).
+    empresa_id: Mapped[int] = mapped_column(
+        ForeignKey("empresas.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     sessao_id: Mapped[int] = mapped_column(ForeignKey("sessoes_inventario.id"), nullable=False, index=True)
     usuario_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"), nullable=False, index=True)
     codigo: Mapped[str] = mapped_column(String, nullable=False, index=True)

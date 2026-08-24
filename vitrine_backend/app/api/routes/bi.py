@@ -465,7 +465,7 @@ def exportar_pdf(
     from app.application.reporting.pdf.relatorio_semanal_pdf import gerar_relatorio_semanal_pdf
     from app.application.config_service import get as get_config
 
-    nome_loja = get_config(db, "nome_estabelecimento", "Vitrine")
+    nome_loja = get_config(db, _usuario.empresa_id, "nome_estabelecimento", "Vitrine")
     pdf_bytes = gerar_relatorio_semanal_pdf(nome_loja, source)
 
     if pdf_bytes is None:

@@ -25,7 +25,7 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 executor = ThreadPoolExecutor(max_workers=1)
 
 
-def _run_sync_background(job_id: str):
+def _run_sync_background(job_id: str, empresa_id: int):
     from app.infrastructure.db.bootstrap import init_db
     from app.infrastructure.db.session import SqliteSession
     from app.application.erp_factory import run_sync_common
@@ -34,18 +34,20 @@ def _run_sync_background(job_id: str):
     session = SqliteSession()
 
     try:
-        job = session.query(SyncJob).filter(SyncJob.job_id == job_id).first()
+        job = session.query(SyncJob).filter(
+            SyncJob.job_id == job_id, SyncJob.empresa_id == empresa_id
+        ).first()
         if not job:
-            logger.error("SyncJob %s not found in DB", job_id)
+            logger.error("SyncJob %s not found in DB | empresa_id=%s", job_id, empresa_id)
             return
         job.started_at = datetime.now(timezone.utc)
         job.status = "em_progresso"
         session.commit()
-        logger.info("Sync job %s iniciado em background", job_id)
+        logger.info("Sync job %s iniciado em background | empresa_id=%s", job_id, empresa_id)
 
         # run_sync_common cuida de engine, source, service.sync(),
         # invalidação de cache e engine.dispose()
-        result = run_sync_common(session, job_id=job_id, pool_size=1)
+        result = run_sync_common(session, empresa_id=empresa_id, job_id=job_id, pool_size=1)
 
         if result is None:
             raise RuntimeError("run_sync_common retornou None sem exceção")
@@ -65,7 +67,9 @@ def _run_sync_background(job_id: str):
         session.rollback()
         logar_erro_interno(f"Sync job {job_id} falhou", e)
         try:
-            job = session.query(SyncJob).filter(SyncJob.job_id == job_id).first()
+            job = session.query(SyncJob).filter(
+                SyncJob.job_id == job_id, SyncJob.empresa_id == empresa_id
+            ).first()
             if job:
                 job.status = "erro"
                 job.finished_at = datetime.now(timezone.utc)
@@ -86,6 +90,7 @@ def trigger_sync(
     now = datetime.now(timezone.utc)
 
     job = SyncJob(
+        empresa_id=_admin.empresa_id,
         job_id=job_id,
         status="em_progresso",
         started_at=now,
@@ -93,7 +98,7 @@ def trigger_sync(
     db.add(job)
     db.commit()
 
-    executor.submit(_run_sync_background, job_id)
+    executor.submit(_run_sync_background, job_id, _admin.empresa_id)
 
     logger.info("Sync triggered | job_id=%s by admin=%s", job_id, _admin.username)
 
@@ -110,7 +115,9 @@ def get_sync_status(
     db: Session = Depends(get_db),
     _admin: Usuario = Depends(require_admin)
 ):
-    job = db.query(SyncJob).filter(SyncJob.job_id == job_id).first()
+    job = db.query(SyncJob).filter(
+        SyncJob.job_id == job_id, SyncJob.empresa_id == _admin.empresa_id
+    ).first()
 
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} não encontrado")
@@ -134,6 +141,7 @@ def list_sync_history(
 ):
     stmt = (
         select(SyncJob)
+        .where(SyncJob.empresa_id == _admin.empresa_id)
         .order_by(SyncJob.id.desc())
         .limit(limit)
     )
@@ -153,7 +161,7 @@ def list_sync_history(
     ]
 
     # total deve refletir o número real de registros, não o limit
-    total_count = db.query(SyncJob).count()
+    total_count = db.query(SyncJob).filter(SyncJob.empresa_id == _admin.empresa_id).count()
     return SyncListResponse(jobs=jobs, total=total_count)
 
 

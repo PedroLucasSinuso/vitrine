@@ -98,7 +98,7 @@ def refresh(request: Request, body: RefreshRequest, db: Session = Depends(get_db
 def register(request: Request, response: Response, dados: UsuarioCreate, db: Session = Depends(get_db), _admin: Usuario = Depends(require_admin)):
     service = AuthService(UsuarioRepository(db))
     try:
-        usuario = service.registrar(dados)
+        usuario = service.registrar(dados, empresa_id=_admin.empresa_id)
         db.commit()
         return usuario
     except ValueError as e:
@@ -108,7 +108,7 @@ def register(request: Request, response: Response, dados: UsuarioCreate, db: Ses
 
 @router.get("/usuarios", response_model=list[UsuarioResponse])
 def listar_usuarios(db: Session = Depends(get_db), _admin: Usuario = Depends(require_admin)):
-    return AuthService(UsuarioRepository(db)).listar()
+    return AuthService(UsuarioRepository(db)).listar(empresa_id=_admin.empresa_id)
 
 
 @router.patch("/usuarios/{usuario_id}", response_model=UsuarioResponse)
@@ -120,7 +120,7 @@ def atualizar_usuario(
 ):
     service = AuthService(UsuarioRepository(db))
     try:
-        usuario = service.atualizar(usuario_id, dados)
+        usuario = service.atualizar(usuario_id, dados, empresa_id=_admin.empresa_id)
         db.commit()
         return usuario
     except LookupError as e:
@@ -137,7 +137,7 @@ def excluir_usuario(
 ):
     service = AuthService(UsuarioRepository(db))
     try:
-        service.excluir(usuario_id, admin.id)
+        service.excluir(usuario_id, admin.id, empresa_id=admin.empresa_id)
         db.commit()
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))

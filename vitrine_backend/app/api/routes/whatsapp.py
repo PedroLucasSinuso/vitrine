@@ -18,7 +18,11 @@ def listar_contatos(
     _admin: Usuario = Depends(require_supervisor),
 ):
     init_db()
-    stmt = select(WhatsAppContato).order_by(WhatsAppContato.nome)
+    stmt = (
+        select(WhatsAppContato)
+        .where(WhatsAppContato.empresa_id == _admin.empresa_id)
+        .order_by(WhatsAppContato.nome)
+    )
     return db.execute(stmt).scalars().all()
 
 
@@ -29,7 +33,7 @@ def criar_contato(
     _admin: Usuario = Depends(require_supervisor),
 ):
     init_db()
-    contato = WhatsAppContato(numero=body.numero, nome=body.nome)
+    contato = WhatsAppContato(numero=body.numero, nome=body.nome, empresa_id=_admin.empresa_id)
     db.add(contato)
     db.commit()
     db.refresh(contato)
@@ -44,7 +48,9 @@ def atualizar_contato(
     _admin: Usuario = Depends(require_supervisor),
 ):
     contato = db.execute(
-        select(WhatsAppContato).where(WhatsAppContato.id == contato_id)
+        select(WhatsAppContato).where(
+            WhatsAppContato.id == contato_id, WhatsAppContato.empresa_id == _admin.empresa_id
+        )
     ).scalar_one_or_none()
     if not contato:
         from fastapi import HTTPException
@@ -63,7 +69,9 @@ def remover_contato(
     _admin: Usuario = Depends(require_supervisor),
 ):
     contato = db.execute(
-        select(WhatsAppContato).where(WhatsAppContato.id == contato_id)
+        select(WhatsAppContato).where(
+            WhatsAppContato.id == contato_id, WhatsAppContato.empresa_id == _admin.empresa_id
+        )
     ).scalar_one_or_none()
     if not contato:
         from fastapi import HTTPException
@@ -74,8 +82,9 @@ def remover_contato(
 
 @router.post("/teste")
 def testar_whatsapp(
+    db: Session = Depends(get_db),
     _admin: Usuario = Depends(require_admin),
 ):
     from app.application.notifications.scheduler_notifications import _enviar_relatorio_whatsapp
-    _enviar_relatorio_whatsapp()
+    _enviar_relatorio_whatsapp(empresa_id=_admin.empresa_id)
     return {"ok": True, "mensagem": "Relatório de teste enviado"}
