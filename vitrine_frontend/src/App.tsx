@@ -30,14 +30,19 @@ import CmdK from './components/ui/CmdK'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ThemeProvider } from './themes/ThemeProvider'
 import AppLayout from './components/layout/AppLayout'
+import Landing from './pages/Landing'
 
-function HomeRouter() {
-  const { getRole } = useAuth()
+/** A raiz é pública: visitante anônimo vê a landing, usuário logado cai
+ *  direto na tela inicial do papel dele. */
+function Raiz() {
+  const { isAuthenticated, getRole } = useAuth()
+  if (!isAuthenticated()) return <Landing />
+
   const role = getRole()
   if (hasRole(role, ['admin'])) return <Navigate to="/admin" replace />
   if (hasRole(role, ['supervisor'])) return <Navigate to="/home" replace />
   if (hasRole(role, ['operador'])) return <Navigate to="/home/operador" replace />
-  return <Busca />
+  return <Navigate to="/busca" replace />
 }
 
 /** Escuta o evento auth:unauthorized disparado pelo interceptor 401
@@ -62,9 +67,9 @@ function App() {
             <AuthListener />
             <React.Suspense fallback={<div className="flex items-center justify-center min-h-[60vh] text-gray-400 text-lg">Carregando...</div>}>
             <Routes>
+              <Route path="/" element={<Raiz />} />
               <Route path="/login" element={<Login />} />
               <Route element={<AppLayout />}>
-                <Route path="/" element={<ProtectedRoute allowedRoles={['admin', 'supervisor', 'operador']}><HomeRouter /></ProtectedRoute>} />
                 <Route path="/busca" element={<ProtectedRoute allowedRoles={['admin', 'supervisor', 'operador']}><Busca /></ProtectedRoute>} />
                 <Route path="/home" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><Home /></ProtectedRoute>} />
                 <Route path="/home/operador" element={<ProtectedRoute allowedRoles={['operador']}><OperadorHome /></ProtectedRoute>} />
