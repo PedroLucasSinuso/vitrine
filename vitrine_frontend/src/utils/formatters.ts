@@ -13,6 +13,17 @@ export function formatNumber(value: number): string {
 }
 
 /**
+ * Formata quantidade em estoque no padrão pt-BR (ex.: "37,054", "24").
+ *
+ * Produto pesável vem fracionado do ERP (37.054 kg de alcatra). Imprimir o
+ * número cru mostra "37.054", que em pt-BR se lê como trinta e sete mil —
+ * por isso o estoque nunca deve ser renderizado sem passar por aqui.
+ */
+export function formatEstoque(value: number): string {
+  return value.toLocaleString('pt-BR', { maximumFractionDigits: 3 })
+}
+
+/**
  * Format ISO date string to "dd MMM yyyy" (e.g. "22 abr 2026")
  */
 export function formatDate(iso: string | null): string {
