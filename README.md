@@ -310,15 +310,41 @@ data — com sazonalidade por dia da semana, picos de horário, feriados e
 crescimento ano a ano. Ninguém precisa configurar ERP, e as telas de BI
 aparecem cheias.
 
-Como o visitante pode alterar coisas (criar inventário, editar
-configurações), há um comando para devolver o tenant ao estado inicial:
+### Entrada pública
+
+Com a demo provisionada, a raiz do site (`/`) vira uma landing pública com
+um botão **Ver demonstração**: o visitante entra sem cadastro, como
+administrador, e cai direto no dashboard de BI. Quem já tem conta segue
+para `/login` normalmente.
+
+A entrada não fabrica token por um caminho próprio — autentica o usuário
+`demo` com a senha pública dele, pelo mesmo serviço de autenticação de
+todo mundo. Numa instalação sem tenant de demonstração o botão não
+aparece, e `POST /auth/demo` responde 404.
+
+### Reset automático
+
+O visitante entra como admin e pode mexer em tudo, então o tenant se
+limpa sozinho — não é preciso agendar nada:
+
+- **na entrada**, quando o último reset passou do cooldown, para que
+  ninguém herde a bagunça do anterior;
+- **periodicamente**, para a demo não ficar suja quando ninguém mais
+  visita.
+
+| Variável | Padrão | O que faz |
+|---|---|---|
+| `DEMO_RESET_COOLDOWN_MINUTES` | `10` | Janela mínima entre dois resets disparados por entrada. Sem ela, dois visitantes simultâneos derrubariam a sessão um do outro. |
+| `DEMO_RESET_INTERVAL_MINUTES` | `180` | Intervalo da limpeza periódica. `0` desliga só essa camada; o reset na entrada continua. |
+
+O reset também está disponível como comando, para forçar na hora:
 
 ```bash
 docker compose exec backend resetar-demo
 ```
 
-O reset se recusa a rodar sobre uma empresa que não seja de demonstração.
-Para resetar periodicamente, agende esse comando no cron da máquina.
+Ele se recusa a rodar sobre uma empresa que não seja de demonstração — o
+que decide é o `erp_adapter`, não o nome do slug.
 
 ---
 
