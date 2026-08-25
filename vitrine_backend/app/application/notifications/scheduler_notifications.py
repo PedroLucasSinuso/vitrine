@@ -14,32 +14,26 @@ from sqlalchemy import select
 from app.infrastructure.db.bootstrap import init_db
 from app.application.scheduler_manager import dia_para_cron, reagendar_etl, reagendar_relatorio_whatsapp, reagendar_relatorio_email
 from app.application.config_service import get as get_config
-from app.application.config_service import montar_url_postgres
-from sqlalchemy import create_engine
+from app.application.erp_factory import create_transaction_source
 from sqlalchemy.orm import Session
-from app.adapters.alterdata.transaction_source import AlterdataTransactionSource
+from app.core.interfaces.source import TransactionSource
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-def _obter_transaction_source(db: Session, empresa_id: int) -> AlterdataTransactionSource | None:
-    """Cria um TransactionSource a partir das configs de ERP DA EMPRESA no SQLite."""
+def _obter_transaction_source(db: Session, empresa_id: int) -> TransactionSource | None:
+    """Fonte de transações do ERP DA EMPRESA, ou None se indisponível.
+
+    Passa pelo mesmo registry de adapters das rotas, para que uma empresa
+    de demonstração receba relatório sem precisar de ERP configurado.
+    Devolver None faz o envio ser pulado — relatório não é motivo para
+    derrubar o scheduler.
+    """
     try:
-        url = montar_url_postgres(db, empresa_id)
-        if not url:
-            logger.warning("ERP não configurado | empresa_id=%s — pulando envio de relatório", empresa_id)
-            return None
-        engine = create_engine(
-            url,
-            pool_pre_ping=True,
-            pool_size=2,
-            max_overflow=3,
-            connect_args={"connect_timeout": 10},
-        )
-        return AlterdataTransactionSource(engine)
+        return create_transaction_source(db, empresa_id)
     except Exception as e:
-        logger.error("Erro ao conectar no ERP | empresa_id=%s erro=%s", empresa_id, e)
+        logger.error("Erro ao obter fonte do ERP | empresa_id=%s erro=%s", empresa_id, e)
         return None
 
 

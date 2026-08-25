@@ -62,6 +62,16 @@ async def lifespan(app: FastAPI):
             )
 
         iniciar_scheduler_notificacoes(scheduler)
+
+        # Limpeza periódica do tenant de demonstração, quando existe um.
+        # O reset também acontece na entrada (ver demo_guard); este job
+        # cobre a demo que ficou suja e ninguém mais visitou.
+        from app.application.demo_guard import agendar_reset_periodico
+        from app.application.demo_provisioner import empresa_demo
+        with SqliteSession() as _session:
+            _tem_demo = empresa_demo(_session) is not None
+        if _tem_demo:
+            agendar_reset_periodico(scheduler)
     else:
         logger.warning("Scheduler lock não adquirido — jobs não serão agendados neste worker")
 

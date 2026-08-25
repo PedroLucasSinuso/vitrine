@@ -1,7 +1,8 @@
 import { useCallback } from 'react'
 import { jwtDecode } from 'jwt-decode'
 import api from '../api/client'
-import { login as apiLogin } from '../api/auth'
+import { login as apiLogin, entrarNaDemo as apiEntrarNaDemo } from '../api/auth'
+import type { AuthToken } from '../types'
 import type { JwtPayload, Role } from '../types'
 
 function getToken(): string | null {
@@ -74,8 +75,7 @@ export function useAuth() {
     return `${payload.nome_exibicao ?? payload.sub} (${payload.role})`
   }, [])
 
-  const login = useCallback(async (username: string, password: string) => {
-    const data = await apiLogin(username, password)
+  const guardarTokens = useCallback((data: AuthToken): Role => {
     const decoded = jwtDecode<JwtPayload>(data.access_token)
     localStorage.setItem('token', data.access_token)
     if (data.refresh_token) {
@@ -83,6 +83,16 @@ export function useAuth() {
     }
     return decoded.role as Role
   }, [])
+
+  const login = useCallback(async (username: string, password: string) => {
+    return guardarTokens(await apiLogin(username, password))
+  }, [guardarTokens])
+
+  /** Entra na demonstração sem credencial. A sessão resultante é igual à
+   *  de qualquer login — mesmo token, mesmas rotas, mesmo logout. */
+  const entrarNaDemo = useCallback(async () => {
+    return guardarTokens(await apiEntrarNaDemo())
+  }, [guardarTokens])
 
   const logout = useCallback(async () => {
     let revoked = false
@@ -123,5 +133,5 @@ export function useAuth() {
     return _getExpiresInMs(token)
   }, [])
 
-  return { isAuthenticated, getRole, getUsername, getNomeExibicao, login, logout, checkAuth, getTokenExp, getExpiresInMs }
+  return { isAuthenticated, getRole, getUsername, getNomeExibicao, login, entrarNaDemo, logout, checkAuth, getTokenExp, getExpiresInMs }
 }

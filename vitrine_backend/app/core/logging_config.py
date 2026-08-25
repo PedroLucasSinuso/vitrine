@@ -10,7 +10,13 @@ class _Utf8StreamHandler(logging.StreamHandler):
         super().__init__(stream)
         if hasattr(self.stream, 'buffer'):
             import io
-            self.stream = io.TextIOWrapper(self.stream.buffer, encoding='utf-8')
+            # line_buffering=True e obrigatorio: o TextIOWrapper novo nasce
+            # com buffer de bloco quando a saida nao e um tty (que e o caso
+            # sob Docker), e o log de um processo longo fica preso na
+            # memoria em vez de sair no `docker compose logs`.
+            self.stream = io.TextIOWrapper(
+                self.stream.buffer, encoding='utf-8', line_buffering=True
+            )
 
 
 def setup_logging():

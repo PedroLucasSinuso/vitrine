@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Camera, Loader2, Search as SearchIcon, BarChart3 } from 'lucide-react'
-import { formatCurrency } from '../utils/formatters'
+import { formatCurrency, formatEstoque } from '../utils/formatters'
 import { buscarProduto, buscarProdutosPorNome, registrarNaoEncontrado } from '../api/produtos'
 import type { ProdutoBasico, ProdutoCompleto } from '../types'
 import { useAuth } from '../hooks/useAuth'
@@ -214,7 +214,7 @@ export default function Busca() {
 
           <div className="border-t border-border pt-3 mt-3">
             <p className="text-xs text-text-muted uppercase tracking-wider font-medium">Estoque</p>
-            <p className="text-sm font-semibold text-text-primary">{produto.estoque} un.</p>
+            <p className="text-sm font-semibold text-text-primary">{formatEstoque(produto.estoque)} un.</p>
           </div>
 
           {isCompleto(produto) && (

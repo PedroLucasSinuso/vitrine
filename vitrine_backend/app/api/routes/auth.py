@@ -10,7 +10,18 @@ from app.api.deps import get_db, require_admin, get_current_user, oauth2_scheme
 from app.infrastructure.repositories.usuario_repository import UsuarioRepository
 from app.application.services.auth_service import AuthService
 from app.application.utils.jwt_handler import decode_access_token
-from app.schemas.auth_schema import TokenResponse, RefreshRequest, MessageResponse
+from app.schemas.auth_schema import (
+    TokenResponse,
+    RefreshRequest,
+    MessageResponse,
+    DemoStatusResponse,
+)
+from app.application.demo_guard import resetar_se_necessario
+from app.application.demo_provisioner import (
+    USUARIO_DEMO,
+    empresa_demo,
+    senha_padrao,
+)
 from app.schemas.usuario_schema import UsuarioCreate, UsuarioPatch, UsuarioResponse
 from app.domain.models.usuario import Usuario
 from app.domain.models.token_blacklist import TokenBlacklist
@@ -73,6 +84,52 @@ def login(request: Request, dados: OAuth2PasswordRequestForm = Depends(), db: Se
     # Login bem sucedido — limpa falhas anteriores
     _limpar_tentativas_falhas(db, dados.username)
     db.commit()
+    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+
+
+@router.get("/demo", response_model=DemoStatusResponse)
+def demo_status(db: Session = Depends(get_db)):
+    """A landing usa isto para decidir se mostra o botão \"Ver demo\"."""
+    return DemoStatusResponse(disponivel=empresa_demo(db) is not None)
+
+
+@router.post("/demo", response_model=TokenResponse)
+@limiter.limit("10/minute")
+def entrar_na_demo(request: Request, db: Session = Depends(get_db)):
+    """Entra na demonstração sem credencial.
+
+    Não emite token por um caminho próprio: autentica o usuário da demo
+    com a senha pública dele, pelo mesmo ``AuthService`` de todo mundo.
+    Um atalho que fabricasse o token direto viraria uma segunda porta de
+    entrada para manter em dia com a primeira.
+    """
+    disponivel = empresa_demo(db) is not None
+    # Encerra a transação de leitura antes do reset: ele escreve por
+    # outra conexão, e uma transação aberta aqui tanto veria o estado
+    # antigo quanto disputaria o lock de escrita do SQLite.
+    db.rollback()
+
+    if not disponivel:
+        raise HTTPException(
+            status_code=404,
+            detail="Este servidor não tem modo de demonstração provisionado.",
+        )
+
+    resetar_se_necessario()
+
+    service = AuthService(UsuarioRepository(db))
+    try:
+        access_token, refresh_token = service.autenticar(USUARIO_DEMO, senha_padrao())
+    except ValueError:
+        # O tenant existe mas o usuário não autentica — demo meio
+        # provisionada. 503 e não 401: não é culpa de quem clicou.
+        logger.error("Usuário '%s' da demo não autentica", USUARIO_DEMO)
+        raise HTTPException(
+            status_code=503,
+            detail="A demonstração está indisponível no momento.",
+        )
+
+    logger.info("Entrada na demonstração | ip=%s", request.client.host if request.client else None)
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 

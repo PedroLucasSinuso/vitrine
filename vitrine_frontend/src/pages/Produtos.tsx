@@ -9,7 +9,7 @@ import Badge from '../components/ui/Badge'
 import EmptyState from '../components/ui/EmptyState'
 import ErrorBanner from '../components/ui/ErrorBanner'
 import type { ProdutoTabelaResponse, SortByProduto } from '../types'
-import { formatCurrency } from '../utils/formatters'
+import { formatCurrency, formatEstoque } from '../utils/formatters'
 
 function margemVariant(margem: number): 'success' | 'warning' | 'danger' {
   if (margem < 10) return 'danger'
@@ -136,6 +136,9 @@ export default function Produtos() {
       sortable: true,
       align: 'right' as const,
       hide: 'md' as const,
+      render: (item: ProdutoTabelaResponse) => (
+        <span className="font-mono">{formatEstoque(item.estoque)}</span>
+      ),
     },
   ]
 

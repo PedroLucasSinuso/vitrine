@@ -28,7 +28,11 @@ for _module_info in pkgutil.iter_modules(_models_pkg.__path__):
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # disable_existing_loggers=False e obrigatorio aqui: o padrao do
+    # fileConfig e True, e como init_db() roda `alembic upgrade head` no
+    # startup da aplicacao, ele desligaria todo logger `app.*` ja
+    # importado — o processo inteiro pararia de logar depois da migracao.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 
