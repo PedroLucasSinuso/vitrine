@@ -61,6 +61,14 @@ class Settings(BaseSettings):
     # rotação em app/application/config_crypto.py e scripts/rotate_encryption_key.py.
     erps_encryption_key_old: str = ""
 
+    # ── Modo de demonstração ───────────────────────────────────────────────
+    # O visitante da demo entra como admin e pode mexer em tudo, então o
+    # tenant é resetado sozinho (ver app/application/demo_guard.py).
+    # Cooldown: janela mínima entre dois resets disparados por entrada.
+    # Intervalo: limpeza periódica; 0 desliga só essa camada.
+    demo_reset_cooldown_minutes: int = 10
+    demo_reset_interval_minutes: int = 180
+
     @model_validator(mode="after")
     def validar_jwt_secret(self):
         if not self.jwt_secret:
