@@ -21,6 +21,11 @@ logger = logging.getLogger(__name__)
 
 SLUG_DEMO = "demo"
 
+# Usuário que o botão "Ver demo" usa. Admin de propósito: o visitante
+# precisa alcançar todas as telas, inclusive Usuários e Configurações —
+# o que ele estragar volta no próximo reset (ver demo_guard.py).
+USUARIO_DEMO = "demo"
+
 # Usuários criados na demo — um por papel, para dar para experimentar as
 # três visões da interface.
 USUARIOS_DEMO = (
@@ -102,6 +107,23 @@ def _garantir_que_e_demo(session: Session, empresa: Empresa) -> None:
             f"(erp_adapter={config.valor if config else 'não definido'!r}). "
             "Operação abortada."
         )
+
+
+def empresa_demo(session: Session, slug: str = SLUG_DEMO) -> Empresa | None:
+    """A empresa de demonstração deste servidor, se houver uma.
+
+    Devolve ``None`` tanto quando o slug não existe quanto quando existe
+    mas não é de demonstração — quem chama quer saber se pode abrir a
+    demo, e nos dois casos a resposta é não.
+    """
+    empresa = _buscar_empresa_demo(session, slug)
+    if empresa is None:
+        return None
+    try:
+        _garantir_que_e_demo(session, empresa)
+    except DemoError:
+        return None
+    return empresa
 
 
 def _apagar_dados(session: Session, empresa_id: int) -> None:
