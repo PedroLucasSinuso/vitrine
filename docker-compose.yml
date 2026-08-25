@@ -16,6 +16,12 @@ services:
       context: ./vitrine_backend
     env_file:
       - ./vitrine_backend/.env
+    environment:
+      # O container nasce em UTC, e todo o corte de data do BI usa a data
+      # local do servidor (`date.today()`). Sem isto, das 21h em diante o
+      # backend já virou o dia e "hoje" deixa de ser o dia da loja.
+      # Sobrescreva por TZ no .env se o cliente estiver em outro fuso.
+      TZ: ${TZ:-America/Sao_Paulo}
     volumes:
       - vitrine_backend_data:/app/data
     ports:
