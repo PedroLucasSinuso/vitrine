@@ -37,9 +37,13 @@ echo ""
 # ──────────────────────────────────────────────
 # 2) Frontend type-check (TypeScript)
 # ──────────────────────────────────────────────
-echo -e "${YELLOW}[2/3]${NC} Verificando TypeScript (noEmit)..."
+# `tsc --noEmit` na raiz nao verifica nada: o tsconfig.json de cima e so
+# um agregador (`"files": []` + references), entao sai 0 sem olhar um
+# arquivo sequer. `tsc -b` percorre os projetos referenciados, que e o
+# que o `npm run build` faz.
+echo -e "${YELLOW}[2/3]${NC} Verificando TypeScript..."
 cd "$ROOT_DIR/vitrine_frontend"
-if npx tsc --noEmit 2>&1; then
+if npx tsc -b 2>&1; then
     echo -e "${GREEN}✔ TypeScript: OK${NC}"
 else
     echo -e "${RED}✖ TypeScript: FALHOU${NC}"
