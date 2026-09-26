@@ -63,6 +63,9 @@ async def lifespan(app: FastAPI):
 
         iniciar_scheduler_notificacoes(scheduler)
 
+        from app.application.limpeza import agendar_limpeza
+        agendar_limpeza(scheduler)
+
         # Limpeza periódica do tenant de demonstração, quando existe um.
         # O reset também acontece na entrada (ver demo_guard); este job
         # cobre a demo que ficou suja e ninguém mais visitou.

@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import String, Integer, DateTime, Boolean
+from sqlalchemy import String, Integer, DateTime, Boolean, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infrastructure.db.database import Base
 
@@ -13,9 +13,12 @@ class TentativaLogin(Base):
     """
 
     __tablename__ = "tentativas_login"
+    __table_args__ = (
+        Index("ix_tentativas_login_username_attempted_at", "username", "attempted_at"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    username: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    username: Mapped[str] = mapped_column(String, nullable=False)
     ip_address: Mapped[str | None] = mapped_column(String, nullable=True)
     attempted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)

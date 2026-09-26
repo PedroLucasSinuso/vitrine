@@ -1,62 +1,22 @@
-import os
 from decimal import Decimal
 from unittest.mock import Mock
 
 import pytest
-from sqlalchemy import create_engine, event, select, text
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy import select, text
 
 from app.application.sync_service import SyncService
-from app.domain.models.empresa import Empresa
 from app.domain.models.historico_preco import HistoricoPreco
 from app.domain.models.produto import Produto, ProdutoCodigo
-from app.infrastructure.db.database import Base
+from tests.bancos import BANCOS, sessao_em_banco_limpo
 from vitrine_core.models.product import Product
 
 EMPRESA_ID = 1
 OUTRA_EMPRESA_ID = 2
 
 
-def _engine_sqlite_com_fk():
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-
-    @event.listens_for(engine, "connect")
-    def _ligar_fk(conexao, _):
-        conexao.execute("PRAGMA foreign_keys=ON")
-
-    return engine
-
-
-def _engines():
-    yield pytest.param(_engine_sqlite_com_fk, id="sqlite-fk")
-    url = os.environ.get("TEST_DATABASE_URL")
-    yield pytest.param(
-        (lambda: create_engine(url)) if url else None,
-        id="postgres",
-        marks=pytest.mark.skipif(not url, reason="TEST_DATABASE_URL não definida"),
-    )
-
-
-@pytest.fixture(params=list(_engines()))
+@pytest.fixture(params=BANCOS)
 def db(request):
-    engine = request.param()
-    Base.metadata.drop_all(engine)
-    Base.metadata.create_all(engine)
-    sessao = sessionmaker(bind=engine, autoflush=False)()
-    sessao.add_all([
-        Empresa(id=EMPRESA_ID, nome="Loja", slug="loja", status="ativa"),
-        Empresa(id=OUTRA_EMPRESA_ID, nome="Outra", slug="outra", status="ativa"),
-    ])
-    sessao.commit()
-    yield sessao
-    sessao.close()
-    Base.metadata.drop_all(engine)
-    engine.dispose()
+    yield from sessao_em_banco_limpo(request.param, {EMPRESA_ID: "loja", OUTRA_EMPRESA_ID: "outra"})
 
 
 def _produto(codigo, preco="10.00", barcodes=("789",), nome=None):

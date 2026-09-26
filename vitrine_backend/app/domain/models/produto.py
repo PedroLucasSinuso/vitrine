@@ -1,5 +1,5 @@
 ﻿from app.infrastructure.db.database import Base
-from sqlalchemy import Boolean, ForeignKey, ForeignKeyConstraint, Float, String
+from sqlalchemy import Boolean, ForeignKey, ForeignKeyConstraint, Float, Index, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
@@ -16,14 +16,20 @@ class Produto(Base):
     )
     codigo_chamada: Mapped[str] = mapped_column(String, primary_key=True)
 
-    nome: Mapped[str] = mapped_column(String, index=True)
-    grupo: Mapped[str] = mapped_column(String, index=True)
-    familia: Mapped[str] = mapped_column(String, index=True)
+    nome: Mapped[str] = mapped_column(String)
+    grupo: Mapped[str] = mapped_column(String)
+    familia: Mapped[str] = mapped_column(String)
 
-    preco_venda: Mapped[float] = mapped_column(Float)
-    preco_custo: Mapped[float] = mapped_column(Float)
+    preco_venda: Mapped[float] = mapped_column(Numeric(14, 4, asdecimal=False))
+    preco_custo: Mapped[float] = mapped_column(Numeric(14, 4, asdecimal=False))
     estoque: Mapped[float] = mapped_column(Float)
     ativo: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    __table_args__ = (
+        Index("ix_produtos_empresa_nome", "empresa_id", "nome"),
+        Index("ix_produtos_empresa_grupo", "empresa_id", "grupo"),
+        Index("ix_produtos_empresa_familia", "empresa_id", "familia"),
+    )
 
     codigos = relationship("ProdutoCodigo", back_populates="produto", cascade="all, delete-orphan", lazy="selectin")
 
@@ -50,10 +56,10 @@ class ProdutoCodigo(Base):
     # depender de ninguém lembrar de fazer o join com Produto primeiro.
     # Esse é justamente o tipo de esquecimento que vaza dado entre clientes.
     empresa_id: Mapped[int] = mapped_column(
-        ForeignKey("empresas.id", ondelete="CASCADE"), nullable=False, index=True
+        ForeignKey("empresas.id", ondelete="CASCADE"), nullable=False
     )
-    codigo: Mapped[str] = mapped_column(String, index=True)
-    codigo_chamada: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    codigo: Mapped[str] = mapped_column(String)
+    codigo_chamada: Mapped[str] = mapped_column(String, nullable=False)
 
     __table_args__ = (
         ForeignKeyConstraint(
@@ -61,6 +67,8 @@ class ProdutoCodigo(Base):
             ["produtos.empresa_id", "produtos.codigo_chamada"],
             ondelete="CASCADE",
         ),
+        Index("ix_produto_codigos_empresa_codigo", "empresa_id", "codigo"),
+        Index("ix_produto_codigos_empresa_codigo_chamada", "empresa_id", "codigo_chamada"),
     )
 
     produto = relationship("Produto", back_populates="codigos")

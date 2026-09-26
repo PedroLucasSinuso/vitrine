@@ -40,6 +40,30 @@ services:
       retries: 10
     restart: unless-stopped
 
+  backup:
+    image: postgres:17-alpine
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_APP_USER:-vitrine}
+      PGPASSWORD: ${POSTGRES_APP_PASSWORD:-vitrine}
+      PGDATABASE: ${POSTGRES_APP_DB:-vitrine}
+      BACKUP_RETENCAO_DIAS: ${BACKUP_RETENCAO_DIAS:-14}
+    volumes:
+      - vitrine_db_backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        while true; do
+          pg_dump -Fc -f /backups/vitrine-$$(date +%Y%m%d-%H%M).dump \
+            && find /backups -name '*.dump' -mtime +$${BACKUP_RETENCAO_DIAS} -delete
+          sleep 86400
+        done
+    restart: unless-stopped
+
   frontend:
     build:
       context: ./vitrine_frontend
@@ -54,3 +78,4 @@ services:
 volumes:
   vitrine_backend_data:
   vitrine_db_data:
+  vitrine_db_backups:

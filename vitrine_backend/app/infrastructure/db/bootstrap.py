@@ -5,7 +5,7 @@ import pkgutil
 import logging
 import threading
 from pathlib import Path
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 from app.infrastructure.db.session import sqlite_engine
 
 # Auto-scan de models: todo .py em app/domain/models/ é importado para
@@ -89,7 +89,31 @@ _SCHEDULER_LOCK_FILE = os.path.join(
 _SCHEDULER_LOCK_FILE = os.path.abspath(_SCHEDULER_LOCK_FILE)
 
 
+CHAVE_LOCK_SCHEDULER = 7_461_2025
+_conexao_lock_scheduler = None
+
+
+def adquirir_lock_postgres(engine, chave: int = CHAVE_LOCK_SCHEDULER):
+    conexao = engine.connect()
+    conexao.detach()
+    if conexao.execute(text("SELECT pg_try_advisory_lock(:chave)"), {"chave": chave}).scalar():
+        conexao.commit()
+        return conexao
+    conexao.close()
+    return None
+
+
 def acquire_scheduler_lock() -> bool:
+    global _conexao_lock_scheduler
+    if sqlite_engine.dialect.name == "postgresql":
+        _conexao_lock_scheduler = adquirir_lock_postgres(sqlite_engine)
+        if _conexao_lock_scheduler is not None:
+            logger.info("Scheduler lock adquirido via advisory lock | pid=%s", os.getpid())
+        return _conexao_lock_scheduler is not None
+    return _adquirir_lock_arquivo()
+
+
+def _adquirir_lock_arquivo() -> bool:
     """Tenta adquirir lock exclusivo para o scheduler multi-worker.
 
     Cria um arquivo PID lock (.scheduler.lock). Se outro worker já
@@ -132,7 +156,7 @@ def acquire_scheduler_lock() -> bool:
         # Stale lock — remove e tenta novamente
         try:
             os.unlink(_SCHEDULER_LOCK_FILE)
-            return acquire_scheduler_lock()
+            return _adquirir_lock_arquivo()
         except OSError:
             return False
 

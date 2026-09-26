@@ -1,11 +1,14 @@
 ﻿from datetime import datetime, timezone
-from sqlalchemy import String, Integer, DateTime, ForeignKey, UniqueConstraint, Index
+from sqlalchemy import CheckConstraint, String, Integer, DateTime, ForeignKey, UniqueConstraint, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infrastructure.db.database import Base
 
 
 class SessaoInventario(Base):
     __tablename__ = "sessoes_inventario"
+    __table_args__ = (
+        CheckConstraint("status IN ('ativa', 'encerrada')", name="ck_sessoes_inventario_status"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     empresa_id: Mapped[int] = mapped_column(

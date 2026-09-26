@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.db.database import Base
@@ -7,6 +7,9 @@ from app.infrastructure.db.database import Base
 
 class SyncJob(Base):
     __tablename__ = "sync_jobs"
+    __table_args__ = (
+        CheckConstraint("status IN ('pendente', 'em_progresso', 'sucesso', 'erro')", name="ck_sync_jobs_status"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     empresa_id: Mapped[int] = mapped_column(

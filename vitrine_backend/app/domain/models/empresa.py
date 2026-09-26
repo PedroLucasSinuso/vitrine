@@ -11,13 +11,16 @@ plataforma (ver RolesEnum.SUPER_ADMIN).
 """
 
 from datetime import datetime, timezone
-from sqlalchemy import String, DateTime
+from sqlalchemy import CheckConstraint, String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infrastructure.db.database import Base
 
 
 class Empresa(Base):
     __tablename__ = "empresas"
+    __table_args__ = (
+        CheckConstraint("status IN ('ativa', 'suspensa')", name="ck_empresas_status"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     nome: Mapped[str] = mapped_column(String, nullable=False)

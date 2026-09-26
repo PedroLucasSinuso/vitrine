@@ -1,10 +1,17 @@
-﻿from sqlalchemy import ForeignKey, Integer, String
+﻿from sqlalchemy import CheckConstraint, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
+from app.domain.enums import RolesEnum
 from app.infrastructure.db.database import Base
 
 
 class Usuario(Base):
     __tablename__ = "usuarios"
+    __table_args__ = (
+        CheckConstraint(
+            "role IN ({})".format(", ".join(f"'{r.value}'" for r in RolesEnum)),
+            name="ck_usuarios_role",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     # username permanece ÚNICO GLOBALMENTE (não por empresa) de propósito:
