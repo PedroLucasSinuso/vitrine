@@ -12,7 +12,7 @@ export type {
 export type { Segmento, ModoOperacao, Modulo, ChaveRotulo, PerfilEmpresa } from './empresa'
 export type {
   PeriodoEquipe, IndicadoresVendedor, IndicadoresLoja, IndicadorIndisponivel, ResultadoEquipe,
-  PontoSerieVendedor, ItemMixVendedor,
+  PontoSerieVendedor, ItemMixVendedor, MetaVendedor, MetasDaCompetencia, AliasVendedor,
 } from './equipe'
 export type {
   TipoDataset, StatusImportacao, Celula, ColunaMapeada, Mapeamento, Previa, Importacao,

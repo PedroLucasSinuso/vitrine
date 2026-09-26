@@ -107,32 +107,30 @@ def provisionar_empresa(
         print("     (Admin > Configurações > ERP no frontend)")
 
 
-def provisionar_demo_cli(senha: str | None = None) -> None:
+def provisionar_demo_cli(senha: str | None = None, perfil: str = "supermercado") -> None:
     """Cria o tenant de demonstração (dados sintéticos, sem ERP)."""
-    from app.application.demo_provisioner import DemoError, provisionar_demo, senha_padrao
+    from app.application.demo_provisioner import PERFIS_DEMO, DemoError, provisionar_demo, senha_padrao
 
     try:
-        empresa_id = provisionar_demo(senha or senha_padrao())
+        empresa_id = provisionar_demo(senha or senha_padrao(), PERFIS_DEMO[perfil].slug)
     except DemoError as e:
         print(f"Erro: {e}")
         sys.exit(1)
 
-    from app.application.demo_provisioner import USUARIOS_DEMO
-
-    print(f"Tenant de demonstração criado — empresa_id={empresa_id}")
+    print(f"Tenant de demonstração '{perfil}' criado — empresa_id={empresa_id}")
     print(f"Senha de todos os usuários: {senha or senha_padrao()}")
-    for username, _, role in USUARIOS_DEMO:
+    for username, _, role in PERFIS_DEMO[perfil].usuarios:
         print(f"  {username} ({role})")
     print()
     print("A demo não precisa de ERP configurado: os dados são sintéticos.")
 
 
-def resetar_demo_cli() -> None:
+def resetar_demo_cli(perfil: str = "supermercado") -> None:
     """Devolve o tenant de demonstração ao estado inicial."""
-    from app.application.demo_provisioner import DemoError, resetar_demo
+    from app.application.demo_provisioner import PERFIS_DEMO, DemoError, resetar_demo
 
     try:
-        empresa_id = resetar_demo()
+        empresa_id = resetar_demo(PERFIS_DEMO[perfil].slug)
     except DemoError as e:
         print(f"Erro: {e}")
         sys.exit(1)
@@ -149,16 +147,17 @@ def main():
 
 def main_provisionar_demo():
     parser = argparse.ArgumentParser(prog="provisionar-demo", description="Cria o tenant de demonstração.")
-    parser.add_argument("senha", nargs="?", help="senha dos usuários da demo (padrão: DEMO_PASSWORD ou a senha padrão)")
+    parser.add_argument("senha", nargs="?", help="senha dos usuários da demo (padrão: a senha pública da demo)")
+    parser.add_argument("--perfil", choices=["supermercado", "moda"], default="supermercado")
     args = parser.parse_args(sys.argv[1:])
-    provisionar_demo_cli(args.senha)
+    provisionar_demo_cli(args.senha, args.perfil)
 
 
 def main_resetar_demo():
-    if len(sys.argv) != 1:
-        print("Uso: resetar-demo")
-        sys.exit(1)
-    resetar_demo_cli()
+    parser = argparse.ArgumentParser(prog="resetar-demo", description="Devolve a demonstração ao estado inicial.")
+    parser.add_argument("--perfil", choices=["supermercado", "moda"], default="supermercado")
+    args = parser.parse_args(sys.argv[1:])
+    resetar_demo_cli(args.perfil)
 
 
 def main_provisionar_empresa():

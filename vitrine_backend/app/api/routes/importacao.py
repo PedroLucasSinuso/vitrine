@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 from enum import Enum
 
@@ -37,7 +37,7 @@ DESCARTADAS_NA_PREVIA = 50
 
 
 def _json(valor):
-    if isinstance(valor, (date, datetime)):
+    if isinstance(valor, (date, datetime, time)):
         return valor.isoformat()
     if isinstance(valor, Decimal):
         return float(valor)
@@ -100,6 +100,18 @@ def campos(_: Empresa = Depends(exige_modulo)):
         ]
         for tipo, definicoes in CAMPOS.items()
     }
+
+
+@router.get("/importacoes/exemplo")
+def exemplo(_: Empresa = Depends(exige_modulo)):
+    from app.application.demo_moda import relatorio_exemplo
+
+    nome, conteudo = relatorio_exemplo()
+    return Response(
+        content=conteudo,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{nome}"'},
+    )
 
 
 @router.post("/importacoes", response_model=ImportacaoDTO, status_code=201)

@@ -181,6 +181,7 @@ def run_sync_scheduled(empresa_id: int | None = None):
     from app.infrastructure.db.bootstrap import init_db
     from app.infrastructure.db.session import SessionLocal
     from app.application.erp_factory import run_sync_common
+    from app.domain.enums import ModoOperacao
     from app.domain.models.empresa import Empresa
 
     init_db()
@@ -191,7 +192,9 @@ def run_sync_scheduled(empresa_id: int | None = None):
         else:
             alvos = [
                 e.id for e in
-                session.query(Empresa).filter(Empresa.status == "ativa").all()
+                session.query(Empresa)
+                .filter(Empresa.status == "ativa", Empresa.modo != ModoOperacao.UPLOAD.value)
+                .all()
             ]
         for eid in alvos:
             try:

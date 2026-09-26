@@ -6,6 +6,8 @@ CLI encerra o processo com ``sys.exit`` nos casos de erro.
 """
 
 import logging
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 
 from sqlalchemy import delete, select
@@ -47,6 +49,22 @@ CONFIG_DEMO = {
 }
 
 
+SLUG_DEMO_MODA = "demo-moda"
+USUARIO_DEMO_MODA = "demo.moda"
+
+USUARIOS_DEMO_MODA = (
+    ("demo.moda", "Demonstração Moda (Admin)", "admin"),
+    ("demo.moda.supervisor", "Demonstração Moda (Supervisor)", "supervisor"),
+)
+
+CONFIG_DEMO_MODA = {
+    "erp_adapter": "demo",
+    "nome_estabelecimento": "Vitrine Moda",
+    "endereco_cidade": "São Paulo",
+    "endereco_estado": "SP",
+}
+
+
 class DemoError(RuntimeError):
     """Falha ao provisionar ou resetar o tenant de demonstração."""
 
@@ -67,8 +85,8 @@ def _gravar_config(session: Session, empresa_id: int, valores: dict[str, str]) -
             session.add(Configuracao(empresa_id=empresa_id, chave=chave, valor=valor))
 
 
-def _criar_usuarios(session: Session, empresa_id: int, senha: str) -> None:
-    for username, nome, role in USUARIOS_DEMO:
+def _criar_usuarios(session: Session, empresa_id: int, senha: str, usuarios=USUARIOS_DEMO) -> None:
+    for username, nome, role in usuarios:
         em_uso = session.execute(
             select(Usuario).where(Usuario.username == username)
         ).scalar_one_or_none()
@@ -135,6 +153,17 @@ def _apagar_dados(session: Session, empresa_id: int) -> None:
     (dependentes primeiro), o que mantém isto correto quando alguém criar
     uma tabela nova.
     """
+    from pathlib import Path
+
+    from app.domain.models.importacao import ArquivoImportado, Dataset
+
+    for arquivo in session.scalars(select(ArquivoImportado).where(ArquivoImportado.empresa_id == empresa_id)):
+        if arquivo.caminho:
+            Path(arquivo.caminho).unlink(missing_ok=True)
+    datasets = select(Dataset.id).where(Dataset.empresa_id == empresa_id)
+    for tabela in reversed(Base.metadata.sorted_tables):
+        if "dataset_id" in tabela.c and "empresa_id" not in tabela.c:
+            session.execute(delete(tabela).where(tabela.c.dataset_id.in_(datasets)))
     for tabela in reversed(Base.metadata.sorted_tables):
         if tabela.name == "empresas" or "empresa_id" not in tabela.c:
             continue
@@ -189,16 +218,17 @@ def provisionar_demo(senha: str, slug: str = SLUG_DEMO) -> int:
                 "para devolvê-la ao estado inicial."
             )
 
-        empresa = Empresa(nome="Vitrine Demo", slug=slug, status="ativa")
+        perfil = perfil_por_slug(slug)
+        empresa = Empresa(nome=perfil.nome, slug=slug, status="ativa", segmento=perfil.segmento, modo=perfil.modo)
         session.add(empresa)
         session.flush()
 
-        _gravar_config(session, empresa.id, CONFIG_DEMO)
-        _criar_usuarios(session, empresa.id, senha)
+        _gravar_config(session, empresa.id, perfil.config)
+        _criar_usuarios(session, empresa.id, senha, perfil.usuarios)
         session.commit()
         empresa_id = empresa.id
 
-    _popular(empresa_id)
+    perfil.popular(empresa_id)
     logger.info("Tenant de demonstração provisionado | empresa_id=%s", empresa_id)
     return empresa_id
 
@@ -235,13 +265,14 @@ def resetar_demo(slug: str = SLUG_DEMO) -> int:
             raise DemoError(f"Não existe empresa com slug '{slug}'.")
         _garantir_que_e_demo(session, empresa)
         empresa_id = empresa.id
+        perfil = perfil_por_slug(slug)
 
         _apagar_dados(session, empresa_id)
-        _gravar_config(session, empresa_id, CONFIG_DEMO)
-        _criar_usuarios(session, empresa_id, senha_padrao())
+        _gravar_config(session, empresa_id, perfil.config)
+        _criar_usuarios(session, empresa_id, senha_padrao(), perfil.usuarios)
         session.commit()
 
-    _popular(empresa_id)
+    perfil.popular(empresa_id)
 
     # Sem isto o processo continuaria servindo a fonte de dados antiga: o
     # cache de adapters não tem expiração.
@@ -258,3 +289,48 @@ def resetar_demo(slug: str = SLUG_DEMO) -> int:
 def senha_padrao() -> str:
     """Senha dos usuários da demo — pública por definição."""
     return "demo1234"
+
+
+@dataclass(frozen=True)
+class PerfilDemo:
+    chave: str
+    slug: str
+    nome: str
+    segmento: str
+    modo: str
+    usuario_entrada: str
+    usuarios: tuple
+    config: dict
+    popular: Callable[[int], None]
+
+
+def _popular_moda(empresa_id: int) -> None:
+    from app.application.demo_moda import popular_moda
+    from app.infrastructure.db.session import SessionLocal
+
+    with SessionLocal() as session:
+        popular_moda(session, empresa_id)
+        session.commit()
+
+
+PERFIS_DEMO: dict[str, PerfilDemo] = {
+    "supermercado": PerfilDemo(
+        chave="supermercado", slug=SLUG_DEMO, nome="Vitrine Demo", segmento="supermercado", modo="legado",
+        usuario_entrada=USUARIO_DEMO, usuarios=USUARIOS_DEMO, config=CONFIG_DEMO, popular=_popular,
+    ),
+    "moda": PerfilDemo(
+        chave="moda", slug=SLUG_DEMO_MODA, nome="Vitrine Moda", segmento="moda", modo="upload",
+        usuario_entrada=USUARIO_DEMO_MODA, usuarios=USUARIOS_DEMO_MODA, config=CONFIG_DEMO_MODA, popular=_popular_moda,
+    ),
+}
+
+
+def perfil_por_slug(slug: str) -> PerfilDemo:
+    for perfil in PERFIS_DEMO.values():
+        if perfil.slug == slug:
+            return perfil
+    raise DemoError(f"Não existe perfil de demonstração para o slug '{slug}'.")
+
+
+def perfis_disponiveis(session: Session) -> list[str]:
+    return [chave for chave, perfil in PERFIS_DEMO.items() if empresa_demo(session, perfil.slug) is not None]

@@ -24,3 +24,11 @@ class DemoStatusResponse(BaseModel):
     """
 
     disponivel: bool
+
+
+class PerfisDemoResponse(BaseModel):
+    perfis: list[str]
+
+
+class EntradaDemoRequest(BaseModel):
+    perfil: str = "supermercado"

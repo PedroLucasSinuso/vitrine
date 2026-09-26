@@ -91,8 +91,9 @@ export function useAuth() {
 
   /** Entra na demonstração sem credencial. A sessão resultante é igual à
    *  de qualquer login — mesmo token, mesmas rotas, mesmo logout. */
-  const entrarNaDemo = useCallback(async () => {
-    return guardarTokens(await apiEntrarNaDemo())
+  const entrarNaDemo = useCallback(async (perfil?: 'supermercado' | 'moda') => {
+    limparCachePerfil()
+    return guardarTokens(await apiEntrarNaDemo(perfil))
   }, [guardarTokens])
 
   const logout = useCallback(async () => {

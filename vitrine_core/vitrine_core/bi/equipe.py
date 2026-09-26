@@ -1,4 +1,6 @@
+import calendar
 from collections import defaultdict
+from dataclasses import dataclass, replace
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -42,6 +44,10 @@ class IndicadoresVendedor(BaseModel):
     variacao_liquido: float | None = None
     variacao_ticket_medio: float | None = None
     variacao_pa: float | None = None
+    meta: float | None = None
+    atingimento: float | None = None
+    projecao: float | None = None
+    comissao_estimada: float | None = None
 
 
 class IndicadoresLoja(BaseModel):
@@ -52,14 +58,54 @@ class IndicadoresLoja(BaseModel):
     atendimentos_somados_por_vendedor: bool
     ticket_medio: float
     pa: float
+    meta: float | None = None
+    atingimento: float | None = None
+    projecao: float | None = None
 
 
 class ResultadoEquipe(BaseModel):
     periodo: Periodo
     periodo_anterior: Periodo | None
+    competencia: str | None = None
     loja: IndicadoresLoja
     vendedores: list[IndicadoresVendedor]
     indisponivel: list[Indisponivel]
+
+
+@dataclass(frozen=True)
+class Meta:
+    valor: Decimal
+    percentual_comissao: Decimal = ZERO
+
+
+def competencia_do_periodo(inicio: date, fim: date) -> str | None:
+    if (inicio.year, inicio.month) != (fim.year, fim.month):
+        return None
+    return f"{inicio.year:04d}-{inicio.month:02d}"
+
+
+def _fator_de_projecao(competencia: str, hoje: date) -> Decimal | None:
+    ano, mes = map(int, competencia.split("-"))
+    if (hoje.year, hoje.month) != (ano, mes):
+        return None
+    dias_no_mes = calendar.monthrange(ano, mes)[1]
+    return Decimal(dias_no_mes) / Decimal(hoje.day)
+
+
+def _chave(nome: str | None) -> str | None:
+    return (nome or "").strip() or None
+
+
+def aplicar_aliases(linhas: list, aliases: dict[str, str]) -> list:
+    if not aliases:
+        return linhas
+    normalizados = {origem.strip().upper(): destino for origem, destino in aliases.items()}
+    resultado = []
+    for linha in linhas:
+        nome = _chave(linha.vendedor)
+        destino = normalizados.get(nome.upper()) if nome else None
+        resultado.append(replace(linha, vendedor=destino) if destino else linha)
+    return resultado
 
 
 def periodo_anterior(inicio: date, fim: date) -> tuple[date, date]:
@@ -98,6 +144,18 @@ def _consolidar(linhas: list[VendaVendedorPeriodo]) -> dict[str | None, dict]:
     return acumulado
 
 
+def _indicadores_de_meta(liquido: Decimal, meta: Meta | None, fator: Decimal | None) -> dict:
+    if meta is None or not meta.valor:
+        return {"meta": None, "atingimento": None, "projecao": None, "comissao_estimada": None}
+    projecao = liquido * fator if fator is not None else None
+    return {
+        "meta": round(float(meta.valor), 2),
+        "atingimento": round(float(liquido / meta.valor), 4),
+        "projecao": round(float(projecao), 2) if projecao is not None else None,
+        "comissao_estimada": round(float(liquido * meta.percentual_comissao / 100), 2),
+    }
+
+
 def _indisponiveis(tipos_disponiveis: set[TipoDataset] | None) -> list[Indisponivel]:
     if tipos_disponiveis is None:
         return []
@@ -116,7 +174,12 @@ def calcular_equipe(
     anteriores: list[VendaVendedorPeriodo] | None = None,
     atendimentos_loja: int | None = None,
     tipos_disponiveis: set[TipoDataset] | None = None,
+    metas: dict[str, Meta] | None = None,
+    hoje: date | None = None,
 ) -> ResultadoEquipe:
+    competencia = competencia_do_periodo(inicio, fim)
+    metas = {k.strip().upper(): v for k, v in (metas or {}).items()} if competencia else {}
+    fator = _fator_de_projecao(competencia, hoje or date.today()) if competencia else None
     atual = _consolidar(linhas)
     anterior = _consolidar(anteriores) if anteriores else {}
 
@@ -132,6 +195,7 @@ def calcular_equipe(
         ticket = _razao(v["bruto"], v["atendimentos"])
         pa = _razao(v["pecas"], v["atendimentos"])
         ant = anterior.get(chave)
+        meta = metas.get(chave.upper()) if chave else None
         vendedores.append(IndicadoresVendedor(
             vendedor=chave or SEM_VENDEDOR,
             sem_vendedor=chave is None,
@@ -147,6 +211,7 @@ def calcular_equipe(
             variacao_liquido=_variacao(v["liquido"], ant["liquido"] if ant else None),
             variacao_ticket_medio=_variacao(ticket, _razao(ant["bruto"], ant["atendimentos"]) if ant else None),
             variacao_pa=_variacao(pa, _razao(ant["pecas"], ant["atendimentos"]) if ant else None),
+            **_indicadores_de_meta(v["liquido"], meta, fator),
         ))
     vendedores.sort(key=lambda i: (i.sem_vendedor, -i.faturamento_liquido))
 
@@ -155,9 +220,14 @@ def calcular_equipe(
         ini_ant, fim_ant = periodo_anterior(inicio, fim)
         periodo_ant = Periodo(inicio=ini_ant, fim=fim_ant)
 
+    meta_loja = sum((m.valor for m in metas.values()), ZERO) if metas else None
+    indicadores_meta_loja = _indicadores_de_meta(liquido_loja, Meta(meta_loja) if meta_loja else None, fator)
+    indicadores_meta_loja.pop("comissao_estimada")
+
     return ResultadoEquipe(
         periodo=Periodo(inicio=inicio, fim=fim),
         periodo_anterior=periodo_ant,
+        competencia=competencia,
         loja=IndicadoresLoja(
             faturamento_bruto=round(float(bruto_loja), 2),
             trocas=round(float(trocas_loja), 2),
@@ -166,6 +236,7 @@ def calcular_equipe(
             atendimentos_somados_por_vendedor=somados,
             ticket_medio=round(float(_razao(bruto_loja, atendimentos)), 2),
             pa=round(float(_razao(pecas_loja, atendimentos)), 2),
+            **indicadores_meta_loja,
         ),
         vendedores=vendedores,
         indisponivel=_indisponiveis(tipos_disponiveis),
@@ -191,15 +262,21 @@ def _mesmo_vendedor(nome: str | None, vendedor: str | None) -> bool:
 
 
 def serie_do_vendedor(diarias: list[VendaDiaria], vendedor: str | None) -> list[PontoSerieVendedor]:
+    por_dia: dict[date, dict] = defaultdict(lambda: {"bruto": ZERO, "atendimentos": 0, "pecas": ZERO})
+    for d in diarias:
+        if _mesmo_vendedor(d.vendedor, vendedor):
+            dia = por_dia[d.data]
+            dia["bruto"] += d.faturamento_bruto
+            dia["atendimentos"] += d.atendimentos
+            dia["pecas"] += d.pecas
     return [
         PontoSerieVendedor(
-            data=d.data,
-            faturamento_bruto=round(float(d.faturamento_bruto), 2),
-            atendimentos=d.atendimentos,
-            pa=round(float(_razao(d.pecas, d.atendimentos)), 2),
+            data=dia,
+            faturamento_bruto=round(float(v["bruto"]), 2),
+            atendimentos=v["atendimentos"],
+            pa=round(float(_razao(v["pecas"], v["atendimentos"])), 2),
         )
-        for d in sorted(diarias, key=lambda d: d.data)
-        if _mesmo_vendedor(d.vendedor, vendedor)
+        for dia, v in sorted(por_dia.items())
     ]
 
 

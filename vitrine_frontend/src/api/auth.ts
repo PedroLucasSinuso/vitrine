@@ -26,8 +26,8 @@ export async function demoDisponivel(): Promise<boolean> {
 }
 
 /** Entra na demonstração sem credencial (botão "Ver demo" da landing). */
-export async function entrarNaDemo(): Promise<AuthToken> {
-  const response = await api.post<AuthToken>('/auth/demo')
+export async function entrarNaDemo(perfil?: 'supermercado' | 'moda'): Promise<AuthToken> {
+  const response = await api.post<AuthToken>('/auth/demo', perfil ? { perfil } : undefined)
   return response.data
 }
 

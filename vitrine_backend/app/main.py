@@ -20,6 +20,7 @@ from app.api.routes import email as email_routes
 from app.api.routes import empresa
 from app.api.routes import equipe
 from app.api.routes import importacao
+from app.api.routes import metas
 from app.core.logging_config import setup_logging
 from app.core.config import settings
 from app.application.scheduler import iniciar_scheduler, parar_scheduler
@@ -52,10 +53,13 @@ async def lifespan(app: FastAPI):
         # intervalo configurado (ver app/application/scheduler_manager.py).
         from app.infrastructure.db.session import SessionLocal
         from app.domain.models.empresa import Empresa
+        from app.domain.enums import ModoOperacao
         with SessionLocal() as _session:
             _empresa_ids = [
                 e.id for e in
-                _session.query(Empresa).filter(Empresa.status == "ativa").all()
+                _session.query(Empresa)
+                .filter(Empresa.status == "ativa", Empresa.modo != ModoOperacao.UPLOAD.value)
+                .all()
             ]
         for _empresa_id in _empresa_ids:
             etl_min = ler_config_etl_interval(_empresa_id)
@@ -73,11 +77,11 @@ async def lifespan(app: FastAPI):
         # O reset também acontece na entrada (ver demo_guard); este job
         # cobre a demo que ficou suja e ninguém mais visitou.
         from app.application.demo_guard import agendar_reset_periodico
-        from app.application.demo_provisioner import empresa_demo
+        from app.application.demo_provisioner import PERFIS_DEMO, perfis_disponiveis
         with SessionLocal() as _session:
-            _tem_demo = empresa_demo(_session) is not None
-        if _tem_demo:
-            agendar_reset_periodico(scheduler)
+            _perfis_demo = perfis_disponiveis(_session)
+        for _perfil in _perfis_demo:
+            agendar_reset_periodico(scheduler, PERFIS_DEMO[_perfil].slug)
     else:
         logger.warning("Scheduler lock não adquirido — jobs não serão agendados neste worker")
 
@@ -112,6 +116,7 @@ app.include_router(email_routes.router)
 app.include_router(empresa.router)
 app.include_router(equipe.router)
 app.include_router(importacao.router)
+app.include_router(metas.router)
 
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 os.makedirs(static_dir, exist_ok=True)

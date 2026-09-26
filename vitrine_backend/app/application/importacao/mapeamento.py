@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from vitrine_core.datasets.tipos import TipoDataset
 
-TipoCampo = Literal["texto", "numero", "inteiro", "data", "operacao"]
+TipoCampo = Literal["texto", "numero", "inteiro", "data", "hora", "operacao"]
 
 
 @dataclass(frozen=True)
@@ -54,6 +54,7 @@ CAMPOS: dict[TipoDataset, dict[str, Campo]] = {
         "data": Campo("Data", "data", obrigatorio=True),
         "quantidade": Campo("Quantidade", "numero", obrigatorio=True, somavel=True),
         "valor": Campo("Valor", "numero", obrigatorio=True, somavel=True),
+        "hora": Campo("Hora", "hora"),
         "operacao": Campo("Operação (venda/troca)", "operacao"),
         "produto": Campo("Produto", "texto"),
         "codigo_produto": Campo("Código do produto", "texto"),

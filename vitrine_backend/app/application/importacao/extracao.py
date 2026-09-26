@@ -2,9 +2,9 @@ import csv
 import io
 import zipfile
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, time
 
-Celula = str | float | int | date | datetime | None
+Celula = str | float | int | date | datetime | time | None
 
 LIMITE_BYTES = 10 * 1024 * 1024
 LIMITE_DESCOMPACTADO = 100 * 1024 * 1024

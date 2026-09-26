@@ -71,6 +71,8 @@ def _converter(valor: Celula, tipo: str, mapeamento: Mapeamento):
         return norm.inteiro(valor, mapeamento.separador_decimal)
     if tipo == "data":
         return norm.data(valor, mapeamento.formato_data)
+    if tipo == "hora":
+        return norm.hora(valor)
     return _operacao(valor)
 
 

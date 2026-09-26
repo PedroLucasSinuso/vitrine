@@ -1,20 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  AlertCircle,
-  BarChart3,
-  Boxes,
-  ClipboardList,
-  Code2,
-  LineChart,
-  LogIn,
-  Play,
-  Search,
-  Shield,
-  Tags,
-} from 'lucide-react'
+import { AlertCircle, BarChart3, Boxes, ClipboardList, Code2, LineChart, LogIn, Play, Search, Shield, Tags, Shirt } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { demoDisponivel } from '../api/auth'
+import { perfisDemo } from '../api/demo'
 import Button from '../components/ui/Button'
 import Logo from '../components/ui/Logo'
 
@@ -81,12 +70,27 @@ export default function Landing() {
   const navigate = useNavigate()
   const { entrarNaDemo } = useAuth()
   const [temDemo, setTemDemo] = useState(false)
+  const [temDemoModa, setTemDemoModa] = useState(false)
   const [entrando, setEntrando] = useState(false)
+  const [entrandoModa, setEntrandoModa] = useState(false)
   const [erro, setErro] = useState('')
 
   useEffect(() => {
     demoDisponivel().then(setTemDemo)
+    perfisDemo().then((perfis) => setTemDemoModa(perfis.includes('moda')))
   }, [])
+
+  async function abrirDemoModa() {
+    setErro('')
+    setEntrandoModa(true)
+    try {
+      await entrarNaDemo('moda')
+      navigate('/bi/equipe', { replace: true })
+    } catch {
+      setErro('Não foi possível abrir a demonstração agora. Tente de novo em instantes.')
+      setEntrandoModa(false)
+    }
+  }
 
   async function abrirDemo() {
     setErro('')
@@ -153,10 +157,24 @@ export default function Landing() {
                 Ver demonstração
               </Button>
             )}
+            {temDemoModa && (
+              <Button size="lg" variant="secondary" onClick={abrirDemoModa} loading={entrandoModa}>
+                <Shirt size={16} />
+                Demo: loja de roupas
+              </Button>
+            )}
             <Button variant="outline" size="lg" onClick={() => navigate('/login')}>
               Já tenho conta
             </Button>
           </div>
+
+          {temDemoModa && (
+            <p className="text-sm text-text-secondary mt-4 max-w-lg">
+              A demo de loja de roupas mostra o outro lado do Vitrine: sem ERP ligado, a loja envia os
+              relatórios que já exporta e acompanha a equipe de vendas — ranking, metas, comissão e o que
+              cada vendedor vende.
+            </p>
+          )}
 
           {temDemo && (
             <p className="text-xs text-text-muted mt-4 max-w-lg">

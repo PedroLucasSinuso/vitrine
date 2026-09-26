@@ -66,6 +66,7 @@ def _linha(tipo: TipoDataset, registro: dict) -> dict:
         "grupo": registro.get("grupo") or "", "familia": registro.get("familia") or "",
         "vendedor": registro.get("vendedor"), "tamanho": registro.get("tamanho") or "",
         "cor": registro.get("cor") or "", "colecao": registro.get("colecao") or "",
+        "hora": registro.get("hora"),
     }
 
 
@@ -125,6 +126,7 @@ def _para_dominio(tipo: TipoDataset, dataset: Dataset, linha):
         quantidade=linha.quantidade, valor=linha.valor, produto=linha.produto,
         codigo_produto=linha.codigo_produto, grupo=linha.grupo, familia=linha.familia,
         vendedor=linha.vendedor, tamanho=linha.tamanho, cor=linha.cor, colecao=linha.colecao,
+        hora=linha.hora,
     )
 
 

@@ -55,6 +55,7 @@ def test_equipe_do_erp_sem_vendedor_cai_no_balde_sem_vendedor(client, cabecalho_
         "faturamento_bruto": 300.0, "trocas": 30.0, "faturamento_liquido": 270.0,
         "atendimentos": 3, "atendimentos_somados_por_vendedor": False,
         "ticket_medio": 100.0, "pa": 2.0,
+        "meta": None, "atingimento": None, "projecao": None,
     }
     assert [(v["vendedor"], v["sem_vendedor"]) for v in corpo["vendedores"]] == [("Sem vendedor", True)]
     assert [i["indicador"] for i in corpo["indisponivel"]] == ["conversao_contatos"]

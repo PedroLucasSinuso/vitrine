@@ -18,6 +18,10 @@ export interface IndicadoresVendedor {
   variacao_liquido: number | null
   variacao_ticket_medio: number | null
   variacao_pa: number | null
+  meta: number | null
+  atingimento: number | null
+  projecao: number | null
+  comissao_estimada: number | null
 }
 
 export interface IndicadoresLoja {
@@ -28,6 +32,9 @@ export interface IndicadoresLoja {
   atendimentos_somados_por_vendedor: boolean
   ticket_medio: number
   pa: number
+  meta: number | null
+  atingimento: number | null
+  projecao: number | null
 }
 
 export interface IndicadorIndisponivel {
@@ -38,6 +45,7 @@ export interface IndicadorIndisponivel {
 export interface ResultadoEquipe {
   periodo: PeriodoEquipe
   periodo_anterior: PeriodoEquipe | null
+  competencia: string | null
   loja: IndicadoresLoja
   vendedores: IndicadoresVendedor[]
   indisponivel: IndicadorIndisponivel[]
@@ -55,4 +63,21 @@ export interface ItemMixVendedor {
   familia: string
   receita: number
   participacao: number
+}
+
+export interface MetaVendedor {
+  vendedor: string
+  valor_meta: number
+  percentual_comissao: number
+}
+
+export interface MetasDaCompetencia {
+  competencia: string
+  metas: MetaVendedor[]
+  vendedores_conhecidos: string[]
+}
+
+export interface AliasVendedor {
+  nome_origem: string
+  vendedor: string
 }

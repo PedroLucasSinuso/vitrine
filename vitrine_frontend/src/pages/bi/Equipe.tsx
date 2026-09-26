@@ -191,7 +191,7 @@ export default function Equipe() {
     buscar(p)
   }
 
-  const colunas: Column<IndicadoresVendedor>[] = [
+  const colunasBase: Column<IndicadoresVendedor>[] = [
     {
       key: 'vendedor', label: 'Vendedor', align: 'left', headerAlign: 'left',
       render: (v) => <span className={v.sem_vendedor ? 'italic text-text-muted' : 'font-medium text-text-primary'}>{v.vendedor}</span>,
@@ -212,6 +212,27 @@ export default function Equipe() {
     { key: 'trocas', label: 'Trocas', align: 'right', hide: 'md', render: (v) => formatarPercentual(taxaDeTroca(v)) },
     { key: 'participacao', label: 'Participação', align: 'right', hide: 'sm', render: (v) => formatarPercentual(v.participacao) },
   ]
+  const temMetas = Boolean(dados?.vendedores.some((v) => v.meta !== null))
+  const colunas = temMetas
+    ? colunasBase.filter((c) => c.key !== 'preco_medio_peca' && c.key !== 'participacao')
+    : colunasBase
+  if (temMetas) {
+    colunas.push(
+      {
+        key: 'atingimento', label: 'Meta', align: 'right',
+        render: (v) => v.meta === null || v.atingimento === null ? <span className="text-text-muted">—</span> : (
+          <div className="flex flex-col gap-1 items-end w-20" title={`${formatarPercentual(v.atingimento, 0)} de ${formatCurrency(v.meta)}`}>
+            <span className="text-xs text-text-secondary">{formatarPercentual(v.atingimento, 0)}</span>
+            <div className="w-full"><ProgressBar value={Math.min(v.atingimento, 1)} max={1} /></div>
+          </div>
+        ),
+      },
+      {
+        key: 'comissao_estimada', label: 'Comissão', align: 'right', hide: 'md',
+        render: (v) => v.comissao_estimada === null ? '—' : formatCurrency(v.comissao_estimada),
+      },
+    )
+  }
 
   const vendedores = dados?.vendedores ?? []
 
@@ -266,6 +287,24 @@ export default function Equipe() {
             <KpiCard label="Ticket médio" value={formatCurrency(dados.loja.ticket_medio)} />
             <KpiCard label="Peças por atendimento" value={formatarDecimal(dados.loja.pa)} />
           </div>
+
+          {dados.loja.meta !== null && dados.loja.atingimento !== null && (
+            <Card variant="bordered">
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap justify-between gap-2 text-sm">
+                  <span className="text-text-primary font-medium">
+                    Meta da loja: {formatarPercentual(dados.loja.atingimento, 0)} de {formatCurrency(dados.loja.meta)}
+                  </span>
+                  {dados.loja.projecao !== null && (
+                    <span className="text-text-secondary">
+                      Projeção do mês: {formatCurrency(dados.loja.projecao)} ({formatarPercentual(dados.loja.projecao / dados.loja.meta, 0)} da meta)
+                    </span>
+                  )}
+                </div>
+                <ProgressBar value={Math.min(dados.loja.atingimento, 1)} max={1} />
+              </div>
+            </Card>
+          )}
 
           {dados.loja.atendimentos_somados_por_vendedor && (
             <p className="text-xs text-text-muted flex items-center gap-1">

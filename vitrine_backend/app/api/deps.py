@@ -206,6 +206,11 @@ def get_transaction_source(
             status_code=403,
             detail="Este recurso é por empresa — não disponível para super_admin.",
         )
+    empresa = db.get(Empresa, empresa_id)
+    if empresa is not None and empresa.modo == ModoOperacao.UPLOAD.value:
+        from app.adapters.arquivo.transaction_source import DatasetTransactionSource
+
+        return DatasetTransactionSource(db, empresa_id)
     erp = _nome_adapter(db, empresa_id)
     with _ADAPTER_LOCK:
         # A chave PRECISA incluir empresa_id: sem isso, a fonte de dados

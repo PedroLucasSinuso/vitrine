@@ -25,6 +25,7 @@ const BiSku = React.lazy(() => import('./pages/bi/Sku'))
 const BiEquipe = React.lazy(() => import('./pages/bi/Equipe'))
 const Importar = React.lazy(() => import('./pages/Importar'))
 const Datasets = React.lazy(() => import('./pages/Datasets'))
+const Metas = React.lazy(() => import('./pages/Metas'))
 import { BiCacheProvider } from './stores/biCache'
 import { ToastProvider } from './hooks/useToast'
 import ToastContainer from './components/ToastContainer'
@@ -98,6 +99,7 @@ function App() {
                 <Route path="/bi/equipe" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="equipe"><BiEquipe /></RequireModulo></ProtectedRoute>} />
                 <Route path="/importar" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="importacao"><Importar /></RequireModulo></ProtectedRoute>} />
                 <Route path="/datasets" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="importacao"><Datasets /></RequireModulo></ProtectedRoute>} />
+                <Route path="/metas" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="metas"><Metas /></RequireModulo></ProtectedRoute>} />
                 <Route path="/bi/dashboard-consolidado" element={<Navigate to="/bi" replace />} />
               </Route>
               <Route path="*" element={<NotFound />} />

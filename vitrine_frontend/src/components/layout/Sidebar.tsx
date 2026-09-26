@@ -6,7 +6,7 @@ import type { Modulo, Role } from '../../types'
 import { usePerfilEmpresa } from '../../stores/perfilEmpresaContexto'
 import {
   BarChart3, Search, Package, ClipboardList, Users, Settings,
-  Tags, ShieldAlert, HelpCircle, LogOut, ChevronLeft, PanelRightClose, Upload,
+  Tags, ShieldAlert, HelpCircle, LogOut, ChevronLeft, PanelRightClose, Upload, Target,
 } from 'lucide-react'
 
 interface NavItem {
@@ -29,6 +29,7 @@ const navGroups: NavGroup[] = [
       { label: 'BI',        path: '/bi',             icon: <BarChart3 size={20} />,    roles: ['supervisor', 'admin'], modulo: 'dashboard' },
       { label: 'Produtos',  path: '/produtos',       icon: <Package size={20} />,      roles: ['supervisor', 'admin'], modulo: 'produtos' },
       { label: 'Importar',  path: '/importar',       icon: <Upload size={20} />,       roles: ['supervisor', 'admin'], modulo: 'importacao' },
+      { label: 'Metas',     path: '/metas',          icon: <Target size={20} />,       roles: ['supervisor', 'admin'], modulo: 'metas' },
     ],
   },
   {

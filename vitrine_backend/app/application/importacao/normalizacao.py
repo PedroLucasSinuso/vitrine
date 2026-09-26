@@ -1,7 +1,7 @@
 import hashlib
 import re
 import unicodedata
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal, InvalidOperation
 
 from app.application.importacao.extracao import Celula
@@ -95,3 +95,21 @@ def datas_no_texto(valor: Celula) -> list[date]:
         except ValueError:
             continue
     return encontradas
+
+
+_HORA = re.compile(r"(\d{1,2}):(\d{2})")
+
+
+def hora(valor: Celula) -> time | None:
+    if isinstance(valor, datetime):
+        return valor.time().replace(second=0, microsecond=0)
+    if isinstance(valor, time):
+        return valor.replace(second=0, microsecond=0)
+    if isinstance(valor, float) and 0 <= valor < 1:
+        minutos = round(valor * 24 * 60)
+        return time(minutos // 60, minutos % 60)
+    encontrado = _HORA.search(str(valor or ""))
+    if not encontrado:
+        return None
+    horas, minutos = int(encontrado.group(1)), int(encontrado.group(2))
+    return time(horas, minutos) if horas < 24 and minutos < 60 else None

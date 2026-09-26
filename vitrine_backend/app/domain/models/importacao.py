@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone
 from decimal import Decimal
 
 from sqlalchemy import (
@@ -12,6 +12,7 @@ from sqlalchemy import (
     Integer,
     Numeric,
     String,
+    Time,
     UniqueConstraint,
     false,
 )
@@ -173,3 +174,4 @@ class DsItemVenda(_LinhaDataset, Base):
     tamanho: Mapped[str] = mapped_column(String, nullable=False, default="")
     cor: Mapped[str] = mapped_column(String, nullable=False, default="")
     colecao: Mapped[str] = mapped_column(String, nullable=False, default="")
+    hora: Mapped[time | None] = mapped_column(Time, nullable=True)

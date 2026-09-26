@@ -15,11 +15,15 @@ from app.schemas.auth_schema import (
     RefreshRequest,
     MessageResponse,
     DemoStatusResponse,
+    EntradaDemoRequest,
+    PerfisDemoResponse,
 )
 from app.application.demo_guard import resetar_se_necessario
 from app.application.demo_provisioner import (
-    USUARIO_DEMO,
+    PERFIS_DEMO,
+    SLUG_DEMO,
     empresa_demo,
+    perfis_disponiveis,
     senha_padrao,
 )
 from app.schemas.usuario_schema import UsuarioCreate, UsuarioPatch, UsuarioResponse
@@ -93,9 +97,14 @@ def demo_status(db: Session = Depends(get_db)):
     return DemoStatusResponse(disponivel=empresa_demo(db) is not None)
 
 
+@router.get("/demo/perfis", response_model=PerfisDemoResponse)
+def demo_perfis(db: Session = Depends(get_db)):
+    return PerfisDemoResponse(perfis=perfis_disponiveis(db))
+
+
 @router.post("/demo", response_model=TokenResponse)
 @limiter.limit("10/minute")
-def entrar_na_demo(request: Request, db: Session = Depends(get_db)):
+def entrar_na_demo(request: Request, entrada: EntradaDemoRequest | None = None, db: Session = Depends(get_db)):
     """Entra na demonstração sem credencial.
 
     Não emite token por um caminho próprio: autentica o usuário da demo
@@ -103,7 +112,8 @@ def entrar_na_demo(request: Request, db: Session = Depends(get_db)):
     Um atalho que fabricasse o token direto viraria uma segunda porta de
     entrada para manter em dia com a primeira.
     """
-    disponivel = empresa_demo(db) is not None
+    perfil = PERFIS_DEMO.get((entrada or EntradaDemoRequest()).perfil)
+    disponivel = perfil is not None and empresa_demo(db, perfil.slug) is not None
     # Encerra a transação de leitura antes do reset: ele escreve por
     # outra conexão, e uma transação aberta aqui tanto veria o estado
     # antigo quanto disputaria o lock de escrita do SQLite.
@@ -115,21 +125,24 @@ def entrar_na_demo(request: Request, db: Session = Depends(get_db)):
             detail="Este servidor não tem modo de demonstração provisionado.",
         )
 
-    resetar_se_necessario()
+    if perfil.slug == SLUG_DEMO:
+        resetar_se_necessario()
+    else:
+        resetar_se_necessario(perfil.slug)
 
     service = AuthService(UsuarioRepository(db))
     try:
-        access_token, refresh_token = service.autenticar(USUARIO_DEMO, senha_padrao())
+        access_token, refresh_token = service.autenticar(perfil.usuario_entrada, senha_padrao())
     except ValueError:
         # O tenant existe mas o usuário não autentica — demo meio
         # provisionada. 503 e não 401: não é culpa de quem clicou.
-        logger.error("Usuário '%s' da demo não autentica", USUARIO_DEMO)
+        logger.error("Usuário '%s' da demo não autentica", perfil.usuario_entrada)
         raise HTTPException(
             status_code=503,
             detail="A demonstração está indisponível no momento.",
         )
 
-    logger.info("Entrada na demonstração | ip=%s", request.client.host if request.client else None)
+    logger.info("Entrada na demonstração | perfil=%s ip=%s", perfil.chave, request.client.host if request.client else None)
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 

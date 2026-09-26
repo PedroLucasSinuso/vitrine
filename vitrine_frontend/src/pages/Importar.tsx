@@ -6,7 +6,7 @@ import Card from '../components/ui/Card'
 import ErrorBanner from '../components/ui/ErrorBanner'
 import SectionHeader from '../components/ui/SectionHeader'
 import {
-  confirmarImportacao, enviarArquivo, listarCampos, listarImportacoes, obterImportacao, salvarMapeamento,
+  baixarRelatorioExemplo, confirmarImportacao, enviarArquivo, listarCampos, listarImportacoes, obterImportacao, salvarMapeamento,
 } from '../api/importacao'
 import { useToast } from '../hooks/useToast'
 import type { CampoDataset, Celula, Importacao, ImportacaoResumo, Mapeamento, TipoDataset } from '../types'
@@ -332,6 +332,20 @@ export default function Importar() {
     }
   }
 
+  async function baixarExemplo() {
+    try {
+      const { nome, conteudo } = await baixarRelatorioExemplo()
+      const url = URL.createObjectURL(conteudo)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = nome
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      setErro('Não foi possível baixar o exemplo.')
+    }
+  }
+
   async function confirmar() {
     if (!importacao) return
     setConfirmando(true)
@@ -368,6 +382,13 @@ export default function Importar() {
           <Upload size={28} className="text-text-muted" />
           <span className="text-sm text-text-primary font-medium">{enviando ? 'Lendo arquivo...' : 'Arraste o arquivo aqui ou clique para escolher'}</span>
           <span className="text-xs text-text-muted">Até 10 MB</span>
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); baixarExemplo() }}
+            className="text-xs text-primary underline mt-1"
+          >
+            Não tem um relatório à mão? Baixe um exemplo
+          </button>
           <input type="file" accept=".xls,.xlsx,.csv,.txt,.pdf" className="sr-only" disabled={enviando} onChange={(e) => enviar(e.target.files?.[0])} />
         </label>
         {erro && <div className="mt-3"><ErrorBanner message={erro} /></div>}

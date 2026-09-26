@@ -38,21 +38,33 @@ JOB_ID_RESET_DEMO = "reset_demo"
 
 _lock = threading.Lock()
 _ultimo_reset: float | None = None
+_ultimos_por_slug: dict[str, float] = {}
+
+
+def _ultimo(slug: str) -> float | None:
+    return _ultimo_reset if slug == SLUG_DEMO else _ultimos_por_slug.get(slug)
+
+
+def _marcar(slug: str, momento: float) -> None:
+    global _ultimo_reset
+    if slug == SLUG_DEMO:
+        _ultimo_reset = momento
+    else:
+        _ultimos_por_slug[slug] = momento
 
 
 def _cooldown_segundos() -> float:
     return max(settings.demo_reset_cooldown_minutes, 0) * 60
 
 
-def marcar_resetado(momento: float | None = None) -> None:
+def marcar_resetado(momento: float | None = None, slug: str = SLUG_DEMO) -> None:
     """Registra que a demo acabou de ser resetada por outro caminho.
 
     O ``provisionar-demo`` deixa o tenant no estado inicial; sem isto o
     primeiro visitante dispararia um reset redundante.
     """
-    global _ultimo_reset
     with _lock:
-        _ultimo_reset = time.monotonic() if momento is None else momento
+        _marcar(slug, time.monotonic() if momento is None else momento)
 
 
 def resetar_se_necessario(slug: str = SLUG_DEMO) -> bool:
@@ -62,15 +74,15 @@ def resetar_se_necessario(slug: str = SLUG_DEMO) -> bool:
     reset falhou — pior um visitante ver dado sujo do que uma tela de
     erro. A falha vai para o log.
     """
-    global _ultimo_reset
     with _lock:
         agora = time.monotonic()
-        if _ultimo_reset is not None and (agora - _ultimo_reset) < _cooldown_segundos():
+        ultimo = _ultimo(slug)
+        if ultimo is not None and (agora - ultimo) < _cooldown_segundos():
             return False
         # Marca antes de resetar: se outro request chegar enquanto este
         # ainda está limpando, ele vê a demo como fresca e segue direto,
         # em vez de enfileirar um segundo reset no mesmo lock.
-        _ultimo_reset = agora
+        _marcar(slug, agora)
 
     try:
         resetar_demo(slug)
@@ -83,8 +95,8 @@ def resetar_se_necessario(slug: str = SLUG_DEMO) -> bool:
 def _reset_periodico(slug: str) -> None:
     try:
         resetar_demo(slug)
-        marcar_resetado()
-        logger.info("Demo resetada pelo job periódico")
+        marcar_resetado(slug=slug)
+        logger.info("Demo resetada pelo job periódico | slug=%s", slug)
     except DemoError as exc:
         logger.warning("Job periódico de reset da demo falhou | %s", exc)
 
@@ -104,7 +116,7 @@ def agendar_reset_periodico(scheduler, slug: str = SLUG_DEMO) -> None:
         lambda: _reset_periodico(slug),
         trigger="interval",
         minutes=minutos,
-        id=JOB_ID_RESET_DEMO,
+        id=JOB_ID_RESET_DEMO if slug == SLUG_DEMO else f"{JOB_ID_RESET_DEMO}:{slug}",
         replace_existing=True,
         misfire_grace_time=3600,
     )

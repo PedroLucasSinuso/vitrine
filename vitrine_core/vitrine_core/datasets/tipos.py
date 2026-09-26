@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, time
 from decimal import Decimal
 from enum import Enum
 
@@ -32,6 +32,7 @@ class ItemVenda:
     tamanho: str = ""
     cor: str = ""
     colecao: str = ""
+    hora: time | None = None
 
 
 @dataclass(frozen=True)

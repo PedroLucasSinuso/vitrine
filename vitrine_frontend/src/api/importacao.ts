@@ -41,3 +41,10 @@ export async function listarDatasets(): Promise<DatasetResumo[]> {
 export async function excluirDataset(id: number): Promise<void> {
   await api.delete(`/datasets/${id}`)
 }
+
+export async function baixarRelatorioExemplo(): Promise<{ nome: string; conteudo: Blob }> {
+  const r = await api.get('/importacoes/exemplo', { responseType: 'blob' })
+  const disposicao = String(r.headers['content-disposition'] ?? '')
+  const nome = /filename="([^"]+)"/.exec(disposicao)?.[1] ?? 'relatorio-exemplo.xlsx'
+  return { nome, conteudo: r.data }
+}
