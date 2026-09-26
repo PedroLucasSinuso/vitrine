@@ -47,6 +47,7 @@ export interface Importacao {
   total_linhas: number
   mapeamento: Mapeamento | null
   previa: Previa | null
+  sugestao_ia?: { confianca: 'alta' | 'media' | 'baixa' | null; duvidas: string[]; erro: string | null } | null
 }
 
 export interface ImportacaoResumo {

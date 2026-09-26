@@ -30,6 +30,7 @@ dependencies = [
     "vitrine-core",
     "xlrd>=2.0",
     "pdfplumber>=0.11",
+    "anthropic>=0.70",
 ]
 
 # Sem um build-system declarado, o uv trata o projeto como "nao empacotado"

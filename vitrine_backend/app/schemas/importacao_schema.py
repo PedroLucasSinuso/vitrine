@@ -40,6 +40,12 @@ class PreviaDTO(BaseModel):
     confirmavel: bool
 
 
+class SugestaoIaDTO(BaseModel):
+    confianca: str | None = None
+    duvidas: list[str] = []
+    erro: str | None = None
+
+
 class ImportacaoDTO(BaseModel):
     id: int
     nome: str
@@ -52,6 +58,7 @@ class ImportacaoDTO(BaseModel):
     total_linhas: int
     mapeamento: Mapeamento | None
     previa: PreviaDTO | None
+    sugestao_ia: SugestaoIaDTO | None = None
 
 
 class ImportacaoResumoDTO(BaseModel):

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { AlertTriangle, CheckCircle2, FileSpreadsheet, History, Upload, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, FileSpreadsheet, History, Sparkles, Upload, XCircle } from 'lucide-react'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import ErrorBanner from '../components/ui/ErrorBanner'
@@ -40,6 +40,33 @@ function mapeamentoInicial(importacao: Importacao, campos: Record<TipoDataset, C
     separador_decimal: ',',
     periodo: null,
   }
+}
+
+const ROTULO_CONFIANCA = { alta: 'alta', media: 'média', baixa: 'baixa' } as const
+
+function SugestaoAutomatica({ sugestao }: { sugestao: NonNullable<Importacao['sugestao_ia']> }) {
+  if (sugestao.erro) {
+    return (
+      <p className="text-sm text-text-muted flex items-center gap-2">
+        <AlertTriangle size={16} /> Sugestão automática indisponível: {sugestao.erro} Mapeie as colunas abaixo.
+      </p>
+    )
+  }
+  return (
+    <div className="rounded-lg border border-border bg-bg-card px-4 py-3 text-sm">
+      <p className="flex items-center gap-2 text-text-primary">
+        <Sparkles size={16} className="text-primary" />
+        Mapeamento sugerido automaticamente
+        {sugestao.confianca && <span className="text-text-muted">(confiança {ROTULO_CONFIANCA[sugestao.confianca]})</span>}
+        — confira a prévia antes de confirmar.
+      </p>
+      {sugestao.duvidas.length > 0 && (
+        <ul className="mt-2 ml-6 list-disc text-text-secondary">
+          {sugestao.duvidas.map((d) => <li key={d}>{d}</li>)}
+        </ul>
+      )}
+    </div>
+  )
 }
 
 function Celulas({ linha, colunas }: { linha: Celula[]; colunas: number }) {
@@ -358,6 +385,9 @@ export default function Importar() {
               <span className="text-xs text-warning">Este mesmo arquivo já foi importado antes</span>
             )}
           </div>
+          {importacao.status !== 'confirmado' && importacao.sugestao_ia && (
+            <SugestaoAutomatica sugestao={importacao.sugestao_ia} />
+          )}
           {importacao.status === 'confirmado' ? (
             <Card variant="bordered">
               <p className="text-sm text-success flex items-center gap-2"><CheckCircle2 size={16} /> Importação confirmada.</p>

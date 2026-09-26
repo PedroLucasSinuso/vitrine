@@ -4,18 +4,24 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from pydantic import ValidationError
+
+from app.application.importacao import ia
 from app.application.importacao.aplicacao import ResultadoAplicacao, aplicar
 from app.application.importacao.extracao import Grade, extrair
 from app.application.importacao.mapeamento import Mapeamento
 from app.application.importacao.normalizacao import assinatura_linha
 from app.application.importacao.persistencia import gravar_dataset
 from app.core.config import settings
+from app.domain.models.empresa import Empresa
 from app.domain.models.importacao import ArquivoImportado, Dataset, TemplateImportacao
 
 LINHAS_PROCURADAS_PARA_TEMPLATE = 40
+TENTATIVAS_IA = 2
+PREFIXO_TENANT_DEMO = "demo"
 
 
 class ImportacaoInvalida(Exception):
@@ -63,6 +69,51 @@ def _procurar_template(db: Session, grade: Grade) -> tuple[TemplateImportacao, M
     return None
 
 
+def _ia_disponivel_para(db: Session, empresa_id: int) -> bool:
+    if not ia.ia_configurada():
+        return False
+    empresa = db.get(Empresa, empresa_id)
+    if empresa is None or empresa.slug.startswith(PREFIXO_TENANT_DEMO):
+        return False
+    inicio_do_mes = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    usadas = db.scalar(
+        select(func.count()).select_from(ArquivoImportado).where(
+            ArquivoImportado.empresa_id == empresa_id,
+            ArquivoImportado.ia_usada.is_(True),
+            ArquivoImportado.criado_em >= inicio_do_mes,
+        )
+    )
+    return usadas < settings.ia_cota_mensal
+
+
+def _problema(resultado: ResultadoAplicacao) -> str | None:
+    if resultado.validacao.status == "divergente":
+        campos = ", ".join(
+            f"{d.campo} (calculado {d.calculado}, relatório {d.informado})" for d in resultado.validacao.diferencas
+        )
+        return f"os totais não conferem: {campos}"
+    if not resultado.registros:
+        return "nenhuma linha válida foi lida com esse mapeamento"
+    return None
+
+
+def _mapear_com_ia(grade: Grade) -> tuple[Mapeamento | None, ResultadoAplicacao | None, ia.SugestaoIa | None]:
+    erro, melhor = None, (None, None, None)
+    for _ in range(TENTATIVAS_IA):
+        sugestao = ia.sugerir_mapeamento(grade, erro)
+        try:
+            mapeamento = Mapeamento(**sugestao.mapeamento)
+        except ValidationError as falha:
+            erro = "; ".join(e["msg"] for e in falha.errors())
+            continue
+        resultado = aplicar(grade, mapeamento)
+        melhor = (mapeamento, resultado, sugestao)
+        erro = _problema(resultado)
+        if erro is None:
+            break
+    return melhor
+
+
 def _duplicado(db: Session, arquivo: ArquivoImportado) -> int | None:
     return db.scalar(
         select(ArquivoImportado.id).where(
@@ -104,6 +155,21 @@ def receber(db: Session, empresa_id: int, usuario_id: int | None, nome: str, con
         arquivo.template_id = template.id
         arquivo.mapeamento = mapeamento.model_dump(mode="json")
         arquivo.status = _status(resultado)
+    elif _ia_disponivel_para(db, empresa_id):
+        arquivo.ia_usada = True
+        try:
+            mapeamento, resultado, sugestao = _mapear_com_ia(grade)
+        except ia.IaIndisponivel as erro:
+            arquivo.sugestao_ia = {"erro": str(erro)}
+        else:
+            if mapeamento is not None:
+                arquivo.mapeamento = mapeamento.model_dump(mode="json")
+                arquivo.status = _status(resultado)
+            arquivo.sugestao_ia = {
+                "confianca": sugestao.confianca if sugestao else None,
+                "duvidas": sugestao.duvidas if sugestao else [],
+                "modelo": settings.ia_modelo,
+            }
     db.add(arquivo)
     db.commit()
     return EstadoImportacao(arquivo, grade, mapeamento, resultado, _duplicado(db, arquivo))

@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -12,6 +13,7 @@ from sqlalchemy import (
     Numeric,
     String,
     UniqueConstraint,
+    false,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -76,6 +78,8 @@ class ArquivoImportado(Base):
         ForeignKey("templates_importacao.id", ondelete="SET NULL"), nullable=True
     )
     erro: Mapped[str | None] = mapped_column(String, nullable=True)
+    sugestao_ia: Mapped[dict | None] = mapped_column(JSONPortavel, nullable=True)
+    ia_usada: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_agora)
     expira_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 

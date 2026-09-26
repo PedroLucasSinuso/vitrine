@@ -24,6 +24,7 @@ from app.schemas.importacao_schema import (
     ImportacaoResumoDTO,
     PeriodoDTO,
     PreviaDTO,
+    SugestaoIaDTO,
     ValidacaoDTO,
 )
 
@@ -79,6 +80,7 @@ def _dto(estado: servico.EstadoImportacao) -> ImportacaoDTO:
         total_linhas=len(estado.grade.linhas),
         mapeamento=estado.mapeamento,
         previa=previa,
+        sugestao_ia=SugestaoIaDTO(**arquivo.sugestao_ia) if arquivo.sugestao_ia else None,
     )
 
 

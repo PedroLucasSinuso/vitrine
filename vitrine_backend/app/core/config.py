@@ -70,6 +70,11 @@ class Settings(BaseSettings):
     importacao_dir: str = "data/importacoes"
     importacao_retencao_dias: int = 30
 
+    anthropic_api_key: str = ""
+    ia_importacao_habilitada: bool = True
+    ia_modelo: str = "claude-opus-5"
+    ia_cota_mensal: int = 50
+
     demo_reset_cooldown_minutes: int = 10
     demo_reset_interval_minutes: int = 180
 
