@@ -1,24 +1,26 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { ClipboardList, LayoutDashboard, Search, Package, Settings, ShieldAlert, Tags } from 'lucide-react'
-import type { Role } from '../../types'
+import type { Modulo, Role } from '../../types'
+import { usePerfilEmpresa } from '../../stores/perfilEmpresaContexto'
 
 interface MobileTab {
   label: string
   path: string
   icon: React.ReactNode
   roles: Role[]
+  modulo?: Modulo
 }
 
 const tabs: MobileTab[] = [
   // Left side
-  { label: 'Busca',      path: '/busca',                   icon: <Search size={20} />,          roles: ['operador', 'supervisor', 'admin'] },
-  { label: 'Produtos',   path: '/produtos',                icon: <Package size={20} />,         roles: ['supervisor', 'admin'] },
-  { label: 'Inventário', path: '/inventario',              icon: <ClipboardList size={20} />,   roles: ['operador', 'supervisor', 'admin'] },
+  { label: 'Busca',      path: '/busca',                   icon: <Search size={20} />,          roles: ['operador', 'supervisor', 'admin'], modulo: 'busca' },
+  { label: 'Produtos',   path: '/produtos',                icon: <Package size={20} />,         roles: ['supervisor', 'admin'], modulo: 'produtos' },
+  { label: 'Inventário', path: '/inventario',              icon: <ClipboardList size={20} />,   roles: ['operador', 'supervisor', 'admin'], modulo: 'inventario' },
   // Center — destacado
-  { label: 'Resumo',     path: '/bi',                      icon: <LayoutDashboard size={24} />, roles: ['supervisor', 'admin'] },
+  { label: 'Resumo',     path: '/bi',                      icon: <LayoutDashboard size={24} />, roles: ['supervisor', 'admin'], modulo: 'dashboard' },
   // Right side
-  { label: 'Etiquetas',  path: '/etiquetas',               icon: <Tags size={20} />,            roles: ['operador', 'supervisor', 'admin'] },
+  { label: 'Etiquetas',  path: '/etiquetas',               icon: <Tags size={20} />,            roles: ['operador', 'supervisor', 'admin'], modulo: 'etiquetas' },
   { label: 'Admin',      path: '/admin',                   icon: <ShieldAlert size={20} />,     roles: ['admin'] },
   { label: 'Config',     path: '/admin/configuracoes',     icon: <Settings size={20} />,        roles: ['admin'] },
 ]
@@ -27,9 +29,12 @@ export default function MobileNav() {
   const location = useLocation()
   const navigate = useNavigate()
   const { getRole } = useAuth()
+  const { temModulo } = usePerfilEmpresa()
 
   const role = getRole()
-  const visibleTabs = tabs.filter(tab => role && tab.roles.includes(role))
+  const visibleTabs = tabs.filter(
+    tab => role && tab.roles.includes(role) && (!tab.modulo || temModulo(tab.modulo)),
+  )
 
   const isActive = (path: string) => {
     if (path === '/bi') return location.pathname.startsWith('/bi')

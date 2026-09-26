@@ -3,6 +3,7 @@ import { jwtDecode } from 'jwt-decode'
 import api from '../api/client'
 import { login as apiLogin, entrarNaDemo as apiEntrarNaDemo } from '../api/auth'
 import type { AuthToken } from '../types'
+import { limparCachePerfil } from '../utils/perfilCache'
 import type { JwtPayload, Role } from '../types'
 
 function getToken(): string | null {
@@ -108,6 +109,7 @@ export function useAuth() {
     }
     localStorage.removeItem('token')
     localStorage.removeItem('refresh_token')
+    limparCachePerfil()
     if (!revoked) {
       console.warn(
         '[Auth] Token ainda pode ser válido por até 8 horas. ' +

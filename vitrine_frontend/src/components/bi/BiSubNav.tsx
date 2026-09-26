@@ -1,29 +1,34 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { LayoutDashboard, TrendingUp, BarChart3, PieChart, RefreshCw, Percent, Clock, Search } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import type { Modulo } from '../../types'
+import { usePerfilEmpresa } from '../../stores/perfilEmpresaContexto'
 
 interface Tab {
   label: string
   icon: LucideIcon
   path: string
+  modulo: Modulo
 }
 
 const TABS: Tab[] = [
-  { label: 'Dashboard', icon: LayoutDashboard, path: '/bi' },
-  { label: 'Receita', icon: TrendingUp, path: '/bi/receita' },
-  { label: 'Ranking', icon: BarChart3, path: '/bi/ranking' },
-  { label: 'Curva ABC', icon: PieChart, path: '/bi/curva-abc' },
-  { label: 'Trocas', icon: RefreshCw, path: '/bi/trocas' },
-  { label: 'Perdas', icon: Percent, path: '/bi/perdas-consumo' },
-  { label: 'Temporal', icon: Clock, path: '/bi/temporal' },
-  { label: 'SKU', icon: Search, path: '/bi/sku' },
+  { label: 'Dashboard', icon: LayoutDashboard, path: '/bi', modulo: 'dashboard' },
+  { label: 'Receita', icon: TrendingUp, path: '/bi/receita', modulo: 'receita' },
+  { label: 'Ranking', icon: BarChart3, path: '/bi/ranking', modulo: 'ranking' },
+  { label: 'Curva ABC', icon: PieChart, path: '/bi/curva-abc', modulo: 'curva_abc' },
+  { label: 'Trocas', icon: RefreshCw, path: '/bi/trocas', modulo: 'trocas' },
+  { label: 'Perdas', icon: Percent, path: '/bi/perdas-consumo', modulo: 'perdas_consumo' },
+  { label: 'Temporal', icon: Clock, path: '/bi/temporal', modulo: 'temporal' },
+  { label: 'SKU', icon: Search, path: '/bi/sku', modulo: 'sku' },
 ]
 
 export default function BiSubNav() {
   const navigate = useNavigate()
   const location = useLocation()
   const [visible, setVisible] = useState(false)
+  const { temModulo } = usePerfilEmpresa()
+  const tabs = useMemo(() => TABS.filter((tab) => temModulo(tab.modulo)), [temModulo])
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -31,7 +36,7 @@ export default function BiSubNav() {
     return () => clearTimeout(t)
   }, [])
 
-  const activeIndex = TABS.findIndex((tab) => location.pathname === tab.path)
+  const activeIndex = tabs.findIndex((tab) => location.pathname === tab.path)
 
   const scrollActiveTab = useCallback(() => {
     const container = scrollRef.current
@@ -74,7 +79,7 @@ export default function BiSubNav() {
         }}
       >
         <div className="inline-flex gap-1 p-1 rounded-xl bg-bg-card border border-border min-w-0 lg:w-full">
-          {TABS.map((tab, i) => {
+          {tabs.map((tab, i) => {
             const ativo = activeIndex === i
             return (
               <button

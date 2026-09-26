@@ -9,6 +9,7 @@ import Badge from '../components/ui/Badge'
 import EmptyState from '../components/ui/EmptyState'
 import ErrorBanner from '../components/ui/ErrorBanner'
 import type { ProdutoTabelaResponse, SortByProduto } from '../types'
+import { usePerfilEmpresa } from '../stores/perfilEmpresaContexto'
 import { formatCurrency, formatEstoque } from '../utils/formatters'
 
 function margemVariant(margem: number): 'success' | 'warning' | 'danger' {
@@ -26,6 +27,7 @@ function codigoLink(codigo: string) {
 }
 
 export default function Produtos() {
+  const { rotulo } = usePerfilEmpresa()
   const {
     items, total, loading, erro,
     search, setSearch,
@@ -84,13 +86,13 @@ export default function Produtos() {
     },
     {
       key: 'grupo',
-      label: 'Grupo',
+      label: rotulo('grupo'),
       sortable: true,
       hide: 'md' as const,
     },
     {
       key: 'familia',
-      label: 'Família',
+      label: rotulo('familia'),
       sortable: true,
       hide: 'md' as const,
     },
@@ -165,7 +167,7 @@ export default function Produtos() {
             onChange={(e) => setGrupo(e.target.value)}
             className="form-input-base"
           >
-            <option value="">Todos os grupos</option>
+            <option value="">Todos os {rotulo('grupos').toLowerCase()}</option>
             {filtrosDisponiveis.grupos.map(g => (
               <option key={g} value={g}>{g}</option>
             ))}
@@ -175,7 +177,7 @@ export default function Produtos() {
             onChange={(e) => setFamilia(e.target.value)}
             className="form-input-base"
           >
-            <option value="">Todas as famílias</option>
+            <option value="">Todas as {rotulo('familias').toLowerCase()}</option>
             {filtrosDisponiveis.familias.map(f => (
               <option key={f} value={f}>{f}</option>
             ))}

@@ -14,3 +14,15 @@ class RolesEnum(str, Enum):
     SUPERVISOR = "supervisor"
     ADMIN = "admin"
     SUPER_ADMIN = "super_admin"
+
+
+class Segmento(str, Enum):
+    SUPERMERCADO = "supermercado"
+    MODA = "moda"
+    VAREJO = "varejo"
+
+
+class ModoOperacao(str, Enum):
+    LEGADO = "legado"
+    UPLOAD = "upload"
+    AGENTE = "agente"

@@ -44,7 +44,7 @@ export default function Login() {
           <Logo height={32} className="text-text-primary mb-12" />
           <h1 className="text-4xl font-bold text-text-primary mb-6 leading-tight tracking-tight font-display">
             Gestão inteligente<br />
-            <span className="text-primary">para o seu supermercado</span>
+            <span className="text-primary">para o seu varejo</span>
           </h1>
           <p className="text-text-muted text-base leading-relaxed mb-10 max-w-md">
             Relatórios de BI, controle de inventário, etiquetas e muito mais
@@ -131,7 +131,7 @@ export default function Login() {
           </Card>
 
           <p className="text-[10px] text-text-muted text-center mt-8">
-            Vitrine — Sistema de Gestão para Supermercados
+            Vitrine — Gestão e BI para varejo
           </p>
         </div>
       </div>

@@ -1,3 +1,4 @@
+import argparse
 import re
 import sys
 from app.core.logging_config import setup_logging
@@ -5,6 +6,7 @@ from app.infrastructure.db.bootstrap import init_db
 from app.infrastructure.db.session import SessionLocal
 from app.domain.models.usuario import Usuario
 from app.domain.models.empresa import Empresa
+from app.domain.enums import ModoOperacao, Segmento
 from app.application.utils.security import hash_password
 
 setup_logging()
@@ -31,7 +33,13 @@ def create_admin(username: str, nome: str, password: str):
 
 
 def provisionar_empresa(
-    nome_empresa: str, slug: str, admin_username: str, admin_nome: str, admin_senha: str
+    nome_empresa: str,
+    slug: str,
+    admin_username: str,
+    admin_nome: str,
+    admin_senha: str,
+    segmento: Segmento = Segmento.SUPERMERCADO,
+    modo: ModoOperacao = ModoOperacao.LEGADO,
 ) -> None:
     """Cria uma empresa (tenant) nova + o primeiro usuário admin dela.
 
@@ -71,7 +79,9 @@ def provisionar_empresa(
             )
             sys.exit(1)
 
-        empresa = Empresa(nome=nome_empresa, slug=slug, status="ativa")
+        empresa = Empresa(
+            nome=nome_empresa, slug=slug, status="ativa", segmento=segmento.value, modo=modo.value
+        )
         session.add(empresa)
         session.flush()  # popula empresa.id sem commitar ainda
 
@@ -85,7 +95,10 @@ def provisionar_empresa(
         session.add(admin)
         session.commit()
 
-        print(f"Empresa '{nome_empresa}' criada — id={empresa.id}, slug={slug}")
+        print(
+            f"Empresa '{nome_empresa}' criada — id={empresa.id}, slug={slug}, "
+            f"segmento={segmento.value}, modo={modo.value}"
+        )
         print(f"Admin '{admin_username}' criado para essa empresa.")
         print()
         print("Próximos passos:")
@@ -135,10 +148,10 @@ def main():
 
 
 def main_provisionar_demo():
-    if len(sys.argv) > 2:
-        print("Uso: provisionar-demo [senha]")
-        sys.exit(1)
-    provisionar_demo_cli(sys.argv[1] if len(sys.argv) == 2 else None)
+    parser = argparse.ArgumentParser(prog="provisionar-demo", description="Cria o tenant de demonstração.")
+    parser.add_argument("senha", nargs="?", help="senha dos usuários da demo (padrão: DEMO_PASSWORD ou a senha padrão)")
+    args = parser.parse_args(sys.argv[1:])
+    provisionar_demo_cli(args.senha)
 
 
 def main_resetar_demo():
@@ -149,17 +162,24 @@ def main_resetar_demo():
 
 
 def main_provisionar_empresa():
-    if len(sys.argv) != 6:
-        print(
-            "Uso: provisionar-empresa <nome_empresa> <slug> <admin_username> "
-            "<admin_nome> <admin_senha>"
-        )
-        print(
-            'Exemplo: provisionar-empresa "Mercado Boa Vista" mercado-boa-vista '
-            'admin.boavista "Admin Boa Vista" "senha-forte-aqui"'
-        )
-        sys.exit(1)
-    provisionar_empresa(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
+    parser = argparse.ArgumentParser(
+        prog="provisionar-empresa",
+        description="Cria uma empresa (tenant) e o primeiro admin dela.",
+        epilog='Exemplo: provisionar-empresa "Mercado Boa Vista" mercado-boa-vista '
+        'admin.boavista "Admin Boa Vista" "senha-forte" --segmento supermercado',
+    )
+    parser.add_argument("nome_empresa")
+    parser.add_argument("slug")
+    parser.add_argument("admin_username")
+    parser.add_argument("admin_nome")
+    parser.add_argument("admin_senha")
+    parser.add_argument("--segmento", choices=[s.value for s in Segmento], default=Segmento.SUPERMERCADO.value)
+    parser.add_argument("--modo", choices=[m.value for m in ModoOperacao], default=ModoOperacao.LEGADO.value)
+    args = parser.parse_args(sys.argv[1:])
+    provisionar_empresa(
+        args.nome_empresa, args.slug, args.admin_username, args.admin_nome, args.admin_senha,
+        segmento=Segmento(args.segmento), modo=ModoOperacao(args.modo),
+    )
 
 
 if __name__ == "__main__":

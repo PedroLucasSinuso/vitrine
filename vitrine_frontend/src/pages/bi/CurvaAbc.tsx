@@ -19,6 +19,7 @@ import { PieChart as PieChartIcon } from 'lucide-react'
 import Skeleton from '../../components/ui/Skeleton'
 import DataTable from '../../components/ui/DataTable'
 import type { Column } from '../../components/ui/DataTable'
+import { usePerfilEmpresa } from '../../stores/perfilEmpresaContexto'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 
 const PRESETS_CURVA: Preset[] = [
@@ -42,6 +43,7 @@ const CURVA_BADGE: Record<CurvaAbc, string> = {
 }
 
 export default function CurvaAbc() {
+  const { rotulo } = usePerfilEmpresa()
   const [searchParams, setSearchParams] = useSearchParams()
   const [periodo, setPeriodo] = useState<PeriodoBi>(periodoInicial)
   const [dimensao, setDimensao] = useState<Dimensao>(
@@ -111,11 +113,11 @@ export default function CurvaAbc() {
 
   function buildColumns(): Column<ItemCurvaAbcDTO>[] {
     const cols: Column<ItemCurvaAbcDTO>[] = [
-      { key: 'grupo', label: 'Grupo', width: '20%', render: (item) => <span className="truncate block" title={item.grupo}>{item.grupo}</span> },
+      { key: 'grupo', label: rotulo('grupo'), width: '20%', render: (item) => <span className="truncate block" title={item.grupo}>{item.grupo}</span> },
     ]
     if (dimensao !== 'grupo') {
       cols.push({
-        key: 'familia', label: 'Família', width: '20%',
+        key: 'familia', label: rotulo('familia'), width: '20%',
         render: (item) => <span className="truncate block text-text-muted" title={item.familia ?? ''}>{item.familia ?? '\u2014'}</span>,
       })
     }
@@ -154,8 +156,8 @@ export default function CurvaAbc() {
               onChange={(e) => { const val = e.target.value as Dimensao; setDimensao(val); syncParams(val) }}
             >
               <option value="produto">Produto</option>
-              <option value="familia">Família</option>
-              <option value="grupo">Grupo</option>
+              <option value="familia">{rotulo('familia')}</option>
+              <option value="grupo">{rotulo('grupo')}</option>
             </select>
           </div>
           {erro && <ErrorBanner message={erro} />}

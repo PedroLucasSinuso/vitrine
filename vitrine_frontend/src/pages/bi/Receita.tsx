@@ -20,6 +20,7 @@ import { useBiCache } from '../../stores/biCache'
 import { useToast } from '../../hooks/useToast'
 import { BarChart3 } from 'lucide-react'
 import Skeleton from '../../components/ui/Skeleton'
+import { usePerfilEmpresa } from '../../stores/perfilEmpresaContexto'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
@@ -46,6 +47,7 @@ function labelDimensao(item: ItemDimensaoDTO, dimensao: Dimensao): string {
 }
 
 export default function Receita() {
+  const { rotulo } = usePerfilEmpresa()
   const [searchParams, setSearchParams] = useSearchParams()
   const [periodo, setPeriodo] = useState<PeriodoBi>(periodoInicial)
   const [dimensao, setDimensao] = useState<Dimensao>(
@@ -129,11 +131,11 @@ export default function Receita() {
 
   function buildReceitaColumns(): Column<ItemDimensaoDTO>[] {
     const cols: Column<ItemDimensaoDTO>[] = [
-      { key: 'grupo', label: 'Grupo', render: (item) => <span className="truncate block" title={item.grupo}>{item.grupo}</span> },
+      { key: 'grupo', label: rotulo('grupo'), render: (item) => <span className="truncate block" title={item.grupo}>{item.grupo}</span> },
     ]
     if (dimensao !== 'grupo') {
       cols.push({
-        key: 'familia', label: 'Família',
+        key: 'familia', label: rotulo('familia'),
         render: (item) => <span className="truncate block text-text-muted" title={item.familia ?? ''}>{item.familia ?? '\u2014'}</span>,
       })
     }
@@ -163,8 +165,8 @@ export default function Receita() {
                 value={dimensao}
                 onChange={(e) => { const val = e.target.value as Dimensao; setDimensao(val); syncParams(val, metrica) }}
               >
-                <option value="grupo">Grupo</option>
-                <option value="familia">Família</option>
+                <option value="grupo">{rotulo('grupo')}</option>
+                <option value="familia">{rotulo('familia')}</option>
                 <option value="produto">Produto</option>
               </select>
             </div>
@@ -183,7 +185,7 @@ export default function Receita() {
           {dimensao !== 'grupo' && (
             <div className="flex gap-4 flex-wrap">
               <div className="flex flex-col gap-1">
-                <label className="text-xs text-text-muted">Grupo</label>
+                <label className="text-xs text-text-muted">{rotulo('grupo')}</label>
               <select
                 className="form-input-base"
                 value={filtroGrupo}
@@ -195,7 +197,7 @@ export default function Receita() {
               </div>
               {dimensao === 'produto' && filtroGrupo && (
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-text-muted">Família</label>
+                  <label className="text-xs text-text-muted">{rotulo('familia')}</label>
                   <select
                     className="form-input-base"
                     value={filtroFamilia}

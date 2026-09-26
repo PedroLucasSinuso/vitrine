@@ -7,7 +7,10 @@ from app.infrastructure.repositories.produto_repository import ProdutoRepository
 from app.infrastructure.repositories.usuario_repository import UsuarioRepository
 from app.domain.models.usuario import Usuario
 from app.domain.models.token_blacklist import TokenBlacklist
-from app.domain.enums import RolesEnum
+from sqlalchemy.orm import Session
+from app.domain.models.empresa import Empresa
+from app.domain.enums import ModoOperacao, RolesEnum, Segmento
+from app.domain.segmentos import modulos_da_empresa
 from app.application.utils.jwt_handler import decode_access_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
@@ -220,3 +223,21 @@ def get_transaction_source(
                 raise HTTPException(status_code=400, detail=str(e)) from e
         return _ADAPTER_CACHE[cache_key]  # type: ignore[return-value]
 
+
+
+def get_empresa_do_usuario(
+    usuario: Usuario = Depends(get_current_user), db: Session = Depends(get_db)
+) -> Empresa:
+    empresa = db.get(Empresa, usuario.empresa_id) if usuario.empresa_id is not None else None
+    if empresa is None:
+        raise HTTPException(status_code=404, detail="Usuário não pertence a nenhuma empresa")
+    return empresa
+
+
+def require_modulo(modulo: str):
+    def _verificar(empresa: Empresa = Depends(get_empresa_do_usuario)) -> Empresa:
+        if modulo not in modulos_da_empresa(Segmento(empresa.segmento), ModoOperacao(empresa.modo)):
+            raise HTTPException(status_code=404, detail="Recurso não disponível para esta empresa")
+        return empresa
+
+    return _verificar

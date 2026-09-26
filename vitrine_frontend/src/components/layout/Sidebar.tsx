@@ -2,7 +2,8 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import Logo from '../ui/Logo'
 import UserAvatar from '../ui/UserAvatar'
-import type { Role } from '../../types'
+import type { Modulo, Role } from '../../types'
+import { usePerfilEmpresa } from '../../stores/perfilEmpresaContexto'
 import {
   BarChart3, Search, Package, ClipboardList, Users, Settings,
   Tags, ShieldAlert, HelpCircle, LogOut, ChevronLeft, PanelRightClose,
@@ -13,6 +14,7 @@ interface NavItem {
   path: string
   icon: React.ReactNode
   roles: Role[]
+  modulo?: Modulo
 }
 
 interface NavGroup {
@@ -24,16 +26,16 @@ const navGroups: NavGroup[] = [
   {
     label: 'Análises',
     items: [
-      { label: 'BI',        path: '/bi',             icon: <BarChart3 size={20} />,    roles: ['supervisor', 'admin'] },
-      { label: 'Produtos',  path: '/produtos',       icon: <Package size={20} />,      roles: ['supervisor', 'admin'] },
+      { label: 'BI',        path: '/bi',             icon: <BarChart3 size={20} />,    roles: ['supervisor', 'admin'], modulo: 'dashboard' },
+      { label: 'Produtos',  path: '/produtos',       icon: <Package size={20} />,      roles: ['supervisor', 'admin'], modulo: 'produtos' },
     ],
   },
   {
     label: 'Operações',
     items: [
-      { label: 'Busca',      path: '/busca',          icon: <Search size={20} />,       roles: ['operador', 'supervisor', 'admin'] },
-      { label: 'Inventário', path: '/inventario',     icon: <ClipboardList size={20} />, roles: ['operador', 'supervisor', 'admin'] },
-      { label: 'Etiquetas',  path: '/etiquetas',       icon: <Tags size={20} />,        roles: ['operador', 'supervisor', 'admin'] },
+      { label: 'Busca',      path: '/busca',          icon: <Search size={20} />,       roles: ['operador', 'supervisor', 'admin'], modulo: 'busca' },
+      { label: 'Inventário', path: '/inventario',     icon: <ClipboardList size={20} />, roles: ['operador', 'supervisor', 'admin'], modulo: 'inventario' },
+      { label: 'Etiquetas',  path: '/etiquetas',       icon: <Tags size={20} />,        roles: ['operador', 'supervisor', 'admin'], modulo: 'etiquetas' },
     ],
   },
   {
@@ -55,6 +57,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
   const location = useLocation()
   const navigate = useNavigate()
   const { getRole, logout, getNomeExibicao } = useAuth()
+  const { temModulo } = usePerfilEmpresa()
   const role = getRole()
   const displayName = getNomeExibicao()
 
@@ -111,7 +114,9 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 space-y-5">
         {navGroups.map((group) => {
-          const visibleItems = group.items.filter(item => role && item.roles.includes(role))
+          const visibleItems = group.items.filter(
+            item => role && item.roles.includes(role) && (!item.modulo || temModulo(item.modulo)),
+          )
           if (visibleItems.length === 0) return null
 
           return (

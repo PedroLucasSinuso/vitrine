@@ -9,3 +9,4 @@ export type {
   Dimensao, Metrica, CurvaAbc,
   ProdutoTabelaResponse, TabelaProdutosResponse, SortByProduto,
 } from './bi'
+export type { Segmento, ModoOperacao, Modulo, ChaveRotulo, PerfilEmpresa } from './empresa'

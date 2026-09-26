@@ -31,6 +31,8 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { ThemeProvider } from './themes/ThemeProvider'
 import AppLayout from './components/layout/AppLayout'
 import Landing from './pages/Landing'
+import RequireModulo from './components/RequireModulo'
+import { PerfilEmpresaProvider } from './stores/perfilEmpresa'
 
 /** A raiz é pública: visitante anônimo vê a landing, usuário logado cai
  *  direto na tela inicial do papel dele. */
@@ -61,6 +63,7 @@ function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
+      <PerfilEmpresaProvider>
       <BiCacheProvider>
         <ToastProvider>
           <ErrorBoundary>
@@ -70,25 +73,25 @@ function App() {
               <Route path="/" element={<Raiz />} />
               <Route path="/login" element={<Login />} />
               <Route element={<AppLayout />}>
-                <Route path="/busca" element={<ProtectedRoute allowedRoles={['admin', 'supervisor', 'operador']}><Busca /></ProtectedRoute>} />
+                <Route path="/busca" element={<ProtectedRoute allowedRoles={['admin', 'supervisor', 'operador']}><RequireModulo modulo="busca"><Busca /></RequireModulo></ProtectedRoute>} />
                 <Route path="/home" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><Home /></ProtectedRoute>} />
                 <Route path="/home/operador" element={<ProtectedRoute allowedRoles={['operador']}><OperadorHome /></ProtectedRoute>} />
                 <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><Admin /></ProtectedRoute>} />
-                <Route path="/inventario" element={<ProtectedRoute allowedRoles={['operador', 'supervisor', 'admin']}><Inventario /></ProtectedRoute>} />
-                <Route path="/produtos" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><Produtos /></ProtectedRoute>} />
-                <Route path="/etiquetas" element={<ProtectedRoute allowedRoles={['operador', 'supervisor', 'admin']}><Etiquetas /></ProtectedRoute>} />
+                <Route path="/inventario" element={<ProtectedRoute allowedRoles={['operador', 'supervisor', 'admin']}><RequireModulo modulo="inventario"><Inventario /></RequireModulo></ProtectedRoute>} />
+                <Route path="/produtos" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="produtos"><Produtos /></RequireModulo></ProtectedRoute>} />
+                <Route path="/etiquetas" element={<ProtectedRoute allowedRoles={['operador', 'supervisor', 'admin']}><RequireModulo modulo="etiquetas"><Etiquetas /></RequireModulo></ProtectedRoute>} />
                 <Route path="/admin/etiquetas" element={<Navigate to="/etiquetas" replace />} />
-                <Route path="/admin/inventario" element={<ProtectedRoute allowedRoles={['admin', 'supervisor', 'operador']}><Inventario /></ProtectedRoute>} />
+                <Route path="/admin/inventario" element={<ProtectedRoute allowedRoles={['admin', 'supervisor', 'operador']}><RequireModulo modulo="inventario"><Inventario /></RequireModulo></ProtectedRoute>} />
                 <Route path="/admin/usuarios" element={<ProtectedRoute allowedRoles={['admin']}><Usuarios /></ProtectedRoute>} />
                 <Route path="/admin/configuracoes" element={<ProtectedRoute allowedRoles={['admin']}><Configuracoes /></ProtectedRoute>} />
-                <Route path="/bi" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiDashboard /></ProtectedRoute>} />
-                <Route path="/bi/receita" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiReceita /></ProtectedRoute>} />
-                <Route path="/bi/curva-abc" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiCurvaAbc /></ProtectedRoute>} />
-                <Route path="/bi/ranking" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiRanking /></ProtectedRoute>} />
-                <Route path="/bi/trocas" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiTrocas /></ProtectedRoute>} />
-                <Route path="/bi/perdas-consumo" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiPerdasConsumo /></ProtectedRoute>} />
-                <Route path="/bi/temporal" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiTemporal /></ProtectedRoute>} />
-                <Route path="/bi/sku" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><BiSku /></ProtectedRoute>} />
+                <Route path="/bi" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="dashboard"><BiDashboard /></RequireModulo></ProtectedRoute>} />
+                <Route path="/bi/receita" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="receita"><BiReceita /></RequireModulo></ProtectedRoute>} />
+                <Route path="/bi/curva-abc" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="curva_abc"><BiCurvaAbc /></RequireModulo></ProtectedRoute>} />
+                <Route path="/bi/ranking" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="ranking"><BiRanking /></RequireModulo></ProtectedRoute>} />
+                <Route path="/bi/trocas" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="trocas"><BiTrocas /></RequireModulo></ProtectedRoute>} />
+                <Route path="/bi/perdas-consumo" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="perdas_consumo"><BiPerdasConsumo /></RequireModulo></ProtectedRoute>} />
+                <Route path="/bi/temporal" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="temporal"><BiTemporal /></RequireModulo></ProtectedRoute>} />
+                <Route path="/bi/sku" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="sku"><BiSku /></RequireModulo></ProtectedRoute>} />
                 <Route path="/bi/dashboard-consolidado" element={<Navigate to="/bi" replace />} />
               </Route>
               <Route path="*" element={<NotFound />} />
@@ -100,6 +103,7 @@ function App() {
           <ToastContainer />
         </ToastProvider>
       </BiCacheProvider>
+      </PerfilEmpresaProvider>
       </ThemeProvider>
     </BrowserRouter>
   )

@@ -132,7 +132,7 @@ export default function Landing() {
         <section className="max-w-2xl mb-16">
           <h1 className="text-4xl sm:text-5xl font-bold text-text-primary leading-tight tracking-tight font-display mb-6">
             Gestão inteligente<br />
-            <span className="text-primary">para o seu supermercado</span>
+            <span className="text-primary">para o seu varejo</span>
           </h1>
           <p className="text-text-secondary text-lg leading-relaxed mb-4">
             O Vitrine lê o ERP da loja e transforma o movimento do caixa em
@@ -212,7 +212,7 @@ export default function Landing() {
 
         <footer className="border-t border-border pt-6 pb-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-text-muted">
-            Vitrine — Sistema de Gestão para Supermercados
+            Vitrine — Gestão e BI para varejo
           </p>
           <a
             href={REPO_URL}
