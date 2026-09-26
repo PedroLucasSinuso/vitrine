@@ -8,8 +8,8 @@ from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
-from app.core.interfaces.source import TransactionSource
-from app.core.models.transaction import TransactionItem, OperationType
+from vitrine_core.interfaces.source import TransactionSource
+from vitrine_core.models.transaction import TransactionItem, OperationType
 from app.adapters.alterdata.config import OPERATION_MAP, CANCELED_MARKER
 
 

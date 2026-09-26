@@ -2084,6 +2084,7 @@ dependencies = [
     { name = "sqlalchemy" },
     { name = "twilio" },
     { name = "uvicorn", extra = ["standard"] },
+    { name = "vitrine-core" },
     { name = "weasyprint" },
 ]
 
@@ -2110,8 +2111,27 @@ requires-dist = [
     { name = "sqlalchemy" },
     { name = "twilio", specifier = ">=9.10.9" },
     { name = "uvicorn", extras = ["standard"] },
+    { name = "vitrine-core", editable = "../vitrine_core" },
     { name = "weasyprint", specifier = ">=68.1" },
 ]
+
+[[package]]
+name = "vitrine-core"
+version = "0.1.0"
+source = { editable = "../vitrine_core" }
+dependencies = [
+    { name = "pandas" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pandas", specifier = ">=3.0.2" },
+    { name = "pydantic", specifier = ">=2" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=9.0.3" }]
 
 [[package]]
 name = "watchfiles"

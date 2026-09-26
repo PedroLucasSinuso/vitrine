@@ -7,8 +7,8 @@ from cachetools import LRUCache
 
 from app.adapters.demo import config
 from app.adapters.demo.generator import gerar_dia
-from app.core.interfaces.source import TransactionSource
-from app.core.models.transaction import TransactionItem
+from vitrine_core.interfaces.source import TransactionSource
+from vitrine_core.models.transaction import TransactionItem
 
 
 class DemoTransactionSource(TransactionSource):

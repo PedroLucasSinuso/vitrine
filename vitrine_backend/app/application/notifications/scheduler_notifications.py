@@ -16,7 +16,7 @@ from app.application.scheduler_manager import dia_para_cron, reagendar_etl, reag
 from app.application.config_service import get as get_config
 from app.application.erp_factory import create_transaction_source
 from sqlalchemy.orm import Session
-from app.core.interfaces.source import TransactionSource
+from vitrine_core.interfaces.source import TransactionSource
 import logging
 
 logger = logging.getLogger(__name__)

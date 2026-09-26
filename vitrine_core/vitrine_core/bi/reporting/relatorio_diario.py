@@ -1,0 +1,69 @@
+﻿from vitrine_core.bi.domain.vendas import Vendas
+from vitrine_core.bi.schema import COLUNAS, Metrica
+from vitrine_core.bi.dto import PontoDiarioDTO
+
+
+class RelatorioDiario:
+    def __init__(self, vendas: Vendas):
+        self.vendas = vendas
+
+    def serie_temporal(self, metrica: Metrica) -> list[PontoDiarioDTO]:
+        if metrica == Metrica.QTD_TICKETS:
+            df_serie = (
+                self.vendas.df
+                .groupby(COLUNAS.emissao)[COLUNAS.id_documento]
+                .nunique()
+                .reset_index()
+                .sort_values(COLUNAS.emissao)
+            )
+            col_valor = COLUNAS.id_documento
+        elif metrica == Metrica.TICKET_MEDIO:
+            df_serie = (
+                self.vendas.df
+                .groupby(COLUNAS.emissao)
+                .agg({COLUNAS.receita: 'sum', COLUNAS.id_documento: 'nunique'})
+                .reset_index()
+            )
+            df_serie['ticket_medio'] = df_serie[COLUNAS.receita] / df_serie[COLUNAS.id_documento]
+            col_valor = 'ticket_medio'
+        else:
+            col_metrica = metrica.value
+            df_serie = (
+                self.vendas.df
+                .groupby(COLUNAS.emissao)[col_metrica]
+                .sum()
+                .reset_index()
+                .sort_values(COLUNAS.emissao)
+            )
+            col_valor = col_metrica
+
+        return [
+            PontoDiarioDTO(
+                data=str(row[COLUNAS.emissao]),
+                valor=round(float(row[col_valor]), 2),
+            )
+            for row in df_serie.to_dict(orient="records")
+        ]
+
+    def serie_por_produto(self, codigo: str, metrica: Metrica) -> list[PontoDiarioDTO]:
+        col_metrica = metrica.value
+
+        df_produto = self.vendas.df[self.vendas.df[COLUNAS.codigo] == codigo]
+        if df_produto.empty:
+            return []
+
+        df_serie = (
+            df_produto
+            .groupby(COLUNAS.emissao)[col_metrica]
+            .sum()
+            .reset_index()
+            .sort_values(COLUNAS.emissao)
+        )
+
+        return [
+            PontoDiarioDTO(
+                data=str(row[COLUNAS.emissao]),
+                valor=round(float(row[col_metrica]), 2),
+            )
+            for row in df_serie.to_dict(orient="records")
+        ]

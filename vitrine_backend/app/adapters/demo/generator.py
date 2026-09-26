@@ -3,7 +3,7 @@
 Núcleo do adapter de demonstração. Recebe uma data e devolve os
 ``TransactionItem`` daquele dia — vendas, trocas, perdas e consumo interno.
 
-Depende só de ``app.core.models``: nada de banco, nada de configuração.
+Depende só de ``vitrine_core.models``: nada de banco, nada de configuração.
 Isso mantém o gerador testável isoladamente e impossível de confundir com
 uma fonte de dados real.
 
@@ -26,7 +26,7 @@ from app.adapters.demo import config, seasonality
 from app.adapters.demo.catalog import CATALOGO, PESOS_POPULARIDADE, SkuDemo
 from app.adapters.demo.pricing import preco_no_dia
 from app.adapters.demo.rng import rng_do_dia
-from app.core.models.transaction import OperationType, TransactionItem
+from vitrine_core.models.transaction import OperationType, TransactionItem
 
 # Grupos com maior perda natural (perecíveis) e maior consumo interno.
 _GRUPOS_PERECIVEIS = ("HORTIFRUTI", "ACOUGUE", "PADARIA", "LATICINIOS")

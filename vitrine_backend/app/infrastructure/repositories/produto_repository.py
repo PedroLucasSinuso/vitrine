@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from app.domain.models.historico_preco import HistoricoPreco
 from app.domain.models.produto import Produto, ProdutoCodigo
 from app.infrastructure.repositories.interfaces import IProdutoRepository
-from app.core.timer import temporizador
+from vitrine_core.timer import temporizador
 import logging
 
 logger = logging.getLogger(__name__)

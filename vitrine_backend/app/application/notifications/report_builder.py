@@ -1,10 +1,10 @@
 from datetime import date, timedelta
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
-from app.core.interfaces.source import TransactionSource
-from app.application.bi.factory import criar_dominio
-from app.application.bi.reporting.relatorio import Relatorio
-from app.application.bi.schema import Metrica
+from vitrine_core.interfaces.source import TransactionSource
+from vitrine_core.bi.factory import criar_dominio
+from vitrine_core.bi.reporting.relatorio import Relatorio
+from vitrine_core.bi.schema import Metrica
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 env = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)))

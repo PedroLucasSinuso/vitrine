@@ -5,18 +5,18 @@ from fastapi.responses import StreamingResponse
 from app.limiter import limiter
 from app.api.deps import get_db, require_supervisor, get_transaction_source, get_produto_repository
 from app.domain.models.usuario import Usuario
-from app.core.interfaces.source import TransactionSource
+from vitrine_core.interfaces.source import TransactionSource
 from sqlalchemy.orm import Session
-from app.application.bi.factory import calcular_kpis_rapido, criar_dominio, criar_dominio_comparativo, obter_comparativo_diario
-from app.application.bi.domain.perdas import Perdas
-from app.application.bi.domain.consumo import Consumo
-from app.application.bi.reporting.relatorio import Relatorio, comparar_kpis
-from app.application.bi.reporting.relatorio_diario import RelatorioDiario
-from app.application.bi.reporting.relatorio_temporal import RelatorioTemporal
-from app.application.bi.reporting.relatorio_sku import RelatorioSku
-from app.application.bi.reporting.relatorio_movimento import RelatorioMovimento
-from app.application.bi.schema import Dimensao, Metrica
-from app.schemas.bi_schema import (
+from vitrine_core.bi.factory import calcular_kpis_rapido, criar_dominio, criar_dominio_comparativo, obter_comparativo_diario
+from vitrine_core.bi.domain.perdas import Perdas
+from vitrine_core.bi.domain.consumo import Consumo
+from vitrine_core.bi.reporting.relatorio import Relatorio, comparar_kpis
+from vitrine_core.bi.reporting.relatorio_diario import RelatorioDiario
+from vitrine_core.bi.reporting.relatorio_temporal import RelatorioTemporal
+from vitrine_core.bi.reporting.relatorio_sku import RelatorioSku
+from vitrine_core.bi.reporting.relatorio_movimento import RelatorioMovimento
+from vitrine_core.bi.schema import Dimensao, Metrica
+from vitrine_core.bi.dto import (
     KpisDTO,
     KpisComparativoDTO,
     ItemDimensaoDTO,
@@ -381,7 +381,7 @@ def exportar_excel(
         )
 
     logger.info("BI Request | exportar/excel relatorio=%s periodo=%s..%s", relatorio, data_inicio, data_fim)
-    from app.core.timer import temporizador
+    from vitrine_core.timer import temporizador
 
     with temporizador(f"BI Export {relatorio}", logger):
         dominio = criar_dominio(source, data_inicio, data_fim)

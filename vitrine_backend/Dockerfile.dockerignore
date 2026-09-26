@@ -1,0 +1,14 @@
+**/.venv/
+**/__pycache__/
+**/*.pyc
+**/*.egg-info/
+**/.pytest_cache/
+.git/
+vitrine_frontend/
+vitrine_backend/data/
+vitrine_backend/logs/
+vitrine_backend/.scheduler.lock
+vitrine_backend/.env
+vitrine_backend/tests/
+vitrine_core/tests/
+docs/

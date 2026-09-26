@@ -1,0 +1,22 @@
+[project]
+name = "vitrine-core"
+version = "0.1.0"
+description = "Contrato de dados e núcleo de BI do Vitrine"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=3.0.2",
+    "pydantic>=2",
+]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["vitrine_core*"]
+
+[dependency-groups]
+dev = ["pytest>=9.0.3"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

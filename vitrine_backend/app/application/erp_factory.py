@@ -14,7 +14,7 @@ outra.
 from sqlalchemy.orm import Session
 
 from app.application.adapter_registry import get_adapter
-from app.core.interfaces.source import ProductSource, TransactionSource
+from vitrine_core.interfaces.source import ProductSource, TransactionSource
 
 ADAPTER_PADRAO = "alterdata"
 

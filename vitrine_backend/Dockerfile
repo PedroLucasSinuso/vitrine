@@ -26,15 +26,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 WORKDIR /app
-COPY pyproject.toml uv.lock ./
+COPY vitrine_core /vitrine_core
+COPY vitrine_backend/pyproject.toml vitrine_backend/uv.lock ./
 RUN uv sync --frozen --no-install-project --no-dev
-COPY . .
+COPY vitrine_backend .
 RUN uv sync --frozen --no-dev
 
 # ── Stage final: só o necessário para rodar ──
 FROM base AS runtime
 WORKDIR /app
 RUN useradd --create-home --uid 1000 vitrine
+COPY --from=builder /vitrine_core /vitrine_core
 COPY --from=builder /app /app
 ENV PATH="/app/.venv/bin:$PATH"
 RUN mkdir -p /app/data && chown -R vitrine:vitrine /app

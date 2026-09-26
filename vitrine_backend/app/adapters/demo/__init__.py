@@ -15,7 +15,7 @@ from typing import Iterator
 from sqlalchemy.orm import Session
 
 from app.application.adapter_registry import AdapterEntry
-from app.core.interfaces.source import ProductSource, TransactionSource
+from vitrine_core.interfaces.source import ProductSource, TransactionSource
 
 
 def _criar_product_source(db: Session, empresa_id: int) -> ProductSource:

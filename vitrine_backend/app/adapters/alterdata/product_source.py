@@ -4,8 +4,8 @@ from decimal import Decimal
 
 from sqlalchemy import text
 
-from app.core.interfaces.source import ProductSource
-from app.core.models.product import Product
+from vitrine_core.interfaces.source import ProductSource
+from vitrine_core.models.product import Product
 
 
 class AlterdataProductSource(ProductSource):

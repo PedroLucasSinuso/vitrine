@@ -24,7 +24,7 @@ echo ""
 # ──────────────────────────────────────────────
 # 1) Backend tests
 # ──────────────────────────────────────────────
-echo -e "${YELLOW}[1/3]${NC} Rodando testes do backend..."
+echo -e "${YELLOW}[1/4]${NC} Rodando testes do backend..."
 cd "$ROOT_DIR/vitrine_backend"
 if uv run pytest -q 2>&1; then
     echo -e "${GREEN}✔ Backend tests: OK${NC}"
@@ -35,13 +35,26 @@ fi
 echo ""
 
 # ──────────────────────────────────────────────
-# 2) Frontend type-check (TypeScript)
+# 2) Core tests
+# ──────────────────────────────────────────────
+echo -e "${YELLOW}[2/4]${NC} Rodando testes do vitrine_core..."
+cd "$ROOT_DIR/vitrine_core"
+if uv run pytest -q 2>&1; then
+    echo -e "${GREEN}✔ Core tests: OK${NC}"
+else
+    echo -e "${RED}✖ Core tests: FALHOU${NC}"
+    FAIL=1
+fi
+echo ""
+
+# ──────────────────────────────────────────────
+# 3) Frontend type-check (TypeScript)
 # ──────────────────────────────────────────────
 # `tsc --noEmit` na raiz nao verifica nada: o tsconfig.json de cima e so
 # um agregador (`"files": []` + references), entao sai 0 sem olhar um
 # arquivo sequer. `tsc -b` percorre os projetos referenciados, que e o
 # que o `npm run build` faz.
-echo -e "${YELLOW}[2/3]${NC} Verificando TypeScript..."
+echo -e "${YELLOW}[3/4]${NC} Verificando TypeScript..."
 cd "$ROOT_DIR/vitrine_frontend"
 if npx tsc -b 2>&1; then
     echo -e "${GREEN}✔ TypeScript: OK${NC}"
@@ -52,9 +65,9 @@ fi
 echo ""
 
 # ──────────────────────────────────────────────
-# 3) Frontend lint
+# 4) Frontend lint
 # ──────────────────────────────────────────────
-echo -e "${YELLOW}[3/3]${NC} Rodando ESLint..."
+echo -e "${YELLOW}[4/4]${NC} Rodando ESLint..."
 cd "$ROOT_DIR/vitrine_frontend"
 if npm run lint 2>&1; then
     echo -e "${GREEN}✔ ESLint: OK${NC}"

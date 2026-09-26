@@ -121,7 +121,7 @@ def require_super_admin(usuario: Usuario = Depends(get_current_user)) -> Usuario
 
 # ── Injeção de dependência — Adapter de ERP ──────────────────────────
 
-from app.core.interfaces.source import ProductSource, TransactionSource
+from vitrine_core.interfaces.source import ProductSource, TransactionSource
 
 
 _ADAPTER_CACHE: dict[str, ProductSource | TransactionSource] = {}

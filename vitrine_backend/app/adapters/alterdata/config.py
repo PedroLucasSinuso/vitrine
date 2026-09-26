@@ -1,4 +1,4 @@
-from app.core.models.transaction import OperationType
+from vitrine_core.models.transaction import OperationType
 
 
 class CodigoOperacao:

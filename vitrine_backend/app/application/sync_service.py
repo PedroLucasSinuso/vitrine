@@ -5,11 +5,11 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
-from app.core.interfaces.source import ProductSource
-from app.core.models.product import Product
+from vitrine_core.interfaces.source import ProductSource
+from vitrine_core.models.product import Product
 from app.domain.models.produto import Produto, ProdutoCodigo
 from app.domain.models.cache_status import CacheStatus
-from app.core.timer import temporizador
+from vitrine_core.timer import temporizador
 from app.core.error_handler import sanitizar_erro
 import logging
 

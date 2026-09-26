@@ -4,8 +4,8 @@ from datetime import date
 
 from app.adapters.demo.catalog import CATALOGO
 from app.adapters.demo.pricing import ativo, custo_no_dia, estoque_no_dia, preco_no_dia
-from app.core.interfaces.source import ProductSource
-from app.core.models.product import Product
+from vitrine_core.interfaces.source import ProductSource
+from vitrine_core.models.product import Product
 
 
 class DemoProductSource(ProductSource):

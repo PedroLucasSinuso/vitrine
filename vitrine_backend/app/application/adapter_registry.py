@@ -27,7 +27,7 @@ from typing import Callable
 
 from sqlalchemy.orm import Session
 
-from app.core.interfaces.source import ProductSource, TransactionSource
+from vitrine_core.interfaces.source import ProductSource, TransactionSource
 
 logger = logging.getLogger(__name__)
 

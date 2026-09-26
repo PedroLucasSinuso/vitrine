@@ -1,0 +1,296 @@
+﻿from collections import Counter
+from datetime import date, datetime, timedelta
+from decimal import Decimal
+import logging
+
+from vitrine_core.interfaces.source import TransactionSource
+from vitrine_core.models.transaction import TransactionItem
+from vitrine_core.bi.domain.vendas import Vendas
+from vitrine_core.bi.domain.trocas import Trocas
+from vitrine_core.bi.schema import Metrica
+from vitrine_core.bi.dto import KpisDTO
+
+logger = logging.getLogger(__name__)
+
+
+def _ajustar_mesmo_dia_semana(data_atual: date, data_alvo: date) -> date:
+    """Desloca data_alvo para o mesmo dia da semana de data_atual.
+    Deslocamento máximo de ±3 dias (padrão indústria varejo)."""
+    diff = (data_atual.weekday() - data_alvo.weekday()) % 7
+    if diff > 3:
+        diff -= 7
+    return data_alvo + timedelta(days=diff)
+
+
+class DominioBI:
+    """Contém os domínios de vendas e trocas para o período informado."""
+    def __init__(self, vendas: Vendas, trocas: Trocas):
+        self.vendas = vendas
+        self.trocas = trocas
+
+
+def _filtrar_hora(items: list[TransactionItem], data_limite: date, hora_atual: int) -> list[TransactionItem]:
+    """Remove itens com hora futura na data_limite (para YoY com dia parcial)."""
+    return [
+        i for i in items
+        if i.date != data_limite
+        or i.time is None
+        or i.time.hour <= hora_atual
+    ]
+
+
+def calcular_kpis_rapido(
+    source: TransactionSource,
+    data_inicio: date,
+    data_fim: date,
+) -> KpisDTO | None:
+    """Calcula KPIs diretamente de agregados SQL, sem carregar linhas.
+
+    Retorna KpisDTO se o adapter suportar consulta agregada,
+    None caso contrário (caller deve fazer full load).
+    """
+    aggregates = source.get_kpi_aggregates(data_inicio, data_fim)
+    if aggregates is None:
+        return None
+
+    return KpisDTO(
+        faturamento_bruto=aggregates["faturamento_bruto"],
+        faturamento_liquido=round(aggregates["faturamento_bruto"] - aggregates["total_trocas"], 2),
+        total_trocas=aggregates["total_trocas"],
+        qtd_tickets=aggregates["qtd_tickets"],
+        ticket_medio=aggregates["ticket_medio"],
+        itens_por_ticket=aggregates["itens_por_ticket"],
+    )
+
+
+def criar_dominio(
+    source: TransactionSource,
+    data_inicio: date,
+    data_fim: date,
+    tipo: str = "completo",
+) -> DominioBI:
+    """Cria o domínio BI carregando os dados via TransactionSource.
+
+    Args:
+        tipo: "completo" para fetch integral, "kpis" para apenas resumo.
+              Quando "kpis", tenta usar get_kpi_aggregates() para carregar
+              apenas agregados SQL em vez de todas as linhas.
+              Se o adapter não suportar agregados, faz full load (fallback).
+    """
+    if tipo == "kpis":
+        aggregates = source.get_kpi_aggregates(data_inicio, data_fim)
+        if aggregates is not None:
+            logger.info("BI domínio (KPI rápido) | periodo=%s..%s agg=%s",
+                        data_inicio, data_fim, aggregates)
+            # Cria dominios com dados vazios — o caller deve usar
+            # calcular_kpis_rapido() ou Relatorio.kpis() que aceitam
+            # items vazios pois o DataFrame vazio é válido.
+            # TODO: refatorar Vendas/Trocas para aceitar agregados
+            # pré-computados e evitar a criação de items/df desnecessária.
+            vendas = Vendas([])
+            trocas = Trocas([])
+            return DominioBI(vendas=vendas, trocas=trocas)
+
+        logger.info("BI criando domínio (KPI, fallback full load) | periodo=%s..%s",
+                    data_inicio, data_fim)
+    else:
+        logger.info("BI criando domínio | periodo=%s..%s", data_inicio, data_fim)
+
+    items = source.get_items(data_inicio, data_fim)
+    vendas = Vendas(items)
+    trocas = Trocas(items)
+    logger.info("BI domínio criado | periodo=%s..%s vendas=%s trocas=%s",
+                data_inicio, data_fim, len(vendas.items), len(trocas.items))
+    return DominioBI(vendas=vendas, trocas=trocas)
+
+
+def _debug_items(items_before: list[TransactionItem], data_limite: date, hora_atual: int, label: str):
+    """Log detalhado para depuração do filtro de hora.
+    Só executa as iterações se o logger estiver em nível DEBUG para evitar
+    percorrer a lista 3× desnecessariamente em produção.
+    """
+    if not logger.isEnabledFor(logging.DEBUG):
+        return
+    filtrados = _filtrar_hora(items_before, data_limite, hora_atual)
+
+    # Contagem por data no período
+    datas = Counter(i.date for i in items_before)
+    soma_total = sum(float(i.line_total) for i in items_before if isinstance(i.line_total, (int, float, Decimal)))
+    soma_filtrada = sum(float(i.line_total) for i in filtrados if isinstance(i.line_total, (int, float, Decimal)))
+
+    logger.debug(
+        "BI debug | %s hora_atual=%s data_limite=%s "
+        "items=%s filtrados=%s "
+        "soma_total=%.2f soma_filtrada=%.2f "
+        "datas=%s",
+        label, hora_atual, data_limite,
+        len(items_before), len(filtrados),
+        soma_total, soma_filtrada,
+        dict(datas),
+    )
+
+    # Detalhe da data limite
+    itens_na_data = [i for i in items_before if i.date == data_limite]
+    com_time = sum(1 for i in itens_na_data if i.time is not None)
+    sem_time = sum(1 for i in itens_na_data if i.time is None)
+    soma_data = sum(float(i.line_total) for i in itens_na_data if isinstance(i.line_total, (int, float, Decimal)))
+    logger.debug(
+        "BI debug | %s data_limite=%s itens_na_data=%s "
+        "com_time=%s sem_time=%s soma_total=%.2f",
+        label, data_limite, len(itens_na_data), com_time, sem_time, soma_data,
+    )
+
+    # Distribuição de horas na data limite
+    if itens_na_data:
+        horas = Counter(i.time.hour for i in itens_na_data if i.time is not None)
+        logger.debug("BI debug | %s horas na data_limite=%s", label, dict(sorted(horas.items())))
+
+
+def criar_dominio_comparativo(
+    source: TransactionSource,
+    data_inicio: date,
+    data_fim: date,
+) -> tuple[DominioBI, DominioBI | None]:
+    dominio_atual = criar_dominio(source, data_inicio, data_fim)
+
+    def _calcular_data_ant(data: date) -> date:
+        try:
+            return _ajustar_mesmo_dia_semana(data, data.replace(year=data.year - 1))
+        except ValueError:
+            logger.warning("BI YoY | data inválida para year-1, usando day=28 | data=%s", data)
+            return _ajustar_mesmo_dia_semana(data, data.replace(year=data.year - 1, day=28))
+
+    data_inicio_ant = _calcular_data_ant(data_inicio)
+    data_fim_ant = _calcular_data_ant(data_fim)
+
+    logger.info(
+        "BI comparativo | periodo_atual=%s..%s periodo_ant=%s..%s data_fim_eh_hoje=%s",
+        data_inicio, data_fim, data_inicio_ant, data_fim_ant,
+        data_fim == date.today(),
+    )
+
+    if data_fim == date.today():
+        hora_atual = datetime.now().hour
+        dominio_anterior = criar_dominio(source, data_inicio_ant, data_fim_ant)
+        logger.info("BI hora filter | hora_atual=%s data_fim_ant=%s", hora_atual, data_fim_ant)
+
+        # Filtra hora futura no ano anterior
+        for nome, dominio_obj in (("vendas", dominio_anterior.vendas), ("trocas", dominio_anterior.trocas)):
+            _debug_items(dominio_obj.items, data_fim_ant, hora_atual, f"ant/{nome}")
+            rows_before = len(dominio_obj.items)
+            dominio_obj.items = _filtrar_hora(dominio_obj.items, data_fim_ant, hora_atual)
+            dominio_obj._df = None  # Invalida cache do DataFrame
+            rows_after = len(dominio_obj.items)
+            logger.info("BI hora filter | nome=%s rows=%s->%s", nome, rows_before, rows_after)
+
+        # Mesmo filtro de hora futura no domínio atual
+        for nome, dominio_obj in (("vendas", dominio_atual.vendas), ("trocas", dominio_atual.trocas)):
+            _debug_items(dominio_obj.items, data_fim, hora_atual, f"atual/{nome}")
+            rows_before = len(dominio_obj.items)
+            dominio_obj.items = _filtrar_hora(dominio_obj.items, data_fim, hora_atual)
+            dominio_obj._df = None
+            rows_after = len(dominio_obj.items)
+            logger.info("BI hora filter (atual) | nome=%s rows=%s->%s", nome, rows_before, rows_after)
+
+        return dominio_atual, dominio_anterior
+
+    try:
+        dominio_anterior = criar_dominio(source, data_inicio_ant, data_fim_ant)
+    except Exception:
+        dominio_anterior = None
+
+    return dominio_atual, dominio_anterior
+
+
+def _calcular_metrica_diaria(
+    items: list[TransactionItem],
+    data: date,
+    metrica: Metrica,
+) -> float:
+    """Calcula o valor de uma métrica agregada para um dia específico.
+
+    Assume que os items já foram filtrados por Vendas (apenas SALE, não cancelados).
+    """
+    items_dia = [i for i in items if i.date == data]
+    if not items_dia:
+        return 0.0
+
+    if metrica == Metrica.RECEITA:
+        return round(sum(float(i.line_total) for i in items_dia), 2)
+    elif metrica == Metrica.QUANTIDADE:
+        return round(sum(float(i.quantity) for i in items_dia), 2)
+    elif metrica == Metrica.QTD_TICKETS:
+        return float(len({i.document_id for i in items_dia}))
+    elif metrica == Metrica.TICKET_MEDIO:
+        total_receita = sum(float(i.line_total) for i in items_dia)
+        qtd_tickets = len({i.document_id for i in items_dia})
+        if qtd_tickets:
+            return round(total_receita / qtd_tickets, 2)
+        return 0.0
+    return 0.0
+
+
+def obter_comparativo_diario(
+    source: TransactionSource,
+    data_inicio: date,
+    data_fim: date,
+    metrica: Metrica = Metrica.RECEITA,
+) -> dict:
+    """Retorna dados de comparação do último dia do período.
+
+    Se data_fim == hoje (parcial), corta a hora atual via _filtrar_hora()
+    tanto no período atual quanto no offset YoY.
+
+    Se data_fim for um dia completo, compara com o mesmo weekday do ano anterior (YoY).
+
+    Returns:
+        dict com chaves: data, valor, valor_offset, offset_data, parcial_ate, rotulo
+    """
+    hoje = date.today()
+    is_partial = data_fim == hoje
+    hora_atual = datetime.now().hour if is_partial else None
+
+    # ── Carrega período atual ──────────────────────────────────────────
+    items_raw = source.get_items(data_inicio, data_fim)
+    vendas_items = Vendas(items_raw).items
+
+    if is_partial:
+        items_filtrados = _filtrar_hora(vendas_items, data_fim, hora_atual)
+        valor = _calcular_metrica_diaria(items_filtrados, data_fim, metrica)
+    else:
+        valor = _calcular_metrica_diaria(vendas_items, data_fim, metrica)
+
+    # ── Determina offset (sempre YoY — mesmo weekday do ano anterior) ──
+    try:
+        offset_data = _ajustar_mesmo_dia_semana(
+            data_fim, data_fim.replace(year=data_fim.year - 1)
+        )
+    except ValueError:
+        offset_data = _ajustar_mesmo_dia_semana(
+            data_fim, data_fim.replace(year=data_fim.year - 1, day=28)
+        )
+    rotulo = "vs ano anterior"
+
+    # ── Carrega período de offset ──────────────────────────────────────
+    try:
+        items_offset_raw = source.get_items(offset_data, offset_data)
+        vendas_offset_items = Vendas(items_offset_raw).items
+
+        if is_partial:
+            items_offset = _filtrar_hora(vendas_offset_items, offset_data, hora_atual)
+        else:
+            items_offset = vendas_offset_items
+
+        valor_offset = _calcular_metrica_diaria(items_offset, offset_data, metrica)
+    except Exception:
+        valor_offset = None
+        offset_data = None  # sinaliza que não foi possível carregar
+
+    return {
+        "data": str(data_fim),
+        "valor": valor,
+        "valor_offset": valor_offset,
+        "offset_data": str(offset_data) if offset_data is not None else None,
+        "parcial_ate": f"{hora_atual:02d}:{datetime.now().minute:02d}" if is_partial else None,
+        "rotulo": rotulo,
+    }

@@ -13,7 +13,8 @@
 services:
   backend:
     build:
-      context: ./vitrine_backend
+      context: .
+      dockerfile: vitrine_backend/Dockerfile
     env_file:
       - ./vitrine_backend/.env
     environment:

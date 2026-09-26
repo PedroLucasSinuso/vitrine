@@ -1,7 +1,7 @@
 ﻿from typing import Optional, List
 from sqlalchemy import select
 from app.domain.models.usuario import Usuario
-from app.core.timer import temporizador
+from vitrine_core.timer import temporizador
 import logging
 
 logger = logging.getLogger(__name__)

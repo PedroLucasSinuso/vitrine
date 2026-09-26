@@ -26,6 +26,7 @@ dependencies = [
     "cryptography>=44.0.0",
     "weasyprint>=68.1",
     "alembic>=1.13",
+    "vitrine-core",
 ]
 
 # Sem um build-system declarado, o uv trata o projeto como "nao empacotado"
@@ -37,6 +38,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["app"]
+
+[tool.uv.sources]
+vitrine-core = { path = "../vitrine_core", editable = true }
 
 [project.scripts]
 create-admin = "app.cli:main"
