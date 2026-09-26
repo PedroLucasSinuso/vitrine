@@ -17,7 +17,7 @@ class HistoricoPreco(Base):
     preco_venda: Mapped[float] = mapped_column(Float, nullable=False)
     markup: Mapped[float] = mapped_column(Float, nullable=False)
     margem: Mapped[float] = mapped_column(Float, nullable=False)
-    data_coleta: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    data_coleta: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     sync_job_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("sync_jobs.id", ondelete="SET NULL"), nullable=True
     )

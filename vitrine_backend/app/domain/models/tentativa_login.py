@@ -18,6 +18,6 @@ class TentativaLogin(Base):
     username: Mapped[str] = mapped_column(String, nullable=False, index=True)
     ip_address: Mapped[str | None] = mapped_column(String, nullable=True)
     attempted_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
     sucesso: Mapped[bool] = mapped_column(Boolean, default=False)

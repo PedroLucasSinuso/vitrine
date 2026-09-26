@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import delete
+from sqlalchemy import delete, insert, select, update
 from sqlalchemy.orm import Session
 
 from vitrine_core.interfaces.source import ProductSource
@@ -15,6 +15,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+_LOTE = 500
+
 
 @dataclass
 class SyncResult:
@@ -26,7 +28,7 @@ class SyncService:
     """Substitui o antigo ETL pipeline.
 
     Usa um ProductSource para obter a lista de produtos do ERP
-    e sincroniza com o SQLite local (delete + insert) — escopado a UMA
+    e sincroniza com o banco local — escopado a UMA
     empresa: cada tenant tem seu próprio ERP, então o sync de uma empresa
     nunca deve tocar os produtos de outra (ver histórico: antes desta
     versão, o DELETE aqui não tinha filtro nenhum e apagava produtos/
@@ -54,31 +56,16 @@ class SyncService:
             products = self.source.get_all_products()
             logger.info("SyncService source retornou %s produtos", len(products))
 
-            # Transação: DELETE + INSERT são atômicos via autobegin.
-            # Se add_all falhar, o rollback em sync_com_erro desfaz o DELETE.
-            # AMBOS os deletes filtram por empresa_id — sem isso, o sync de
-            # uma empresa apaga o catálogo inteiro de todas as outras.
-            with temporizador("SyncService delete antigos", logger):
-                self.db.execute(
-                    delete(ProdutoCodigo).where(ProdutoCodigo.empresa_id == self.empresa_id)
-                )
-                self.db.execute(
-                    delete(Produto).where(Produto.empresa_id == self.empresa_id)
-                )
-
-            produtos_orm = [self._to_orm(p) for p in products]
-
-            with temporizador("SyncService insert", logger):
-                self.db.add_all(produtos_orm)
+            with temporizador("SyncService catalogo", logger):
+                self._aplicar_catalogo(products)
 
             # ── Gravar histórico de preços (dentro da transação atômica — C1)
             with temporizador("SyncService historico_precos", logger):
                 from app.infrastructure.repositories.produto_repository import ProdutoRepository
 
-                # C6: se job_id foi passado externamente, usa direto (evita
-                # query race condition com func.max(SyncJob.id))
+                from app.domain.models.sync_job import SyncJob
+
                 if job_id is None:
-                    from app.domain.models.sync_job import SyncJob
                     ultimo_job = (
                         self.db.query(SyncJob)
                         .filter(SyncJob.empresa_id == self.empresa_id)
@@ -87,7 +74,11 @@ class SyncService:
                     )
                     job_id_resolved = ultimo_job.id if ultimo_job else None
                 else:
-                    job_id_resolved = job_id
+                    job_id_resolved = self.db.scalar(
+                        select(SyncJob.id).where(
+                            SyncJob.job_id == job_id, SyncJob.empresa_id == self.empresa_id
+                        )
+                    )
 
                 repo = ProdutoRepository(self.db, empresa_id=self.empresa_id)
                 for p in products:
@@ -107,7 +98,7 @@ class SyncService:
 
             self.db.commit()
 
-            produtos_count = len(produtos_orm)
+            produtos_count = len(products)
             codigos_count = sum(len(p.barcodes) for p in products)
 
             logger.info(
@@ -129,22 +120,52 @@ class SyncService:
         self.db.commit()
         raise RuntimeError("Erro ao sincronizar dados do ERP") from error
 
-    def _to_orm(self, p: Product) -> Produto:
-        return Produto(
-            empresa_id=self.empresa_id,
-            codigo_chamada=p.internal_code,
-            nome=p.name,
-            grupo=p.group,
-            familia=p.family,
-            preco_venda=float(p.sale_price),
-            preco_custo=float(p.cost_price),
-            estoque=p.stock,
-            ativo=p.is_active,
-            codigos=[
-                ProdutoCodigo(empresa_id=self.empresa_id, codigo=b, codigo_chamada=p.internal_code)
-                for b in p.barcodes
-            ],
+    def _aplicar_catalogo(self, products: list[Product]) -> None:
+        existentes = set(self.db.scalars(
+            select(Produto.codigo_chamada).where(Produto.empresa_id == self.empresa_id)
+        ))
+        novos = {p.internal_code for p in products}
+
+        self.db.execute(
+            delete(ProdutoCodigo).where(ProdutoCodigo.empresa_id == self.empresa_id)
         )
+        removidos = sorted(existentes - novos)
+        for inicio in range(0, len(removidos), _LOTE):
+            self.db.execute(
+                delete(Produto).where(
+                    Produto.empresa_id == self.empresa_id,
+                    Produto.codigo_chamada.in_(removidos[inicio:inicio + _LOTE]),
+                )
+            )
+
+        linhas = [self._linha_produto(p) for p in products]
+        atualizar = [linha for linha in linhas if linha["codigo_chamada"] in existentes]
+        inserir = [linha for linha in linhas if linha["codigo_chamada"] not in existentes]
+        if atualizar:
+            self.db.execute(update(Produto), atualizar)
+        if inserir:
+            self.db.execute(insert(Produto), inserir)
+
+        codigos = [
+            {"empresa_id": self.empresa_id, "codigo": b, "codigo_chamada": p.internal_code}
+            for p in products
+            for b in p.barcodes
+        ]
+        if codigos:
+            self.db.execute(insert(ProdutoCodigo), codigos)
+
+    def _linha_produto(self, p: Product) -> dict:
+        return {
+            "empresa_id": self.empresa_id,
+            "codigo_chamada": p.internal_code,
+            "nome": p.name,
+            "grupo": p.group,
+            "familia": p.family,
+            "preco_venda": float(p.sale_price),
+            "preco_custo": float(p.cost_price),
+            "estoque": p.stock,
+            "ativo": p.is_active,
+        }
 
 
 def run_sync_scheduled(empresa_id: int | None = None):
@@ -158,12 +179,12 @@ def run_sync_scheduled(empresa_id: int | None = None):
     sincronização das demais.
     """
     from app.infrastructure.db.bootstrap import init_db
-    from app.infrastructure.db.session import SqliteSession
+    from app.infrastructure.db.session import SessionLocal
     from app.application.erp_factory import run_sync_common
     from app.domain.models.empresa import Empresa
 
     init_db()
-    session = SqliteSession()
+    session = SessionLocal()
     try:
         if empresa_id is not None:
             alvos = [empresa_id]

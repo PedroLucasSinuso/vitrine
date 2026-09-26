@@ -12,6 +12,6 @@ class CacheStatus(Base):
     empresa_id: Mapped[int] = mapped_column(
         ForeignKey("empresas.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    last_updated: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    last_updated: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False, default="sucesso")
     erro: Mapped[str | None] = mapped_column(String, nullable=True)

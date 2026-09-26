@@ -49,6 +49,92 @@ _TABELAS_SIMPLES = [
 ]
 
 
+def _eh_sqlite() -> bool:
+    return op.get_bind().dialect.name == "sqlite"
+
+
+def _recriar_tabelas_com_chave_composta_postgres() -> None:
+    conn = op.get_bind()
+    tabelas = ("historico_precos", "produto_codigos", "configuracoes", "produtos")
+    for tabela in tabelas:
+        if conn.execute(sa.text(f"SELECT EXISTS (SELECT 1 FROM {tabela})")).scalar():
+            raise RuntimeError(
+                f"Tabela {tabela} tem dados: em Postgres esta revisão só roda em banco novo"
+            )
+    for tabela in tabelas:
+        op.drop_table(tabela)
+
+    op.create_table(
+        "produtos",
+        sa.Column("empresa_id", sa.Integer(), nullable=False),
+        sa.Column("codigo_chamada", sa.String(), nullable=False),
+        sa.Column("nome", sa.String(), nullable=False),
+        sa.Column("grupo", sa.String(), nullable=False),
+        sa.Column("familia", sa.String(), nullable=False),
+        sa.Column("preco_venda", sa.Float(), nullable=False),
+        sa.Column("preco_custo", sa.Float(), nullable=False),
+        sa.Column("estoque", sa.Float(), nullable=False),
+        sa.Column("ativo", sa.Boolean(), nullable=False, server_default=sa.true()),
+        sa.PrimaryKeyConstraint("empresa_id", "codigo_chamada"),
+        sa.ForeignKeyConstraint(["empresa_id"], ["empresas.id"], ondelete="CASCADE"),
+    )
+    op.create_index("ix_produtos_nome", "produtos", ["nome"])
+    op.create_index("ix_produtos_grupo", "produtos", ["grupo"])
+    op.create_index("ix_produtos_familia", "produtos", ["familia"])
+
+    op.create_table(
+        "produto_codigos",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("empresa_id", sa.Integer(), nullable=False),
+        sa.Column("codigo", sa.String(), nullable=False),
+        sa.Column("codigo_chamada", sa.String(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.ForeignKeyConstraint(["empresa_id"], ["empresas.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["empresa_id", "codigo_chamada"],
+            ["produtos.empresa_id", "produtos.codigo_chamada"],
+            ondelete="CASCADE",
+        ),
+    )
+    op.create_index("ix_produto_codigos_codigo", "produto_codigos", ["codigo"])
+    op.create_index("ix_produto_codigos_codigo_chamada", "produto_codigos", ["codigo_chamada"])
+    op.create_index("ix_produto_codigos_empresa_id", "produto_codigos", ["empresa_id"])
+
+    op.create_table(
+        "historico_precos",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("empresa_id", sa.Integer(), nullable=False),
+        sa.Column("codigo_chamada", sa.String(), nullable=False),
+        sa.Column("preco_custo", sa.Float(), nullable=False),
+        sa.Column("preco_venda", sa.Float(), nullable=False),
+        sa.Column("markup", sa.Float(), nullable=False),
+        sa.Column("margem", sa.Float(), nullable=False),
+        sa.Column("data_coleta", sa.DateTime(), nullable=False),
+        sa.Column("sync_job_id", sa.Integer(), nullable=True),
+        sa.PrimaryKeyConstraint("id"),
+        sa.ForeignKeyConstraint(["empresa_id"], ["empresas.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["empresa_id", "codigo_chamada"],
+            ["produtos.empresa_id", "produtos.codigo_chamada"],
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(["sync_job_id"], ["sync_jobs.id"], ondelete="SET NULL"),
+    )
+    op.create_index("ix_historico_precos_codigo_chamada", "historico_precos", ["codigo_chamada"])
+    op.create_index("ix_historico_precos_data_coleta", "historico_precos", ["data_coleta"])
+    op.create_index("ix_historico_precos_empresa_id", "historico_precos", ["empresa_id"])
+
+    op.create_table(
+        "configuracoes",
+        sa.Column("empresa_id", sa.Integer(), nullable=False),
+        sa.Column("chave", sa.String(), nullable=False),
+        sa.Column("valor", sa.String(), nullable=False),
+        sa.Column("atualizado_em", sa.DateTime(), nullable=False),
+        sa.PrimaryKeyConstraint("empresa_id", "chave"),
+        sa.ForeignKeyConstraint(["empresa_id"], ["empresas.id"], ondelete="CASCADE"),
+    )
+
+
 def upgrade() -> None:
     # ── 1. empresas + tenant padrão ─────────────────────────────────────
     op.create_table(
@@ -67,6 +153,8 @@ def upgrade() -> None:
         "INSERT INTO empresas (id, nome, slug, status, criado_em) "
         "VALUES (1, 'Empresa Padrão', 'default', 'ativa', CURRENT_TIMESTAMP)"
     )
+    if not _eh_sqlite():
+        op.execute("SELECT setval(pg_get_serial_sequence('empresas', 'id'), 1)")
 
     # ── 2. usuarios: empresa_id NULLABLE (super_admin não tem tenant) ──
     with op.batch_alter_table("usuarios", schema=None) as batch_op:
@@ -89,6 +177,10 @@ def upgrade() -> None:
             batch_op.create_foreign_key(
                 f"fk_{tabela}_empresa_id_empresas", "empresas", ["empresa_id"], ["id"], ondelete="CASCADE"
             )
+
+    if not _eh_sqlite():
+        _recriar_tabelas_com_chave_composta_postgres()
+        return
 
     # ── 4. produtos / produto_codigos / historico_precos / configuracoes:
     #        recriação manual (constraints originais são anônimas) ──────
@@ -198,6 +290,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    if not _eh_sqlite():
+        raise NotImplementedError("Downgrade desta revisão só existe para SQLite")
     op.execute("PRAGMA foreign_keys=OFF")
 
     op.execute("""

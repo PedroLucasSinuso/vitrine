@@ -37,17 +37,17 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 # Sobrescreve a URL do alembic.ini com a URL real da aplicação.
-config.set_main_option("sqlalchemy.url", settings.sqlite_url)
+config.set_main_option("sqlalchemy.url", settings.url_banco_app)
 
 
 def _is_sqlite() -> bool:
-    return settings.sqlite_url.startswith("sqlite")
+    return settings.url_banco_app.startswith("sqlite")
 
 
 def run_migrations_offline() -> None:
     """Gera SQL sem se conectar ao banco (``alembic upgrade --sql``)."""
     context.configure(
-        url=settings.sqlite_url,
+        url=settings.url_banco_app,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},

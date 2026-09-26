@@ -28,5 +28,5 @@ class Empresa(Base):
     # de SaaS), que fica em cima deste campo.
     status: Mapped[str] = mapped_column(String, nullable=False, default="ativa")
     criado_em: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

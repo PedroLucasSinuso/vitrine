@@ -71,8 +71,8 @@ def init_db():
         # Migração de chaves criptografadas (config_crypto / config_service)
         try:
             from app.application.config_crypto import migrar_chaves_criptografia
-            from app.infrastructure.db.session import SqliteSession
-            session = SqliteSession()
+            from app.infrastructure.db.session import SessionLocal
+            session = SessionLocal()
             try:
                 migrar_chaves_criptografia(session)
             finally:

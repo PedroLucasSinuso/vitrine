@@ -17,5 +17,5 @@ class Configuracao(Base):
     chave: Mapped[str] = mapped_column(String, primary_key=True)
     valor: Mapped[str] = mapped_column(String, nullable=False)
     atualizado_em: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

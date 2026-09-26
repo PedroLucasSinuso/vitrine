@@ -9,7 +9,7 @@ from app.application.notifications.email_client import (
 from app.domain.models.whatsapp_contato import WhatsAppContato
 from app.domain.models.email_contato import EmailContato
 from app.domain.models.empresa import Empresa
-from app.infrastructure.db.session import SqliteSession
+from app.infrastructure.db.session import SessionLocal
 from sqlalchemy import select
 from app.infrastructure.db.bootstrap import init_db
 from app.application.scheduler_manager import dia_para_cron, reagendar_etl, reagendar_relatorio_whatsapp, reagendar_relatorio_email
@@ -40,7 +40,7 @@ def _obter_transaction_source(db: Session, empresa_id: int) -> TransactionSource
 def _enviar_relatorio_whatsapp(empresa_id: int):
     try:
         init_db()
-        with SqliteSession() as session:
+        with SessionLocal() as session:
             nome_loja = get_config(session, empresa_id, "nome_estabelecimento", "Vitrine")
 
             sid = get_config(session, empresa_id, "twilio_account_sid")
@@ -76,7 +76,7 @@ def _enviar_relatorio_whatsapp(empresa_id: int):
 def _enviar_relatorio_email(empresa_id: int):
     try:
         init_db()
-        with SqliteSession() as session:
+        with SessionLocal() as session:
             nome_loja = get_config(session, empresa_id, "nome_estabelecimento", "Vitrine")
 
             smtp_host = get_config(session, empresa_id, "smtp_host")
@@ -127,7 +127,7 @@ def _enviar_relatorio_email(empresa_id: int):
 def ler_config_etl_interval(empresa_id: int) -> int:
     try:
         init_db()
-        with SqliteSession() as session:
+        with SessionLocal() as session:
             val = get_config(session, empresa_id, "etl_interval_minutes", "60")
             return max(10, int(val))
     except (ValueError, TypeError):
@@ -139,7 +139,7 @@ def ler_config_etl_interval(empresa_id: int) -> int:
 def ler_config_schedule_whatsapp(empresa_id: int) -> tuple[str, int, int]:
     try:
         init_db()
-        with SqliteSession() as session:
+        with SessionLocal() as session:
             day_of_week = get_config(session, empresa_id, "report_day", "fri")
             time_str = get_config(session, empresa_id, "report_time", "18:00")
             hour, minute = map(int, time_str.split(":"))
@@ -151,7 +151,7 @@ def ler_config_schedule_whatsapp(empresa_id: int) -> tuple[str, int, int]:
 def ler_config_schedule_email(empresa_id: int) -> tuple[str, int, int]:
     try:
         init_db()
-        with SqliteSession() as session:
+        with SessionLocal() as session:
             day_of_week = get_config(session, empresa_id, "report_email_day", "fri")
             time_str = get_config(session, empresa_id, "report_email_time", "18:00")
             hour, minute = map(int, time_str.split(":"))
@@ -164,7 +164,7 @@ def iniciar_scheduler_notificacoes(scheduler: BackgroundScheduler):
     """Registra os jobs de relatório (WhatsApp/Email) de CADA empresa ativa,
     cada um com o próprio dia/horário configurado (ver scheduler_manager.py).
     """
-    with SqliteSession() as session:
+    with SessionLocal() as session:
         empresas = session.execute(
             select(Empresa).where(Empresa.status == "ativa")
         ).scalars().all()

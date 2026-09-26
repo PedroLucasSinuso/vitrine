@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
-from app.infrastructure.db.session import SqliteSession
+from app.infrastructure.db.session import SessionLocal
 from app.infrastructure.repositories.produto_repository import ProdutoRepository
 from app.infrastructure.repositories.usuario_repository import UsuarioRepository
 from app.domain.models.usuario import Usuario
@@ -14,8 +14,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 
 def get_db():
-    """Retorna uma sessão do banco SQLite."""
-    session = SqliteSession()
+    """Retorna uma sessão do banco da aplicação."""
+    session = SessionLocal()
     try:
         yield session
     finally:

@@ -12,6 +12,7 @@ dependencies = [
     "PyJWT",
     "bcrypt",
     "psycopg2>=2.9.11",
+    "psycopg[binary]>=3.2",
     "pytest>=9.0.3",
     "python-multipart",
     "pandas>=3.0.2",

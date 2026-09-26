@@ -16,9 +16,9 @@ class SessaoInventario(Base):
     status: Mapped[str] = mapped_column(String, nullable=False, default="ativa", index=True)
     codigo_convite: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     criado_em: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
-    encerrado_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    encerrado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class ItemInventario(Base):

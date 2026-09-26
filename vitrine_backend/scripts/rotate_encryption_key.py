@@ -29,7 +29,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from app.application.config_crypto import is_cipher_available, reencriptar_com_chave_atual
-from app.infrastructure.db.session import SqliteSession
+from app.infrastructure.db.session import SessionLocal
 
 
 def main() -> None:
@@ -37,7 +37,7 @@ def main() -> None:
         print("Nenhuma chave ERPS_ENCRYPTION_KEY* configurada — nada a fazer.")
         return
 
-    session = SqliteSession()
+    session = SessionLocal()
     try:
         total = reencriptar_com_chave_atual(session)
     finally:

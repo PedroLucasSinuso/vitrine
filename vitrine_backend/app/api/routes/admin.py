@@ -27,11 +27,11 @@ executor = ThreadPoolExecutor(max_workers=1)
 
 def _run_sync_background(job_id: str, empresa_id: int):
     from app.infrastructure.db.bootstrap import init_db
-    from app.infrastructure.db.session import SqliteSession
+    from app.infrastructure.db.session import SessionLocal
     from app.application.erp_factory import run_sync_common
 
     init_db()
-    session = SqliteSession()
+    session = SessionLocal()
 
     try:
         job = session.query(SyncJob).filter(

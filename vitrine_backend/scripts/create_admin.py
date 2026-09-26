@@ -1,7 +1,7 @@
 ﻿import sys
 from app.core.logging_config import setup_logging
 from app.infrastructure.db.bootstrap import init_db
-from app.infrastructure.db.session import SqliteSession
+from app.infrastructure.db.session import SessionLocal
 from app.domain.models.usuario import Usuario
 from app.application.utils.security import hash_password
 
@@ -10,7 +10,7 @@ setup_logging()
 
 def create_admin(username: str, nome: str, password: str):
     init_db()
-    with SqliteSession() as session:
+    with SessionLocal() as session:
         usuario = Usuario(
             username=username,
             nome_exibicao=nome,

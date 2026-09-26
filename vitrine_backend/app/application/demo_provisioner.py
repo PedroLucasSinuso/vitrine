@@ -179,10 +179,10 @@ def provisionar_demo(senha: str, slug: str = SLUG_DEMO) -> int:
         O ``empresa_id`` criado.
     """
     from app.infrastructure.db.bootstrap import init_db
-    from app.infrastructure.db.session import SqliteSession
+    from app.infrastructure.db.session import SessionLocal
 
     init_db()
-    with SqliteSession() as session:
+    with SessionLocal() as session:
         if _buscar_empresa_demo(session, slug):
             raise DemoError(
                 f"Já existe uma empresa com slug '{slug}'. Use resetar_demo() "
@@ -206,9 +206,9 @@ def provisionar_demo(senha: str, slug: str = SLUG_DEMO) -> int:
 def _popular(empresa_id: int) -> None:
     """Roda o sync e semeia o que não vem do adapter."""
     from app.application.erp_factory import run_sync_common
-    from app.infrastructure.db.session import SqliteSession
+    from app.infrastructure.db.session import SessionLocal
 
-    with SqliteSession() as session:
+    with SessionLocal() as session:
         # As telas de produto, tabela de preços e inventário leem do SQLite,
         # não do adapter — sem este sync elas ficam vazias mesmo com o BI
         # cheio.
@@ -226,10 +226,10 @@ def resetar_demo(slug: str = SLUG_DEMO) -> int:
     chaveados por ele.
     """
     from app.infrastructure.db.bootstrap import init_db
-    from app.infrastructure.db.session import SqliteSession
+    from app.infrastructure.db.session import SessionLocal
 
     init_db()
-    with SqliteSession() as session:
+    with SessionLocal() as session:
         empresa = _buscar_empresa_demo(session, slug)
         if empresa is None:
             raise DemoError(f"Não existe empresa com slug '{slug}'.")

@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     postgres_user: str = ""
     postgres_password: str = ""
 
+    database_url: str = ""
     sqlite_url: str = ""
     default_db: DatabaseType = DatabaseType.SQLITE
 
@@ -68,6 +69,10 @@ class Settings(BaseSettings):
     # Intervalo: limpeza periódica; 0 desliga só essa camada.
     demo_reset_cooldown_minutes: int = 10
     demo_reset_interval_minutes: int = 180
+
+    @property
+    def url_banco_app(self) -> str:
+        return self.database_url or self.sqlite_url
 
     @model_validator(mode="after")
     def validar_jwt_secret(self):

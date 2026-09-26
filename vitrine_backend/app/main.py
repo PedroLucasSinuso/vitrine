@@ -47,9 +47,9 @@ async def lifespan(app: FastAPI):
 
         # Um job de ETL por empresa ativa, cada um com seu próprio
         # intervalo configurado (ver app/application/scheduler_manager.py).
-        from app.infrastructure.db.session import SqliteSession
+        from app.infrastructure.db.session import SessionLocal
         from app.domain.models.empresa import Empresa
-        with SqliteSession() as _session:
+        with SessionLocal() as _session:
             _empresa_ids = [
                 e.id for e in
                 _session.query(Empresa).filter(Empresa.status == "ativa").all()
@@ -68,7 +68,7 @@ async def lifespan(app: FastAPI):
         # cobre a demo que ficou suja e ninguém mais visitou.
         from app.application.demo_guard import agendar_reset_periodico
         from app.application.demo_provisioner import empresa_demo
-        with SqliteSession() as _session:
+        with SessionLocal() as _session:
             _tem_demo = empresa_demo(_session) is not None
         if _tem_demo:
             agendar_reset_periodico(scheduler)

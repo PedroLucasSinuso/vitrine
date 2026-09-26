@@ -2,7 +2,7 @@ import re
 import sys
 from app.core.logging_config import setup_logging
 from app.infrastructure.db.bootstrap import init_db
-from app.infrastructure.db.session import SqliteSession
+from app.infrastructure.db.session import SessionLocal
 from app.domain.models.usuario import Usuario
 from app.domain.models.empresa import Empresa
 from app.application.utils.security import hash_password
@@ -17,7 +17,7 @@ def create_admin(username: str, nome: str, password: str):
     migração multi-tenant). Mantido por compatibilidade — para provisionar
     um cliente novo (empresa própria), use provisionar_empresa()."""
     init_db()
-    with SqliteSession() as session:
+    with SessionLocal() as session:
         usuario = Usuario(
             username=username,
             nome_exibicao=nome,
@@ -50,7 +50,7 @@ def provisionar_empresa(
         sys.exit(1)
 
     init_db()
-    with SqliteSession() as session:
+    with SessionLocal() as session:
         slug_em_uso = session.execute(
             select(Empresa).where(Empresa.slug == slug)
         ).scalar_one_or_none()
