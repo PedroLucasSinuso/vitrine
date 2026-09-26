@@ -1,4 +1,3 @@
-import io
 import random
 from collections import defaultdict
 from datetime import date
@@ -10,18 +9,21 @@ from sqlalchemy.orm import Session
 from app.adapters.demo import moda
 from app.adapters.demo.rng import semente
 from app.application.equipe.metas import salvar_metas
+from app.application.importacao.exemplo import (
+    LINHA_CABECALHO_EXEMPLO,
+    NOMES_DOS_MESES,
+    mapeamento_do_exemplo,
+    nome_do_arquivo,
+    relatorio_por_vendedor,
+)
 from app.application.importacao.extracao import extrair
-from app.application.importacao.mapeamento import ColunaMapeada, Mapeamento
 from app.application.importacao.normalizacao import assinatura_linha
 from app.application.importacao.persistencia import gravar_dataset
 from app.domain.models.importacao import TemplateImportacao
 from vitrine_core.datasets.tipos import Operacao, TipoDataset
 
-LINHA_CABECALHO_EXEMPLO = 5
 COMISSAO_PADRAO = Decimal("2")
 COMISSAO_DESTAQUE = Decimal("2.5")
-NOMES_DOS_MESES = ("janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho",
-                   "agosto", "setembro", "outubro", "novembro", "dezembro")
 
 
 def _liquido_por_vendedor(itens: list[dict]) -> dict[str, Decimal]:
@@ -68,28 +70,7 @@ def _semear_metas(session: Session, empresa_id: int, base: dict[str, Decimal], c
         salvar_metas(session, empresa_id, competencia, itens, None)
 
 
-def mapeamento_do_exemplo() -> Mapeamento:
-    return Mapeamento(
-        tipo=TipoDataset.VENDAS_VENDEDOR_PERIODO,
-        linha_cabecalho=LINHA_CABECALHO_EXEMPLO,
-        colunas=[
-            ColunaMapeada(indice=0, campo="vendedor"),
-            ColunaMapeada(indice=1, campo="atendimentos"),
-            ColunaMapeada(indice=2, campo="pecas"),
-            ColunaMapeada(indice=3, campo="faturamento_bruto"),
-            ColunaMapeada(indice=4, campo="trocas"),
-        ],
-    )
-
-
-def _formatar(valor: Decimal) -> str:
-    inteiro, centavos = f"{valor:.2f}".split(".")
-    return f"{int(inteiro):,}".replace(",", ".") + "," + centavos
-
-
 def relatorio_exemplo(hoje: date | None = None) -> tuple[str, bytes]:
-    from openpyxl import Workbook
-
     hoje = hoje or date.today()
     inicio, fim = moda.meses_da_demo(hoje)[-2]
     itens = moda.itens_do_periodo(inicio, fim, hoje)
@@ -104,31 +85,12 @@ def relatorio_exemplo(hoje: date | None = None) -> tuple[str, bytes]:
             linha["docs"].add(item["documento"])
             linha["pecas"] += item["quantidade"]
             linha["valor"] += item["valor"]
-
-    livro = Workbook()
-    planilha = livro.active
-    planilha.title = "Relatorio"
-    planilha.append(["RELATÓRIO DE VENDAS POR VENDEDOR"])
-    planilha.append(["Loja: VITRINE MODA - SHOPPING CENTRAL"])
-    planilha.append([f"Período: {inicio:%d/%m/%Y} a {fim:%d/%m/%Y}"])
-    planilha.append([])
-    planilha.append([None, "Vendas", None, None, None])
-    planilha.append(["Vendedor", "Qtd Tickets", "Qtd Peças", "Valor (R$)", "Trocas (R$)"])
-    planilha.merge_cells(start_row=5, start_column=2, end_row=5, end_column=4)
-    total = {"docs": 0, "pecas": Decimal(0), "valor": Decimal(0), "trocas": Decimal(0)}
-    for nome in sorted(por_vendedor):
-        v = por_vendedor[nome]
-        planilha.append([nome, len(v["docs"]), int(v["pecas"]), f"R$ {_formatar(v['valor'])}", _formatar(v["trocas"])])
-        total["docs"] += len(v["docs"])
-        total["pecas"] += v["pecas"]
-        total["valor"] += v["valor"]
-        total["trocas"] += v["trocas"]
-    planilha.append(["TOTAL GERAL", total["docs"], int(total["pecas"]), _formatar(total["valor"]), _formatar(total["trocas"])])
-    planilha.append([])
-    planilha.append([f"Emitido em {hoje:%d/%m/%Y} por gerente.loja"])
-    saida = io.BytesIO()
-    livro.save(saida)
-    return f"vendas-por-vendedor-{NOMES_DOS_MESES[inicio.month - 1]}.xlsx", saida.getvalue()
+    linhas = [
+        (nome, len(v["docs"]), v["pecas"], v["valor"], v["trocas"])
+        for nome, v in sorted(por_vendedor.items())
+    ]
+    conteudo = relatorio_por_vendedor("VITRINE MODA - SHOPPING CENTRAL", inicio, fim, hoje, linhas)
+    return nome_do_arquivo(inicio), conteudo
 
 
 def registrar_template_do_exemplo(session: Session) -> None:

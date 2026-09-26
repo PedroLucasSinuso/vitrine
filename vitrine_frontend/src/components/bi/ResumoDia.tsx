@@ -2,20 +2,12 @@ import { CalendarDays, Clock } from 'lucide-react'
 import Card from '../ui/Card'
 import type { PontoDiarioDTO, DiarioComparativoDTO } from '../../types'
 import { formatCurrency, formatDateWithWeekday } from '../../utils/formatters'
+import { baseDeComparacao, variacaoSobreBase } from '../../utils/comparacao'
 
 /* ── Badge de Variação (▲/▼) ── */
 function BadgeVariacao({ atual, comp }: { atual: number; comp: DiarioComparativoDTO | null }) {
-  const antVal = comp?.valor_offset ?? null
   const rotuloBase = comp?.rotulo ?? 'vs período anterior'
-
-  let diff: number | null = null
-  if (antVal !== null) {
-    if (antVal === 0 && atual > 0) {
-      diff = 100
-    } else if (antVal > 0) {
-      diff = ((atual / antVal) - 1) * 100
-    }
-  }
+  const diff = variacaoSobreBase(atual, comp?.valor_offset)
 
   if (diff === null) return <span className="block h-[18px]" />
 
@@ -31,10 +23,10 @@ function BadgeVariacao({ atual, comp }: { atual: number; comp: DiarioComparativo
 
 /* ── Linha "Ano passado: R$ X" ── */
 function LinhaOffset({ comp, fmt }: { comp: DiarioComparativoDTO | null; fmt: (v: number) => string }) {
-  if (comp?.valor_offset == null) return <p className="h-[14px]" />
+  if (baseDeComparacao(comp?.valor_offset) === null) return <p className="h-[14px]" />
   return (
     <p className="text-[11px] text-text-muted leading-tight h-[14px]">
-      Ano passado: <span className="font-medium text-text-secondary">{fmt(comp.valor_offset)}</span>
+      Ano passado: <span className="font-medium text-text-secondary">{fmt(comp!.valor_offset!)}</span>
     </p>
   )
 }

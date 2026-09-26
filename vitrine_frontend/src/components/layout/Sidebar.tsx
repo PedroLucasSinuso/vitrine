@@ -6,7 +6,7 @@ import type { Modulo, Role } from '../../types'
 import { usePerfilEmpresa } from '../../stores/perfilEmpresaContexto'
 import {
   BarChart3, Search, Package, ClipboardList, Users, Settings,
-  Tags, ShieldAlert, HelpCircle, LogOut, ChevronLeft, PanelRightClose, Upload, Target,
+  Tags, ShieldAlert, HelpCircle, LogOut, ChevronLeft, PanelRightClose, Upload, Target, Users2,
 } from 'lucide-react'
 
 interface NavItem {
@@ -27,6 +27,7 @@ const navGroups: NavGroup[] = [
     label: 'Análises',
     items: [
       { label: 'BI',        path: '/bi',             icon: <BarChart3 size={20} />,    roles: ['supervisor', 'admin'], modulo: 'dashboard' },
+      { label: 'Equipe',    path: '/bi/equipe',      icon: <Users2 size={20} />,       roles: ['supervisor', 'admin'], modulo: 'equipe' },
       { label: 'Produtos',  path: '/produtos',       icon: <Package size={20} />,      roles: ['supervisor', 'admin'], modulo: 'produtos' },
       { label: 'Importar',  path: '/importar',       icon: <Upload size={20} />,       roles: ['supervisor', 'admin'], modulo: 'importacao' },
       { label: 'Metas',     path: '/metas',          icon: <Target size={20} />,       roles: ['supervisor', 'admin'], modulo: 'metas' },
@@ -64,7 +65,8 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
   const displayName = getNomeExibicao()
 
   const isActive = (path: string) => {
-    if (path === '/bi') return location.pathname === '/bi' || location.pathname.startsWith('/bi/')
+    if (path === '/bi/equipe') return location.pathname.startsWith('/bi/equipe')
+    if (path === '/bi') return location.pathname === '/bi' || (location.pathname.startsWith('/bi/') && !location.pathname.startsWith('/bi/equipe'))
     if (path === '/admin') return location.pathname === '/admin' || (location.pathname.startsWith('/admin/') && !location.pathname.startsWith('/admin/usuarios') && !location.pathname.startsWith('/admin/configuracoes') && !location.pathname.startsWith('/admin/etiquetas'))
     if (path === '/admin/usuarios') return location.pathname.startsWith('/admin/usuario')
     if (path === '/admin/configuracoes') return location.pathname.startsWith('/admin/configuracoes')

@@ -15,6 +15,7 @@ export const PERFIL_PADRAO: PerfilEmpresa = {
 export interface PerfilEmpresaContexto {
   perfil: PerfilEmpresa
   carregado: boolean
+  pronto?: boolean
   temModulo: (modulo: Modulo) => boolean
   rotulo: (chave: ChaveRotulo) => string
 }

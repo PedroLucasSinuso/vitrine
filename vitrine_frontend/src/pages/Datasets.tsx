@@ -10,6 +10,7 @@ import { excluirDataset, listarDatasets } from '../api/importacao'
 import { useToast } from '../hooks/useToast'
 import type { DatasetResumo } from '../types'
 import { NOMES_TIPO_DATASET, formatarDataCurta } from '../utils/equipe'
+import { atualizarPerfil } from '../utils/navegacao'
 
 export default function Datasets() {
   const navigate = useNavigate()
@@ -33,6 +34,7 @@ export default function Datasets() {
     if (!excluindo) return
     await excluirDataset(excluindo.id)
     toast({ type: 'success', message: 'Dados excluídos' })
+    atualizarPerfil()
     setExcluindo(null)
     carregar()
   }

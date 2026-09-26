@@ -20,6 +20,7 @@ class Segmento(str, Enum):
     SUPERMERCADO = "supermercado"
     MODA = "moda"
     VAREJO = "varejo"
+    EQUIPE = "equipe"
 
 
 class ModoOperacao(str, Enum):

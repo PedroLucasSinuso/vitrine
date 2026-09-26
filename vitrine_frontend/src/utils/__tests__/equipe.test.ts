@@ -62,3 +62,29 @@ describe('intensidade do mapa de calor', () => {
     expect(intensidade(3, 0)).toBe(0)
   })
 })
+
+describe('textos da comparação e da evolução', () => {
+  it('rótulo de mês abreviado', async () => {
+    const { rotuloMes } = await import('../equipe')
+
+    expect(rotuloMes('2026-08')).toBe('ago/26')
+    expect(rotuloMes('2027-01')).toBe('jan/27')
+  })
+
+  it('explica quando a comparação é só de taxas', async () => {
+    const { textoDeComparacao } = await import('../equipe')
+
+    expect(textoDeComparacao({ inicio: '2026-08-01', fim: '2026-08-31' }, false)).toBe('Comparado a 01/08/2026 a 31/08/2026.')
+    expect(textoDeComparacao({ inicio: '2026-08-01', fim: '2026-08-31' }, true)).toContain('só ticket médio e PA')
+    expect(textoDeComparacao(null, false)).toBeNull()
+  })
+
+  it('posição e contagem de pontos com dado', async () => {
+    const { posicaoEmTexto, pontosDaEvolucao } = await import('../equipe')
+
+    expect(posicaoEmTexto(2, 8)).toBe('2º de 8')
+    expect(posicaoEmTexto(null, 8)).toBeNull()
+    expect(pontosDaEvolucao([{ sem_dados: false, ausente: false }, { sem_dados: true, ausente: false }, { sem_dados: false, ausente: true }])).toBe(1)
+    expect(pontosDaEvolucao(null)).toBe(0)
+  })
+})

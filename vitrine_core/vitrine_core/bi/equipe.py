@@ -51,6 +51,7 @@ class IndicadoresVendedor(BaseModel):
     variacao_liquido: float | None = None
     variacao_ticket_medio: float | None = None
     variacao_pa: float | None = None
+    novo: bool = False
     meta: float | None = None
     atingimento: float | None = None
     projecao: float | None = None
@@ -72,13 +73,23 @@ class IndicadoresLoja(BaseModel):
     projecao: float | None = None
 
 
+class ResumoEquipe(BaseModel):
+    vendedores_ativos: int
+    vendedores_ativos_anterior: int | None = None
+    entradas: list[str] = []
+    saidas: list[str] = []
+    concentracao_top3: float | None = None
+
+
 class ResultadoEquipe(BaseModel):
     periodo: Periodo
     periodo_anterior: Periodo | None
+    comparacao_parcial: bool = False
     competencia: str | None = None
     loja: IndicadoresLoja
     vendedores: list[IndicadoresVendedor]
     indisponivel: list[Indisponivel]
+    equipe: ResumoEquipe | None = None
 
 
 @dataclass(frozen=True)
@@ -117,7 +128,23 @@ def aplicar_aliases(linhas: list, aliases: dict[str, str]) -> list:
     return resultado
 
 
+def _ultimo_dia_do_mes(dia: date) -> int:
+    return calendar.monthrange(dia.year, dia.month)[1]
+
+
+def _primeiro_do_mes_anterior(dia: date, meses: int = 1) -> date:
+    indice = dia.year * 12 + dia.month - 1 - meses
+    return date(indice // 12, indice % 12 + 1, 1)
+
+
 def periodo_anterior(inicio: date, fim: date) -> tuple[date, date]:
+    if inicio.day == 1:
+        meses = (fim.year - inicio.year) * 12 + fim.month - inicio.month + 1
+        if fim.day == _ultimo_dia_do_mes(fim):
+            return _primeiro_do_mes_anterior(inicio, meses), inicio - timedelta(days=1)
+        if meses == 1:
+            comeco = _primeiro_do_mes_anterior(inicio)
+            return comeco, comeco.replace(day=min(fim.day, _ultimo_dia_do_mes(comeco)))
     duracao = fim - inicio
     fim_anterior = inicio - timedelta(days=1)
     return fim_anterior - duracao, fim_anterior
@@ -151,6 +178,25 @@ def _consolidar(linhas: list[VendaVendedorPeriodo]) -> dict[str | None, dict]:
         valores["atendimentos"] += linha.atendimentos
         valores["pecas"] += linha.pecas
     return acumulado
+
+
+def _ativos(consolidado: dict[str | None, dict]) -> set[str]:
+    return {nome for nome, v in consolidado.items() if nome is not None and v["bruto"] > 0}
+
+
+def _resumo_da_equipe(atual: dict[str | None, dict], anterior: dict[str | None, dict]) -> ResumoEquipe:
+    ativos = _ativos(atual)
+    ativos_anterior = _ativos(anterior) if anterior else None
+    nomeados = sorted((atual[n]["bruto"] for n in ativos), reverse=True)
+    total = sum(nomeados, ZERO)
+    concentracao = round(float(sum(nomeados[:3], ZERO) / total), 4) if len(nomeados) > 3 and total else None
+    return ResumoEquipe(
+        vendedores_ativos=len(ativos),
+        vendedores_ativos_anterior=len(ativos_anterior) if ativos_anterior is not None else None,
+        entradas=sorted(ativos - ativos_anterior, key=str.upper) if ativos_anterior is not None else [],
+        saidas=sorted(ativos_anterior - ativos, key=str.upper) if ativos_anterior is not None else [],
+        concentracao_top3=concentracao,
+    )
 
 
 def _indicadores_de_meta(liquido: Decimal, meta: Meta | None, fator: Decimal | None) -> dict:
@@ -192,6 +238,8 @@ def calcular_equipe(
     metas: dict[str, Meta] | None = None,
     hoje: date | None = None,
     contatos: list[ContatoVendedor] | None = None,
+    anterior_exato: bool = True,
+    periodo_anterior_efetivo: tuple[date, date] | None = None,
 ) -> ResultadoEquipe:
     contatos_por_vendedor: dict[str, int] = defaultdict(int)
     for contato in contatos or []:
@@ -229,9 +277,10 @@ def calcular_equipe(
             pa=round(float(pa), 2),
             preco_medio_peca=round(float(_razao(v["bruto"], v["pecas"])), 2),
             participacao=round(float(_razao(v["bruto"], bruto_loja)), 4),
-            variacao_liquido=_variacao(v["liquido"], ant["liquido"] if ant else None),
+            variacao_liquido=_variacao(v["liquido"], ant["liquido"] if ant else None) if anterior_exato else None,
             variacao_ticket_medio=_variacao(ticket, _razao(ant["bruto"], ant["atendimentos"]) if ant else None),
             variacao_pa=_variacao(pa, _razao(ant["pecas"], ant["atendimentos"]) if ant else None),
+            novo=bool(anterior) and chave is not None and ant is None,
             **_indicadores_de_meta(v["liquido"], meta, fator),
             **_indicadores_de_contato(v["atendimentos"], contatos_por_vendedor.get(chave.upper()) if chave else None),
         ))
@@ -239,16 +288,19 @@ def calcular_equipe(
 
     periodo_ant = None
     if anteriores:
-        ini_ant, fim_ant = periodo_anterior(inicio, fim)
+        ini_ant, fim_ant = periodo_anterior_efetivo or periodo_anterior(inicio, fim)
         periodo_ant = Periodo(inicio=ini_ant, fim=fim_ant)
 
     meta_loja = sum((m.valor for m in metas.values()), ZERO) if metas else None
     indicadores_meta_loja = _indicadores_de_meta(liquido_loja, Meta(meta_loja) if meta_loja else None, fator)
     indicadores_meta_loja.pop("comissao_estimada")
 
+    resumo = _resumo_da_equipe(atual, anterior)
+
     return ResultadoEquipe(
         periodo=Periodo(inicio=inicio, fim=fim),
         periodo_anterior=periodo_ant,
+        comparacao_parcial=bool(anteriores) and not anterior_exato,
         competencia=competencia,
         loja=IndicadoresLoja(
             faturamento_bruto=round(float(bruto_loja), 2),
@@ -262,6 +314,7 @@ def calcular_equipe(
         ),
         vendedores=vendedores,
         indisponivel=_indisponiveis(tipos_disponiveis),
+        equipe=resumo,
     )
 
 
@@ -318,3 +371,105 @@ def mix_do_vendedor(itens: list[ItemVenda], vendedor: str | None) -> list[ItemMi
         for (grupo, familia), valor in receita.items()
     ]
     return sorted(mix, key=lambda m: -m.receita)
+
+
+class PontoMensal(BaseModel):
+    competencia: str
+    inicio: date
+    fim: date
+    parcial: bool
+    sem_dados: bool
+    ausente: bool
+    faturamento_liquido: float | None = None
+    atendimentos: int | None = None
+    ticket_medio: float | None = None
+    pa: float | None = None
+    taxa_troca: float | None = None
+    vendedores_ativos: int | None = None
+
+
+def meses_ate(fim: date, quantidade: int) -> list[tuple[date, date, bool]]:
+    meses = []
+    for atras in range(quantidade - 1, -1, -1):
+        inicio = _primeiro_do_mes_anterior(fim.replace(day=1), atras) if atras else fim.replace(day=1)
+        ultimo = inicio.replace(day=_ultimo_dia_do_mes(inicio))
+        parcial = atras == 0 and fim < ultimo
+        meses.append((inicio, fim if atras == 0 and parcial else ultimo, parcial))
+    return meses
+
+
+def _ponto_mensal(inicio: date, fim: date, parcial: bool, linhas: list[VendaVendedorPeriodo], vendedor: str | None, equipe: bool) -> PontoMensal:
+    base = dict(competencia=f"{inicio.year:04d}-{inicio.month:02d}", inicio=inicio, fim=fim, parcial=parcial)
+    if not linhas:
+        return PontoMensal(**base, sem_dados=True, ausente=False)
+    consolidado = _consolidar(linhas)
+    if equipe:
+        escolhidos = list(consolidado.values())
+    else:
+        alvo = _chave(vendedor)
+        escolhido = next((v for n, v in consolidado.items() if (n or "").upper() == (alvo or "").upper() and (n is None) == (alvo is None)), None)
+        if escolhido is None:
+            return PontoMensal(**base, sem_dados=False, ausente=True)
+        escolhidos = [escolhido]
+    bruto = sum((v["bruto"] for v in escolhidos), ZERO)
+    trocas = sum((v["trocas"] for v in escolhidos), ZERO)
+    liquido = sum((v["liquido"] for v in escolhidos), ZERO)
+    atendimentos = sum(v["atendimentos"] for v in escolhidos)
+    pecas = sum((v["pecas"] for v in escolhidos), ZERO)
+    return PontoMensal(
+        **base,
+        sem_dados=False,
+        ausente=False,
+        faturamento_liquido=round(float(liquido), 2),
+        atendimentos=atendimentos,
+        ticket_medio=round(float(_razao(bruto, atendimentos)), 2),
+        pa=round(float(_razao(pecas, atendimentos)), 2),
+        taxa_troca=round(float(_razao(trocas, bruto)), 4),
+        vendedores_ativos=len(_ativos(consolidado)) if equipe else None,
+    )
+
+
+def serie_mensal_da_equipe(meses: list[tuple[date, date, bool, list[VendaVendedorPeriodo]]]) -> list[PontoMensal]:
+    return [_ponto_mensal(i, f, p, linhas, None, equipe=True) for i, f, p, linhas in meses]
+
+
+def serie_mensal_do_vendedor(meses: list[tuple[date, date, bool, list[VendaVendedorPeriodo]]], vendedor: str | None) -> list[PontoMensal]:
+    return [_ponto_mensal(i, f, p, linhas, vendedor, equipe=False) for i, f, p, linhas in meses]
+
+
+class ComparacaoComLoja(BaseModel):
+    ticket_medio: float | None = None
+    pa: float | None = None
+    preco_medio_peca: float | None = None
+    taxa_troca: float | None = None
+
+
+def _relativo(valor: float, referencia: float) -> float | None:
+    return round(valor / referencia - 1, 4) if referencia else None
+
+
+def comparar_com_loja(vendedor: IndicadoresVendedor, loja: IndicadoresLoja) -> ComparacaoComLoja:
+    preco_medio_loja = loja.faturamento_bruto / (loja.pa * loja.atendimentos) if loja.pa and loja.atendimentos else 0.0
+    taxa_troca_loja = loja.trocas / loja.faturamento_bruto if loja.faturamento_bruto else 0.0
+    taxa_troca_vendedor = vendedor.trocas / vendedor.faturamento_bruto if vendedor.faturamento_bruto else 0.0
+    return ComparacaoComLoja(
+        ticket_medio=_relativo(vendedor.ticket_medio, loja.ticket_medio),
+        pa=_relativo(vendedor.pa, loja.pa),
+        preco_medio_peca=_relativo(vendedor.preco_medio_peca, preco_medio_loja),
+        taxa_troca=_relativo(taxa_troca_vendedor, taxa_troca_loja),
+    )
+
+
+class DetalheVendedor(BaseModel):
+    periodo: Periodo
+    periodo_anterior: Periodo | None
+    comparacao_parcial: bool = False
+    indicadores: IndicadoresVendedor
+    loja: IndicadoresLoja
+    comparacao_loja: ComparacaoComLoja
+    posicao: int | None = None
+    total_vendedores: int
+    serie_mensal: list[PontoMensal] | None = None
+    serie_diaria: list[PontoSerieVendedor] | None = None
+    mix: list[ItemMixVendedor] | None = None
+    indisponivel: list[Indisponivel] = []

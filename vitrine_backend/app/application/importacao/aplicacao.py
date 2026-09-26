@@ -81,11 +81,19 @@ def detectar_periodo(grade: Grade, ate_linha: int) -> tuple[date, date] | None:
     return (min(datas), max(datas)) if datas else None
 
 
-def _linha_de_total(totais: list[list[Celula]]) -> list[Celula] | list[list[Celula]] | None:
+PALAVRAS_DE_TOTAL = ("total", "totais", "soma", "geral")
+
+
+def _eh_total(linha: list[Celula]) -> bool:
+    primeiro = _primeiro_texto(linha)
+    return any(p in primeiro for p in PALAVRAS_DE_TOTAL)
+
+
+def _linha_de_total(totais: list[list[Celula]]) -> list[list[Celula]] | None:
     if not totais:
         return None
-    geral = [t for t in totais if "geral" in _primeiro_texto(t)]
-    return [geral[-1]] if geral else totais
+    gerais = [t for t in totais if "sub" not in _primeiro_texto(t)]
+    return [gerais[-1]] if gerais else totais
 
 
 def _validar(registros: list[dict], totais: list[list[Celula]], mapeamento: Mapeamento) -> Validacao:
@@ -132,7 +140,7 @@ def aplicar(grade: Grade, mapeamento: Mapeamento) -> ResultadoAplicacao:
         if _vazia(linha):
             continue
         if _eh_linha_ignorada(linha, mapeamento.ignorar_linhas_com):
-            if "total" in _primeiro_texto(linha):
+            if _eh_total(linha):
                 totais.append(linha)
             continue
 

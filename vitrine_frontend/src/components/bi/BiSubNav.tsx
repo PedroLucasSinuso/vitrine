@@ -38,7 +38,9 @@ export default function BiSubNav() {
     return () => clearTimeout(t)
   }, [])
 
-  const activeIndex = tabs.findIndex((tab) => location.pathname === tab.path)
+  const activeIndex = tabs.findIndex(
+    (tab) => location.pathname === tab.path || (tab.path !== '/bi' && location.pathname.startsWith(`${tab.path}/`)),
+  )
 
   const scrollActiveTab = useCallback(() => {
     const container = scrollRef.current
@@ -63,6 +65,8 @@ export default function BiSubNav() {
       window.removeEventListener('orientationchange', handleResize)
     }
   }, [scrollActiveTab])
+
+  if (tabs.length <= 1) return null
 
   return (
     <div

@@ -1,6 +1,6 @@
 import api from './client'
 import type {
-  AliasVendedor, ItemMixVendedor, ResultadoGrade, MetaVendedor, MetasDaCompetencia, PeriodoBi, PontoSerieVendedor, ResultadoEquipe,
+  AliasVendedor, DetalheVendedor, ItemMixVendedor, PontoMensal, ResultadoGrade, MetaVendedor, MetasDaCompetencia, PeriodoBi, PontoSerieVendedor, ResultadoEquipe,
 } from '../types'
 
 export async function fetchEquipe(periodo: PeriodoBi): Promise<ResultadoEquipe> {
@@ -54,5 +54,15 @@ export async function salvarAliases(aliases: AliasVendedor[]): Promise<AliasVend
 
 export async function fetchGrade(periodo: PeriodoBi, grupo: string, familia: string): Promise<ResultadoGrade> {
   const r = await api.get('/bi/grade', { params: { ...periodo, grupo: grupo || undefined, familia: familia || undefined } })
+  return r.data
+}
+
+export async function fetchDetalheVendedor(periodo: PeriodoBi, nome: string): Promise<DetalheVendedor> {
+  const r = await api.get('/bi/equipe/vendedor', { params: { ...periodo, nome } })
+  return r.data
+}
+
+export async function fetchSerieMensal(dataFim: string, vendedor?: string, meses = 6): Promise<PontoMensal[]> {
+  const r = await api.get('/bi/equipe/serie-mensal', { params: { data_fim: dataFim, meses, vendedor } })
   return r.data
 }

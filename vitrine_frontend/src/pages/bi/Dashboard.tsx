@@ -25,6 +25,7 @@ import type {
   PontoDiarioDTO, PontoHoraDTO, DiarioComparativoDTO,
   PeriodoBi, ItemCurvaAbcDTO,
 } from '../../types'
+import { baseDeComparacao } from '../../utils/comparacao'
 import { variacaoInfo } from './dashboardHelpers'
 
 // Default period: current month
@@ -109,7 +110,7 @@ export default function Dashboard() {
   const getAnterior = useCallback((key: KpiKeys): number | null => {
     if (!temComparativo) return null
     const comp = kpisAtivos as KpisComparativoDTO
-    return comp[key]?.anterior ?? null
+    return baseDeComparacao(comp[key]?.anterior)
   }, [kpisAtivos, temComparativo])
 
   const animFatLiq = useCountUp(getKpi('faturamento_liquido'), 600, !!kpisAtivos)

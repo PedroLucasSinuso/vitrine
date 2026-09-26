@@ -8,9 +8,21 @@ from app.application.equipe.fonte import FonteEquipe
 from app.application.equipe.metas import aliases_da_empresa, metas_para_calculo
 from app.domain.models.empresa import Empresa
 from vitrine_core.bi.equipe import competencia_do_periodo
-from app.application.equipe.servico import IndicadorIndisponivel, grade, mix, resultado_equipe, serie
+from app.application.equipe.servico import (
+    MESES_MAXIMO,
+    MESES_PADRAO,
+    IndicadorIndisponivel,
+    VendedorNaoEncontrado,
+    detalhe_do_vendedor,
+    grade,
+    mix,
+    resultado_equipe,
+    serie,
+    serie_mensal_equipe,
+    serie_mensal_vendedor,
+)
 from app.limiter import limiter
-from vitrine_core.bi.equipe import ItemMixVendedor, PontoSerieVendedor, ResultadoEquipe
+from vitrine_core.bi.equipe import DetalheVendedor, ItemMixVendedor, PontoMensal, PontoSerieVendedor, ResultadoEquipe
 from vitrine_core.bi.grade import ResultadoGrade
 
 router = APIRouter(
@@ -46,6 +58,45 @@ def equipe(
         metas=metas_para_calculo(db, empresa.id, competencia_do_periodo(inicio, fim)),
         aliases=aliases_da_empresa(db, empresa.id),
     )
+
+
+@router.get("/vendedor", response_model=DetalheVendedor)
+@limiter.limit("20/minute")
+def detalhe_vendedor(
+    request: Request,
+    nome: str = Query(..., min_length=1),
+    data_inicio: date = Query(...),
+    data_fim: date = Query(...),
+    fonte: FonteEquipe = Depends(get_fonte_equipe),
+    empresa: Empresa = Depends(get_empresa_do_usuario),
+    db: Session = Depends(get_db),
+):
+    inicio, fim = _periodo(data_inicio, data_fim)
+    try:
+        return detalhe_do_vendedor(
+            fonte, inicio, fim, nome,
+            metas=metas_para_calculo(db, empresa.id, competencia_do_periodo(inicio, fim)),
+            aliases=aliases_da_empresa(db, empresa.id),
+        )
+    except VendedorNaoEncontrado:
+        raise HTTPException(status_code=404, detail="Vendedor não encontrado no período")
+
+
+@router.get("/serie-mensal", response_model=list[PontoMensal])
+@limiter.limit("20/minute")
+def serie_mensal(
+    request: Request,
+    data_fim: date = Query(...),
+    meses: int = Query(MESES_PADRAO, ge=2, le=MESES_MAXIMO),
+    vendedor: str | None = Query(None),
+    fonte: FonteEquipe = Depends(get_fonte_equipe),
+    empresa: Empresa = Depends(get_empresa_do_usuario),
+    db: Session = Depends(get_db),
+):
+    aliases = aliases_da_empresa(db, empresa.id)
+    if vendedor is None:
+        return serie_mensal_equipe(fonte, data_fim, meses, aliases)
+    return serie_mensal_vendedor(fonte, data_fim, meses, vendedor, aliases)
 
 
 @router.get("/serie", response_model=list[PontoSerieVendedor])

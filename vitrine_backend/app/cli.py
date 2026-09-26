@@ -148,14 +148,14 @@ def main():
 def main_provisionar_demo():
     parser = argparse.ArgumentParser(prog="provisionar-demo", description="Cria o tenant de demonstração.")
     parser.add_argument("senha", nargs="?", help="senha dos usuários da demo (padrão: a senha pública da demo)")
-    parser.add_argument("--perfil", choices=["supermercado", "moda"], default="supermercado")
+    parser.add_argument("--perfil", choices=["supermercado", "moda", "equipe"], default="supermercado")
     args = parser.parse_args(sys.argv[1:])
     provisionar_demo_cli(args.senha, args.perfil)
 
 
 def main_resetar_demo():
     parser = argparse.ArgumentParser(prog="resetar-demo", description="Devolve a demonstração ao estado inicial.")
-    parser.add_argument("--perfil", choices=["supermercado", "moda"], default="supermercado")
+    parser.add_argument("--perfil", choices=["supermercado", "moda", "equipe"], default="supermercado")
     args = parser.parse_args(sys.argv[1:])
     resetar_demo_cli(args.perfil)
 

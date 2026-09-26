@@ -66,3 +66,21 @@ describe('sugerirTipo', () => {
     expect(sugerirTipo(cabecalho)).toBe(esperado)
   })
 })
+
+describe('sugerirColunas com o vocabulário de ERPs diferentes', () => {
+  const mapa = (cabecalho: string[]) => Object.fromEntries(sugerirColunas(cabecalho, CAMPOS_VENDEDOR).map((c) => [c.campo, c.indice]))
+
+  it.each([
+    [['Cód', 'Nome do Vendedor', 'Cupons', 'Itens', 'Vlr Venda', 'Vlr Devolução'], { vendedor: 1, atendimentos: 2, pecas: 3, faturamento_bruto: 4, trocas: 5 }],
+    [['Consultor', 'Nº Vendas', 'Qtde Itens', 'Total Vendido', 'Estornos'], { vendedor: 0, atendimentos: 1, pecas: 2, faturamento_bruto: 3, trocas: 4 }],
+    [['Seller', 'Tickets', 'Units', 'Amount', 'Returns'], { vendedor: 0, atendimentos: 1, pecas: 2, faturamento_bruto: 3, trocas: 4 }],
+    [['Vendedor', 'Tickets', 'Peças', 'Faturamento', 'Devoluções'], { vendedor: 0, atendimentos: 1, pecas: 2, faturamento_bruto: 3, trocas: 4 }],
+    [['Vendedor', 'Qtd. Vendas', 'Qtd. Peças', 'Valor Bruto', 'Devolvido'], { vendedor: 0, atendimentos: 1, pecas: 2, faturamento_bruto: 3, trocas: 4 }],
+  ])('%j', (cabecalho, esperado) => {
+    expect(mapa(cabecalho)).toEqual(esperado)
+  })
+
+  it('a coluna de devolução nunca vira faturamento', () => {
+    expect(mapa(['Vendedor', 'Vlr Devolução', 'Vlr Venda']).faturamento_bruto).toBe(2)
+  })
+})

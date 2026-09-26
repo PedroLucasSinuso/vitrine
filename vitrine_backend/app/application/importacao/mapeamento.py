@@ -67,6 +67,8 @@ CAMPOS: dict[TipoDataset, dict[str, Campo]] = {
     },
 }
 
+MARCADORES_DE_LINHA_IGNORADA = ["total", "totais", "subtotal", "soma", "geral"]
+
 TIPOS_POR_PERIODO = {
     TipoDataset.VENDAS_VENDEDOR_PERIODO,
     TipoDataset.VENDAS_PRODUTO_PERIODO,
@@ -94,7 +96,7 @@ class Mapeamento(BaseModel):
     tipo: TipoDataset
     linha_cabecalho: int = Field(ge=0)
     colunas: list[ColunaMapeada]
-    ignorar_linhas_com: list[str] = Field(default_factory=lambda: ["total", "subtotal"])
+    ignorar_linhas_com: list[str] = Field(default_factory=lambda: list(MARCADORES_DE_LINHA_IGNORADA))
     formato_data: Literal["dd/mm/aaaa", "aaaa-mm-dd", "mm/dd/aaaa"] = "dd/mm/aaaa"
     separador_decimal: Literal[",", "."] = ","
     periodo: PeriodoInformado | None = None

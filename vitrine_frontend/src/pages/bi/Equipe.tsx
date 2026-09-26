@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { format, startOfMonth } from 'date-fns'
 import {
   Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
-import { Info, TrendingUp, Users } from 'lucide-react'
+import { Info, TrendingUp, UserMinus, UserPlus, Users } from 'lucide-react'
 import BiPageLayout from '../../components/bi/BiPageLayout'
+import EvolucaoMensal from '../../components/bi/EvolucaoMensal'
+import Button from '../../components/ui/Button'
 import PeriodoForm, { type Preset } from '../../components/bi/PeriodoForm'
 import Card from '../../components/ui/Card'
 import DataTable, { type Column } from '../../components/ui/DataTable'
@@ -15,16 +18,16 @@ import Modal from '../../components/ui/Modal'
 import ProgressBar from '../../components/ui/ProgressBar'
 import SectionHeader from '../../components/ui/SectionHeader'
 import Skeleton from '../../components/ui/Skeleton'
-import { fetchEquipe, fetchMixVendedor, fetchSerieVendedor } from '../../api/equipe'
+import { fetchEquipe, fetchMixVendedor, fetchSerieMensal, fetchSerieVendedor } from '../../api/equipe'
 import { listarDatasets } from '../../api/importacao'
 import { CHART_THEME } from '../../config/chartTheme'
 import { usePerfilEmpresa } from '../../stores/perfilEmpresaContexto'
 import type {
-  IndicadoresVendedor, ItemMixVendedor, PeriodoBi, PontoSerieVendedor, ResultadoEquipe,
+  IndicadoresVendedor, ItemMixVendedor, PeriodoBi, PontoMensal, PontoSerieVendedor, ResultadoEquipe,
 } from '../../types'
 import { formatCurrency } from '../../utils/formatters'
 import {
-  comparadoALoja, direcaoVariacao, formatarDataCurta, formatarDecimal, formatarPercentual, formatarVariacao, periodosImportados, taxaDeTroca,
+  comparadoALoja, direcaoVariacao, pontosDaEvolucao, textoDeComparacao, formatarDataCurta, formatarDecimal, formatarPercentual, formatarVariacao, periodosImportados, taxaDeTroca,
 } from '../../utils/equipe'
 
 const PRESETS: Preset[] = [
@@ -62,6 +65,7 @@ function DetalheVendedor({
   vendedor, periodo, resultado, onClose,
 }: { vendedor: IndicadoresVendedor; periodo: PeriodoBi; resultado: ResultadoEquipe; onClose: () => void }) {
   const { rotulo } = usePerfilEmpresa()
+  const navigate = useNavigate()
   const [serie, setSerie] = useState<PontoSerieVendedor[] | null>(null)
   const [mix, setMix] = useState<ItemMixVendedor[] | null>(null)
   const indisponivel: Record<string, string> = Object.fromEntries(resultado.indisponivel.map((i) => [i.indicador, i.motivo]))
@@ -82,7 +86,20 @@ function DetalheVendedor({
   ]
 
   return (
-    <Modal open onClose={onClose} title={vendedor.vendedor} size="lg">
+    <Modal
+      open
+      onClose={onClose}
+      title={vendedor.vendedor}
+      size="lg"
+      actions={vendedor.sem_vendedor ? undefined : (
+        <Button
+          variant="outline"
+          onClick={() => navigate(`/bi/equipe/vendedor?${new URLSearchParams({ nome: vendedor.vendedor, inicio: periodo.data_inicio, fim: periodo.data_fim })}`)}
+        >
+          Ver análise completa
+        </Button>
+      )}
+    >
       <div className="flex flex-col gap-5">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {comparacoes.map((c) => (
@@ -155,6 +172,7 @@ export default function Equipe() {
   const [erro, setErro] = useState<string | null>(null)
   const [selecionado, setSelecionado] = useState<IndicadoresVendedor | null>(null)
   const [importados, setImportados] = useState<PeriodoBi[]>([])
+  const [evolucao, setEvolucao] = useState<PontoMensal[] | null>(null)
   const { temModulo } = usePerfilEmpresa()
   const podeImportar = temModulo('importacao')
 
@@ -186,6 +204,14 @@ export default function Equipe() {
     return () => { cancelado = true }
   }, [buscar, podeImportar])
 
+  const fimDaBusca = dados?.periodo.fim
+  useEffect(() => {
+    if (!fimDaBusca) return
+    let cancelado = false
+    fetchSerieMensal(fimDaBusca).then((pontos) => { if (!cancelado) setEvolucao(pontos) }).catch(() => { if (!cancelado) setEvolucao(null) })
+    return () => { cancelado = true }
+  }, [fimDaBusca])
+
   function escolherPeriodo(p: PeriodoBi) {
     setPeriodo(p)
     buscar(p)
@@ -194,14 +220,19 @@ export default function Equipe() {
   const colunasBase: Column<IndicadoresVendedor>[] = [
     {
       key: 'vendedor', label: 'Vendedor', align: 'left', headerAlign: 'left',
-      render: (v) => <span className={v.sem_vendedor ? 'italic text-text-muted' : 'font-medium text-text-primary'}>{v.vendedor}</span>,
+      render: (v) => (
+        <span className={v.sem_vendedor ? 'italic text-text-muted' : 'font-medium text-text-primary'}>
+          {v.vendedor}
+          {v.novo && <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-primary bg-primary-light px-1.5 py-0.5 rounded">novo</span>}
+        </span>
+      ),
     },
     {
       key: 'faturamento_liquido', label: 'Faturamento líquido', align: 'right',
       render: (v) => (
         <div className="flex flex-col items-end">
           <span>{formatCurrency(v.faturamento_liquido)}</span>
-          {dados?.periodo_anterior && <Variacao valor={v.variacao_liquido} />}
+          {v.variacao_liquido !== null && <Variacao valor={v.variacao_liquido} />}
         </div>
       ),
     },
@@ -222,7 +253,7 @@ export default function Equipe() {
   }
   const temMetas = Boolean(dados?.vendedores.some((v) => v.meta !== null))
   const colunas = temMetas
-    ? colunasBase.filter((c) => c.key !== 'preco_medio_peca' && c.key !== 'participacao')
+    ? colunasBase.filter((c) => !['preco_medio_peca', 'participacao', 'trocas'].includes(c.key))
     : colunasBase
   if (temMetas) {
     colunas.push(
@@ -295,6 +326,42 @@ export default function Equipe() {
             <KpiCard label="Ticket médio" value={formatCurrency(dados.loja.ticket_medio)} />
             <KpiCard label="Peças por atendimento" value={formatarDecimal(dados.loja.pa)} />
           </div>
+
+          {textoDeComparacao(dados.periodo_anterior, dados.comparacao_parcial) && (
+            <p className="text-xs text-text-muted flex items-center gap-1">
+              <Info size={12} /> {textoDeComparacao(dados.periodo_anterior, dados.comparacao_parcial)}
+            </p>
+          )}
+
+          {dados.equipe && (
+            <Card variant="bordered">
+              <SectionHeader icon={Users}>A equipe no período</SectionHeader>
+              <div className="flex flex-wrap gap-x-8 gap-y-2 mt-3 text-sm text-text-secondary">
+                <span>
+                  <strong className="text-text-primary">{dados.equipe.vendedores_ativos}</strong> vendedores ativos
+                  {dados.equipe.vendedores_ativos_anterior !== null && ` (${dados.equipe.vendedores_ativos_anterior} no período anterior)`}
+                </span>
+                {dados.equipe.concentracao_top3 !== null && (
+                  <span><strong className="text-text-primary">{formatarPercentual(dados.equipe.concentracao_top3, 0)}</strong> do faturamento nos 3 maiores</span>
+                )}
+                {dados.equipe.entradas.length > 0 && (
+                  <span className="inline-flex items-center gap-1"><UserPlus size={14} className="text-success" /> Entraram: {dados.equipe.entradas.join(', ')}</span>
+                )}
+                {dados.equipe.saidas.length > 0 && (
+                  <span className="inline-flex items-center gap-1"><UserMinus size={14} className="text-danger" /> Não venderam neste período: {dados.equipe.saidas.join(', ')}</span>
+                )}
+              </div>
+            </Card>
+          )}
+
+          {evolucao && pontosDaEvolucao(evolucao) >= 2 && (
+            <Card variant="bordered">
+              <SectionHeader icon={TrendingUp}>Evolução mensal da equipe</SectionHeader>
+              <div className="mt-3">
+                <EvolucaoMensal pontos={evolucao} descricao="Faturamento líquido mensal da equipe" mostrarAtivos />
+              </div>
+            </Card>
+          )}
 
           {dados.loja.meta !== null && dados.loja.atingimento !== null && (
             <Card variant="bordered">

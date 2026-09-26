@@ -10,7 +10,6 @@ import Home from './pages/Home'
 import NotFound from './pages/NotFound'
 import ProtectedRoute from './components/ProtectedRoute'
 import { useAuth } from './hooks/useAuth'
-import { hasRole } from './utils/auth'
 import Usuarios from './pages/Usuarios'
 import Configuracoes from './pages/Configuracoes'
 import Produtos from './pages/Produtos'
@@ -24,6 +23,7 @@ const BiTemporal = React.lazy(() => import('./pages/bi/Temporal'))
 const BiSku = React.lazy(() => import('./pages/bi/Sku'))
 const BiEquipe = React.lazy(() => import('./pages/bi/Equipe'))
 const BiGrade = React.lazy(() => import('./pages/bi/Grade'))
+const BiVendedor = React.lazy(() => import('./pages/bi/Vendedor'))
 const Importar = React.lazy(() => import('./pages/Importar'))
 const Datasets = React.lazy(() => import('./pages/Datasets'))
 const Metas = React.lazy(() => import('./pages/Metas'))
@@ -38,18 +38,18 @@ import AppLayout from './components/layout/AppLayout'
 import Landing from './pages/Landing'
 import RequireModulo from './components/RequireModulo'
 import { PerfilEmpresaProvider } from './stores/perfilEmpresa'
+import { usePerfilEmpresa } from './stores/perfilEmpresaContexto'
+import { paginaInicial } from './utils/navegacao'
 
 /** A raiz é pública: visitante anônimo vê a landing, usuário logado cai
  *  direto na tela inicial do papel dele. */
 function Raiz() {
   const { isAuthenticated, getRole } = useAuth()
+  const { perfil, pronto } = usePerfilEmpresa()
   if (!isAuthenticated()) return <Landing />
+  if (pronto === false) return null
 
-  const role = getRole()
-  if (hasRole(role, ['admin'])) return <Navigate to="/admin" replace />
-  if (hasRole(role, ['supervisor'])) return <Navigate to="/home" replace />
-  if (hasRole(role, ['operador'])) return <Navigate to="/home/operador" replace />
-  return <Navigate to="/busca" replace />
+  return <Navigate to={paginaInicial(getRole(), perfil)} replace />
 }
 
 /** Escuta o evento auth:unauthorized disparado pelo interceptor 401
@@ -98,6 +98,7 @@ function App() {
                 <Route path="/bi/temporal" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="temporal"><BiTemporal /></RequireModulo></ProtectedRoute>} />
                 <Route path="/bi/sku" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="sku"><BiSku /></RequireModulo></ProtectedRoute>} />
                 <Route path="/bi/equipe" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="equipe"><BiEquipe /></RequireModulo></ProtectedRoute>} />
+                <Route path="/bi/equipe/vendedor" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="equipe"><BiVendedor /></RequireModulo></ProtectedRoute>} />
                 <Route path="/bi/grade" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="grade"><BiGrade /></RequireModulo></ProtectedRoute>} />
                 <Route path="/importar" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="importacao"><Importar /></RequireModulo></ProtectedRoute>} />
                 <Route path="/datasets" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="importacao"><Datasets /></RequireModulo></ProtectedRoute>} />

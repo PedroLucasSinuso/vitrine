@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { usePerfilEmpresa } from '../stores/perfilEmpresaContexto'
+import { paginaInicial } from '../utils/navegacao'
 import { useAuth } from '../hooks/useAuth'
 
 /**
@@ -15,13 +17,13 @@ import { useAuth } from '../hooks/useAuth'
 export default function Home() {
   const navigate = useNavigate()
   const { getRole } = useAuth()
+  const { perfil, pronto } = usePerfilEmpresa()
   const role = getRole()
 
   useEffect(() => {
-    if (role === 'admin') navigate('/admin', { replace: true })
-    else if (role === 'supervisor') navigate('/bi', { replace: true })
-    else navigate('/inventario', { replace: true })
-  }, [role, navigate])
+    if (pronto === false) return
+    navigate(paginaInicial(role, perfil), { replace: true })
+  }, [role, perfil, pronto, navigate])
 
   return null
 }

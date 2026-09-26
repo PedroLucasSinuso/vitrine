@@ -3,6 +3,7 @@ import { jwtDecode } from 'jwt-decode'
 import api from '../api/client'
 import { login as apiLogin, entrarNaDemo as apiEntrarNaDemo } from '../api/auth'
 import type { AuthToken } from '../types'
+import type { PerfilDemo } from '../api/demo'
 import { limparCachePerfil } from '../utils/perfilCache'
 import type { JwtPayload, Role } from '../types'
 
@@ -91,7 +92,7 @@ export function useAuth() {
 
   /** Entra na demonstração sem credencial. A sessão resultante é igual à
    *  de qualquer login — mesmo token, mesmas rotas, mesmo logout. */
-  const entrarNaDemo = useCallback(async (perfil?: 'supermercado' | 'moda') => {
+  const entrarNaDemo = useCallback(async (perfil?: PerfilDemo) => {
     limparCachePerfil()
     return guardarTokens(await apiEntrarNaDemo(perfil))
   }, [guardarTokens])

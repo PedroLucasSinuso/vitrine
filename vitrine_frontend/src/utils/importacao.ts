@@ -3,12 +3,12 @@ import type { CampoDataset, Celula, ColunaMapeada, TipoDataset } from '../types'
 export const TIPOS_POR_PERIODO: TipoDataset[] = ['vendas_vendedor_periodo', 'vendas_produto_periodo', 'contatos_vendedor']
 
 const PALAVRAS_CHAVE: Record<string, string[]> = {
-  vendedor: ['vendedor', 'vendedora', 'colaborador', 'atendente', 'consultor'],
-  atendimentos: ['ticket', 'atendimento', 'cupom', 'cupons', 'venda qtd', 'qtd vendas', 'n vendas'],
-  pecas: ['peca', 'pecas', 'itens', 'qtd itens'],
-  faturamento_bruto: ['valor', 'faturamento', 'total vendido', 'venda bruta', 'vendas r'],
+  vendedor: ['vendedor', 'vendedora', 'colaborador', 'atendente', 'consultor', 'seller', 'sales rep', 'representante', 'funcionario'],
+  atendimentos: ['ticket', 'atendimento', 'cupom', 'cupons', 'venda qtd', 'qtd vendas', 'qtde vendas', 'n vendas', 'nr vendas', 'num vendas', 'transacoes', 'orders'],
+  pecas: ['peca', 'pecas', 'itens', 'qtd itens', 'units', 'unidades', 'qty', 'quantity'],
+  faturamento_bruto: ['valor', 'vlr', 'faturamento', 'total vendido', 'venda bruta', 'vendas r', 'amount', 'vendido', 'revenue', 'sales'],
   faturamento_liquido: ['liquido'],
-  trocas: ['troca', 'devolucao'],
+  trocas: ['troca', 'devoluc', 'devolv', 'estorno', 'return', 'refund'],
   data: ['data', 'dia', 'emissao'],
   produto: ['produto', 'descricao', 'item'],
   codigo_produto: ['codigo', 'cod', 'sku', 'referencia'],
@@ -26,6 +26,13 @@ const PALAVRAS_CHAVE: Record<string, string[]> = {
   contatos: ['contato', 'mensagen', 'disparo'],
   respostas: ['resposta'],
   conversoes: ['conversao', 'conversoes', 'vendas geradas'],
+}
+
+const EXCLUIR: Record<string, string[]> = {
+  faturamento_bruto: ['devol', 'troca', 'estorn', 'return', 'refund', 'liquid', 'custo', 'net'],
+  faturamento_liquido: ['bruto', 'gross'],
+  receita: ['devol', 'troca', 'estorn', 'custo'],
+  valor: ['devol', 'troca', 'estorn', 'custo'],
 }
 
 export function normalizar(texto: Celula): string {
@@ -46,7 +53,11 @@ export function sugerirColunas(cabecalho: Celula[], campos: CampoDataset[]): Col
   const sugestao: ColunaMapeada[] = []
   for (const campo of campos) {
     const palavras = PALAVRAS_CHAVE[campo.campo] ?? [normalizar(campo.rotulo)]
-    const indice = cabecalho.findIndex((celula, i) => !usados.has(i) && palavras.some((p) => combina(normalizar(celula), p)))
+    const excluir = EXCLUIR[campo.campo] ?? []
+    const indice = cabecalho.findIndex((celula, i) => {
+      const texto = normalizar(celula)
+      return !usados.has(i) && palavras.some((p) => combina(texto, p)) && !excluir.some((e) => texto.includes(e))
+    })
     if (indice >= 0) {
       usados.add(indice)
       sugestao.push({ indice, campo: campo.campo })

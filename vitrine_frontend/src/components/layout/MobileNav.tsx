@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { ClipboardList, LayoutDashboard, Search, Package, Settings, ShieldAlert, Tags } from 'lucide-react'
+import { ClipboardList, LayoutDashboard, Search, Package, Settings, ShieldAlert, Tags, Users2 } from 'lucide-react'
 import type { Modulo, Role } from '../../types'
 import { usePerfilEmpresa } from '../../stores/perfilEmpresaContexto'
 
@@ -19,6 +19,7 @@ const tabs: MobileTab[] = [
   { label: 'Inventário', path: '/inventario',              icon: <ClipboardList size={20} />,   roles: ['operador', 'supervisor', 'admin'], modulo: 'inventario' },
   // Center — destacado
   { label: 'Resumo',     path: '/bi',                      icon: <LayoutDashboard size={24} />, roles: ['supervisor', 'admin'], modulo: 'dashboard' },
+  { label: 'Equipe',     path: '/bi/equipe',               icon: <Users2 size={20} />,          roles: ['supervisor', 'admin'], modulo: 'equipe' },
   // Right side
   { label: 'Etiquetas',  path: '/etiquetas',               icon: <Tags size={20} />,            roles: ['operador', 'supervisor', 'admin'], modulo: 'etiquetas' },
   { label: 'Admin',      path: '/admin',                   icon: <ShieldAlert size={20} />,     roles: ['admin'] },
@@ -37,7 +38,8 @@ export default function MobileNav() {
   )
 
   const isActive = (path: string) => {
-    if (path === '/bi') return location.pathname.startsWith('/bi')
+    if (path === '/bi/equipe') return location.pathname.startsWith('/bi/equipe')
+    if (path === '/bi') return location.pathname.startsWith('/bi') && !location.pathname.startsWith('/bi/equipe')
     return location.pathname === path
   }
 

@@ -1,4 +1,4 @@
-export type Segmento = 'supermercado' | 'moda' | 'varejo'
+export type Segmento = 'supermercado' | 'moda' | 'varejo' | 'equipe'
 export type ModoOperacao = 'legado' | 'upload' | 'agente'
 
 export type Modulo =

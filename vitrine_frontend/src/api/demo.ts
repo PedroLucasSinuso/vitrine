@@ -1,6 +1,6 @@
 import api from './client'
 
-export type PerfilDemo = 'supermercado' | 'moda'
+export type PerfilDemo = 'supermercado' | 'moda' | 'equipe'
 
 export async function perfisDemo(): Promise<PerfilDemo[]> {
   try {

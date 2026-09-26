@@ -1,6 +1,7 @@
 import { jwtDecode } from 'jwt-decode'
 import api from './client'
 import type { AuthToken, Role } from '../types'
+import type { PerfilDemo } from './demo'
 
 export async function login(username: string, password: string): Promise<AuthToken> {
   const params = new URLSearchParams()
@@ -26,7 +27,7 @@ export async function demoDisponivel(): Promise<boolean> {
 }
 
 /** Entra na demonstração sem credencial (botão "Ver demo" da landing). */
-export async function entrarNaDemo(perfil?: 'supermercado' | 'moda'): Promise<AuthToken> {
+export async function entrarNaDemo(perfil?: PerfilDemo): Promise<AuthToken> {
   const response = await api.post<AuthToken>('/auth/demo', perfil ? { perfil } : undefined)
   return response.data
 }

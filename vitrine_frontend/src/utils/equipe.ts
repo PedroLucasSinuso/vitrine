@@ -60,3 +60,33 @@ export function intensidade(valor: number, maximo: number): number {
   if (maximo <= 0 || valor <= 0) return 0
   return Math.round(12 + (valor / maximo) * 78)
 }
+
+const MESES_ABREVIADOS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+
+export function rotuloMes(competencia: string): string {
+  const [ano, mes] = competencia.split('-')
+  return `${MESES_ABREVIADOS[Number(mes) - 1]}/${ano.slice(2)}`
+}
+
+export function formatarPeriodo(inicio: string, fim: string): string {
+  return `${formatarDataCurta(inicio)} a ${formatarDataCurta(fim)}`
+}
+
+export function textoDeComparacao(
+  anterior: { inicio: string; fim: string } | null | undefined,
+  parcial: boolean | undefined,
+): string | null {
+  if (!anterior) return null
+  const periodo = formatarPeriodo(anterior.inicio, anterior.fim)
+  return parcial
+    ? `Comparado ao mês anterior completo (${periodo}): só ticket médio e PA, porque o total não é comparável.`
+    : `Comparado a ${periodo}.`
+}
+
+export function posicaoEmTexto(posicao: number | null, total: number): string | null {
+  return posicao === null || total === 0 ? null : `${posicao}º de ${total}`
+}
+
+export function pontosDaEvolucao<T extends { sem_dados: boolean; ausente: boolean }>(pontos: T[] | null | undefined): number {
+  return (pontos ?? []).filter((p) => !p.sem_dados && !p.ausente).length
+}

@@ -9,8 +9,8 @@ from app.domain.models.usuario import Usuario
 from app.domain.models.token_blacklist import TokenBlacklist
 from sqlalchemy.orm import Session
 from app.domain.models.empresa import Empresa
-from app.domain.enums import ModoOperacao, RolesEnum, Segmento
-from app.domain.segmentos import modulos_da_empresa
+from app.domain.enums import ModoOperacao, RolesEnum
+from app.application.perfil import modulos_ativos
 from app.application.utils.jwt_handler import decode_access_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
@@ -240,8 +240,8 @@ def get_empresa_do_usuario(
 
 
 def require_modulo(modulo: str):
-    def _verificar(empresa: Empresa = Depends(get_empresa_do_usuario)) -> Empresa:
-        if modulo not in modulos_da_empresa(Segmento(empresa.segmento), ModoOperacao(empresa.modo)):
+    def _verificar(empresa: Empresa = Depends(get_empresa_do_usuario), db: Session = Depends(get_db)) -> Empresa:
+        if modulo not in modulos_ativos(db, empresa):
             raise HTTPException(status_code=404, detail="Recurso não disponível para esta empresa")
         return empresa
 

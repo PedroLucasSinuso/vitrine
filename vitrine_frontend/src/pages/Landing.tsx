@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertCircle, BarChart3, Boxes, ClipboardList, Code2, LineChart, LogIn, Play, Search, Shield, Tags, Shirt } from 'lucide-react'
+import { AlertCircle, BarChart3, Boxes, ClipboardList, Code2, LineChart, LogIn, Play, Search, Shield, Tags, Shirt, Users } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { demoDisponivel } from '../api/auth'
 import { perfisDemo } from '../api/demo'
@@ -71,14 +71,31 @@ export default function Landing() {
   const { entrarNaDemo } = useAuth()
   const [temDemo, setTemDemo] = useState(false)
   const [temDemoModa, setTemDemoModa] = useState(false)
+  const [temDemoEquipe, setTemDemoEquipe] = useState(false)
+  const [entrandoEquipe, setEntrandoEquipe] = useState(false)
   const [entrando, setEntrando] = useState(false)
   const [entrandoModa, setEntrandoModa] = useState(false)
   const [erro, setErro] = useState('')
 
   useEffect(() => {
     demoDisponivel().then(setTemDemo)
-    perfisDemo().then((perfis) => setTemDemoModa(perfis.includes('moda')))
+    perfisDemo().then((perfis) => {
+      setTemDemoModa(perfis.includes('moda'))
+      setTemDemoEquipe(perfis.includes('equipe'))
+    })
   }, [])
+
+  async function abrirDemoEquipe() {
+    setErro('')
+    setEntrandoEquipe(true)
+    try {
+      await entrarNaDemo('equipe')
+      navigate('/bi/equipe', { replace: true })
+    } catch {
+      setErro('Não foi possível abrir a demonstração agora. Tente de novo em instantes.')
+      setEntrandoEquipe(false)
+    }
+  }
 
   async function abrirDemoModa() {
     setErro('')
@@ -157,6 +174,12 @@ export default function Landing() {
                 Ver demonstração
               </Button>
             )}
+            {temDemoEquipe && (
+              <Button size="lg" variant="secondary" onClick={abrirDemoEquipe} loading={entrandoEquipe}>
+                <Users size={16} />
+                Demo: equipe de vendas
+              </Button>
+            )}
             {temDemoModa && (
               <Button size="lg" variant="secondary" onClick={abrirDemoModa} loading={entrandoModa}>
                 <Shirt size={16} />
@@ -168,11 +191,10 @@ export default function Landing() {
             </Button>
           </div>
 
-          {temDemoModa && (
+          {(temDemoEquipe || temDemoModa) && (
             <p className="text-sm text-text-secondary mt-4 max-w-lg">
-              A demo de loja de roupas mostra o outro lado do Vitrine: sem ERP ligado, a loja envia os
-              relatórios que já exporta e acompanha a equipe de vendas — ranking, metas, comissão e o que
-              cada vendedor vende.
+              {temDemoEquipe && 'A demo de equipe mostra o Vitrine sem ERP ligado: o gerente envia os relatórios que já exporta (como tickets por vendedor) e acompanha ranking, metas, comissão, evolução mês a mês e a rotatividade da equipe. '}
+              {temDemoModa && 'A de loja de roupas soma a isso a análise de vendas por item, quando esse dado existe.'}
             </p>
           )}
 

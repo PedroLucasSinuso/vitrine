@@ -6,11 +6,13 @@ import type { ResultadoEquipe } from '../../../types'
 const fetchEquipe = vi.fn()
 const fetchSerieVendedor = vi.fn()
 const fetchMixVendedor = vi.fn()
+const fetchSerieMensal = vi.fn()
 
 vi.mock('../../../api/equipe', () => ({
   fetchEquipe: (...a: unknown[]) => fetchEquipe(...a),
   fetchSerieVendedor: (...a: unknown[]) => fetchSerieVendedor(...a),
   fetchMixVendedor: (...a: unknown[]) => fetchMixVendedor(...a),
+  fetchSerieMensal: (...a: unknown[]) => fetchSerieMensal(...a),
 }))
 
 import Equipe from '../Equipe'
@@ -52,6 +54,7 @@ describe('Equipe', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     fetchEquipe.mockResolvedValue(RESULTADO)
+    fetchSerieMensal.mockResolvedValue([])
   })
 
   it('mostra KPIs da loja, ranking e a nota de atendimentos somados', async () => {

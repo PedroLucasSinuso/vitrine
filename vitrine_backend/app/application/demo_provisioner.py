@@ -49,6 +49,21 @@ CONFIG_DEMO = {
 }
 
 
+SLUG_DEMO_EQUIPE = "demo-equipe"
+USUARIO_DEMO_EQUIPE = "demo.equipe"
+
+USUARIOS_DEMO_EQUIPE = (
+    ("demo.equipe", "Demonstração Equipe (Admin)", "admin"),
+    ("demo.equipe.supervisor", "Demonstração Equipe (Gerente)", "supervisor"),
+)
+
+CONFIG_DEMO_EQUIPE = {
+    "erp_adapter": "demo",
+    "nome_estabelecimento": "Vitrine Equipe",
+    "endereco_cidade": "São Paulo",
+    "endereco_estado": "SP",
+}
+
 SLUG_DEMO_MODA = "demo-moda"
 USUARIO_DEMO_MODA = "demo.moda"
 
@@ -302,6 +317,7 @@ class PerfilDemo:
     usuarios: tuple
     config: dict
     popular: Callable[[int], None]
+    exemplo: Callable[[], tuple[str, bytes]] | None = None
 
 
 def _popular_moda(empresa_id: int) -> None:
@@ -313,6 +329,27 @@ def _popular_moda(empresa_id: int) -> None:
         session.commit()
 
 
+def _popular_equipe(empresa_id: int) -> None:
+    from app.application.demo_equipe import popular_equipe
+    from app.infrastructure.db.session import SessionLocal
+
+    with SessionLocal() as session:
+        popular_equipe(session, empresa_id)
+        session.commit()
+
+
+def _exemplo_equipe() -> tuple[str, bytes]:
+    from app.application.demo_equipe import relatorio_exemplo
+
+    return relatorio_exemplo()
+
+
+def _exemplo_moda() -> tuple[str, bytes]:
+    from app.application.demo_moda import relatorio_exemplo
+
+    return relatorio_exemplo()
+
+
 PERFIS_DEMO: dict[str, PerfilDemo] = {
     "supermercado": PerfilDemo(
         chave="supermercado", slug=SLUG_DEMO, nome="Vitrine Demo", segmento="supermercado", modo="legado",
@@ -321,8 +358,22 @@ PERFIS_DEMO: dict[str, PerfilDemo] = {
     "moda": PerfilDemo(
         chave="moda", slug=SLUG_DEMO_MODA, nome="Vitrine Moda", segmento="moda", modo="upload",
         usuario_entrada=USUARIO_DEMO_MODA, usuarios=USUARIOS_DEMO_MODA, config=CONFIG_DEMO_MODA, popular=_popular_moda,
+        exemplo=_exemplo_moda,
+    ),
+    "equipe": PerfilDemo(
+        chave="equipe", slug=SLUG_DEMO_EQUIPE, nome="Vitrine Equipe", segmento="equipe", modo="upload",
+        usuario_entrada=USUARIO_DEMO_EQUIPE, usuarios=USUARIOS_DEMO_EQUIPE, config=CONFIG_DEMO_EQUIPE,
+        popular=_popular_equipe, exemplo=_exemplo_equipe,
     ),
 }
+
+
+def exemplo_da_empresa(slug: str) -> tuple[str, bytes]:
+    try:
+        perfil = perfil_por_slug(slug)
+    except DemoError:
+        perfil = PERFIS_DEMO["equipe"]
+    return (perfil.exemplo or _exemplo_equipe)()
 
 
 def perfil_por_slug(slug: str) -> PerfilDemo:

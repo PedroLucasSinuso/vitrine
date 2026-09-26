@@ -1,26 +1,32 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, LayoutDashboard, TrendingUp, BarChart3, PieChart, RefreshCw, Percent, Clock, Search as SearchIcon, Command, Package } from 'lucide-react'
+import { Search, LayoutDashboard, TrendingUp, BarChart3, PieChart, RefreshCw, Percent, Clock, Search as SearchIcon, Command, Package, Users2, Upload, Target } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import type { Modulo } from '../../types'
+import { usePerfilEmpresa } from '../../stores/perfilEmpresaContexto'
 
 interface RouteEntry {
   label: string
   path: string
   icon: LucideIcon
   keywords: string
+  modulo?: Modulo
 }
 
 const ROUTES: RouteEntry[] = [
-  { label: 'Dashboard BI', path: '/bi', icon: LayoutDashboard, keywords: 'dashboard bi kpi faturamento vendas' },
-  { label: 'Receita por Dimensão', path: '/bi/receita', icon: TrendingUp, keywords: 'receita grupo familia produto vendas' },
-  { label: 'Ranking de Produtos', path: '/bi/ranking', icon: BarChart3, keywords: 'ranking top produtos mais vendidos' },
-  { label: 'Curva ABC', path: '/bi/curva-abc', icon: PieChart, keywords: 'curva abc classificacao Pareto 80/20' },
-  { label: 'Trocas', path: '/bi/trocas', icon: RefreshCw, keywords: 'trocas devolucao substituicao' },
-  { label: 'Perdas e Consumo', path: '/bi/perdas-consumo', icon: Percent, keywords: 'perdas consumo interno quebra' },
-  { label: 'Temporal', path: '/bi/temporal', icon: Clock, keywords: 'temporal hora dia semana distribuicao' },
-  { label: 'Análise SKU', path: '/bi/sku', icon: SearchIcon, keywords: 'sku codigo produto ean plu detalhe' },
-  { label: 'Tabela de Preços', path: '/produtos', icon: Package, keywords: 'preco tabela preços markup margem custo venda' },
-  { label: 'Busca de Produtos', path: '/busca', icon: Search, keywords: 'busca produto preco estoque codigo' },
+  { label: 'Dashboard BI', path: '/bi', icon: LayoutDashboard, keywords: 'dashboard bi kpi faturamento vendas', modulo: 'dashboard' },
+  { label: 'Receita por Dimensão', path: '/bi/receita', icon: TrendingUp, keywords: 'receita grupo familia produto vendas', modulo: 'receita' },
+  { label: 'Ranking de Produtos', path: '/bi/ranking', icon: BarChart3, keywords: 'ranking top produtos mais vendidos', modulo: 'ranking' },
+  { label: 'Curva ABC', path: '/bi/curva-abc', icon: PieChart, keywords: 'curva abc classificacao Pareto 80/20', modulo: 'curva_abc' },
+  { label: 'Trocas', path: '/bi/trocas', icon: RefreshCw, keywords: 'trocas devolucao substituicao', modulo: 'trocas' },
+  { label: 'Perdas e Consumo', path: '/bi/perdas-consumo', icon: Percent, keywords: 'perdas consumo interno quebra', modulo: 'perdas_consumo' },
+  { label: 'Temporal', path: '/bi/temporal', icon: Clock, keywords: 'temporal hora dia semana distribuicao', modulo: 'temporal' },
+  { label: 'Análise SKU', path: '/bi/sku', icon: SearchIcon, keywords: 'sku codigo produto ean plu detalhe', modulo: 'sku' },
+  { label: 'Tabela de Preços', path: '/produtos', icon: Package, keywords: 'preco tabela preços markup margem custo venda', modulo: 'produtos' },
+  { label: 'Busca de Produtos', path: '/busca', icon: Search, keywords: 'busca produto preco estoque codigo', modulo: 'busca' },
+  { label: 'Equipe de vendas', path: '/bi/equipe', icon: Users2, keywords: 'equipe vendedores ranking produtividade metas', modulo: 'equipe' },
+  { label: 'Importar relatório', path: '/importar', icon: Upload, keywords: 'importar relatorio planilha excel csv pdf', modulo: 'importacao' },
+  { label: 'Metas da equipe', path: '/metas', icon: Target, keywords: 'metas comissao vendedores', modulo: 'metas' },
   { label: 'Admin — Sync ETL', path: '/admin', icon: RefreshCw, keywords: 'sync etl administracao' },
 ]
 
@@ -37,6 +43,7 @@ function wordSubstringMatch(text: string, query: string): boolean {
 
 export default function CmdK() {
   const navigate = useNavigate()
+  const { temModulo } = usePerfilEmpresa()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [selectedIdx, setSelectedIdx] = useState(0)
@@ -88,9 +95,10 @@ export default function CmdK() {
     navigate(path)
   }, [navigate])
 
+  const disponiveis = ROUTES.filter((r) => !r.modulo || temModulo(r.modulo))
   const filtered = query.trim()
-    ? ROUTES.filter((r) => wordSubstringMatch(`${r.label} ${r.keywords}`, query))
-    : ROUTES
+    ? disponiveis.filter((r) => wordSubstringMatch(`${r.label} ${r.keywords}`, query))
+    : disponiveis
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'ArrowDown') {

@@ -12,6 +12,8 @@ import PageContainer from '../components/layout/PageContainer'
 import Card from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
+import { usePerfilEmpresa } from '../stores/perfilEmpresaContexto'
+import type { Modulo } from '../types'
 import ErrorBanner from '../components/ui/ErrorBanner'
 
 
@@ -34,16 +36,18 @@ interface QuickLink {
   path: string
   icon: React.ReactNode
   description: string
+  modulo?: Modulo
 }
 
 const QUICK_LINKS: QuickLink[] = [
   { label: 'Configurações', path: '/admin/configuracoes', icon: <Settings size={18} />, description: 'ERP, WhatsApp, E-mail, IA' },
   { label: 'Usuários', path: '/admin/usuarios', icon: <Users size={18} />, description: 'Gerenciar contas e permissões' },
-  { label: 'Etiquetas', path: '/admin/etiquetas', icon: <Tags size={18} />, description: 'Impressão de etiquetas' },
+  { label: 'Etiquetas', path: '/admin/etiquetas', icon: <Tags size={18} />, description: 'Impressão de etiquetas', modulo: 'etiquetas' },
 ]
 
 export default function Admin() {
   const navigate = useNavigate()
+  const { temModulo } = usePerfilEmpresa()
   const [history, setHistory] = useState<SyncHistory | null>(null)
   const [activeJob, setActiveJob] = useState<SyncJob | null>(null)
   const [loading, setLoading] = useState(false)
@@ -286,7 +290,7 @@ export default function Admin() {
         <Card variant="default" padding="md">
           <h2 className="text-sm font-semibold text-text-primary mb-4">Acesso rápido</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {QUICK_LINKS.map((link) => (
+            {QUICK_LINKS.filter((link) => !link.modulo || temModulo(link.modulo)).map((link) => (
               <button
                 key={link.path}
                 onClick={() => navigate(link.path)}

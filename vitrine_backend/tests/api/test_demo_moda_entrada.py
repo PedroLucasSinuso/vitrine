@@ -70,7 +70,7 @@ def test_bi_do_modo_upload_le_os_itens_importados_e_nao_o_erp(client, db_session
     assert {item["produto"] for item in ranking} <= produtos_de_moda
 
 
-def test_grade_so_para_moda_e_indisponivel_sem_itens(client, db_session, demo_moda):
+def test_grade_so_para_moda_e_inativa_sem_itens(client, db_session, demo_moda):
     from app.application.utils.security import hash_password as _hash
     from app.domain.models.empresa import Empresa as _Empresa
     from app.domain.models.usuario import Usuario as _Usuario
@@ -89,5 +89,5 @@ def test_grade_so_para_moda_e_indisponivel_sem_itens(client, db_session, demo_mo
     from tests.api.conftest import get_token
     token_mercado = get_token(client, "sup.mercado-grade")
 
-    assert sem_itens.status_code == 409
+    assert sem_itens.status_code == 404
     assert client.get("/bi/grade", headers={"Authorization": f"Bearer {token_mercado}"}, params=semestre).status_code == 404

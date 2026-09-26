@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from collections.abc import Callable
 from datetime import date
 
@@ -13,8 +14,19 @@ from vitrine_core.datasets.tipos import ContatoVendedor, ItemVenda, TipoDataset,
 from vitrine_core.interfaces.source import TransactionSource
 
 
+@dataclass(frozen=True)
+class Comparativo:
+    linhas: list[VendaVendedorPeriodo]
+    inicio: date
+    fim: date
+    exato: bool
+
+
 class FonteEquipe(ABC):
     tipos: set[TipoDataset]
+
+    def comparativo(self, inicio: date, fim: date) -> Comparativo:
+        return Comparativo(self.vendedor_periodo(inicio, fim), inicio, fim, True)
 
     @abstractmethod
     def vendedor_periodo(self, inicio: date, fim: date) -> list[VendaVendedorPeriodo]: ...
@@ -112,6 +124,17 @@ class FonteEquipeDatasets(FonteEquipe):
     def atendimentos_loja(self, inicio: date, fim: date) -> int | None:
         itens = self.itens(inicio, fim)
         return atendimentos_da_loja(itens) if itens is not None else None
+
+    def comparativo(self, inicio: date, fim: date) -> Comparativo:
+        exato = self.vendedor_periodo(inicio, fim)
+        if exato:
+            return Comparativo(exato, inicio, fim, True)
+        for dataset in self._datasets:
+            if dataset.tipo == TipoDataset.VENDAS_VENDEDOR_PERIODO.value and dataset.inicio <= inicio and fim <= dataset.fim:
+                from app.application.importacao.persistencia import linhas_do_dataset
+
+                return Comparativo(linhas_do_dataset(self._db, dataset), dataset.inicio, dataset.fim, False)
+        return Comparativo([], inicio, fim, True)
 
     def contatos(self, inicio: date, fim: date) -> list[ContatoVendedor] | None:
         if TipoDataset.CONTATOS_VENDEDOR not in self.tipos:

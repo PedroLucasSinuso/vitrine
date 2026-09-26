@@ -103,10 +103,10 @@ def campos(_: Empresa = Depends(exige_modulo)):
 
 
 @router.get("/importacoes/exemplo")
-def exemplo(_: Empresa = Depends(exige_modulo)):
-    from app.application.demo_moda import relatorio_exemplo
+def exemplo(empresa: Empresa = Depends(exige_modulo)):
+    from app.application.demo_provisioner import exemplo_da_empresa
 
-    nome, conteudo = relatorio_exemplo()
+    nome, conteudo = exemplo_da_empresa(empresa.slug)
     return Response(
         content=conteudo,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

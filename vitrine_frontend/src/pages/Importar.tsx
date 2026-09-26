@@ -11,6 +11,7 @@ import {
 import { useToast } from '../hooks/useToast'
 import type { CampoDataset, Celula, Importacao, ImportacaoResumo, Mapeamento, TipoDataset } from '../types'
 import { NOMES_TIPO_DATASET, formatarDataCurta } from '../utils/equipe'
+import { atualizarPerfil } from '../utils/navegacao'
 import { TIPOS_POR_PERIODO, largura, linhaDeCabecalhoProvavel, sugerirColunas, sugerirTipo } from '../utils/importacao'
 
 const ROTULO_STATUS: Record<string, string> = {
@@ -352,6 +353,7 @@ export default function Importar() {
     try {
       const dataset = await confirmarImportacao(importacao.id)
       toast({ type: 'success', message: `${dataset.linhas} linhas importadas` })
+      atualizarPerfil()
       abrir(await obterImportacao(importacao.id))
       atualizarHistorico()
     } catch (e) {
