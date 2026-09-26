@@ -10,3 +10,11 @@ export type {
   ProdutoTabelaResponse, TabelaProdutosResponse, SortByProduto,
 } from './bi'
 export type { Segmento, ModoOperacao, Modulo, ChaveRotulo, PerfilEmpresa } from './empresa'
+export type {
+  PeriodoEquipe, IndicadoresVendedor, IndicadoresLoja, IndicadorIndisponivel, ResultadoEquipe,
+  PontoSerieVendedor, ItemMixVendedor,
+} from './equipe'
+export type {
+  TipoDataset, StatusImportacao, Celula, ColunaMapeada, Mapeamento, Previa, Importacao,
+  ImportacaoResumo, CampoDataset, DatasetResumo,
+} from './importacao'

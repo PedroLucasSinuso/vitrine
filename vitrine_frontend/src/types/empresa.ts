@@ -4,7 +4,7 @@ export type ModoOperacao = 'legado' | 'upload' | 'agente'
 export type Modulo =
   | 'dashboard' | 'receita' | 'ranking' | 'curva_abc' | 'trocas' | 'perdas_consumo'
   | 'temporal' | 'sku' | 'busca' | 'produtos' | 'inventario' | 'etiquetas'
-  | 'equipe' | 'metas' | 'grade'
+  | 'equipe' | 'metas' | 'grade' | 'importacao'
 
 export type ChaveRotulo = 'grupo' | 'grupos' | 'familia' | 'familias' | 'documento'
 
