@@ -160,6 +160,25 @@ def main_resetar_demo():
     resetar_demo_cli(args.perfil)
 
 
+def main_testar_ia():
+    from app.application.importacao.llm import fabrica
+    from app.application.importacao.llm.erros import IaIndisponivel
+
+    argparse.ArgumentParser(prog="testar-ia", description="Faz uma chamada mínima ao provedor de IA configurado.").parse_args(sys.argv[1:])
+    if not fabrica.configurado():
+        print("IA não configurada. Defina IA_PROVEDOR, IA_MODELO e a chave (ou IA_BASE_URL) no .env.")
+        sys.exit(1)
+    esquema = {"type": "object", "properties": {"ok": {"type": "boolean"}}, "required": ["ok"], "additionalProperties": False}
+    try:
+        provedor = fabrica.criar_provedor()
+        resposta = provedor.gerar_json("Responda somente com o JSON pedido.", 'Responda exatamente {"ok": true}.', esquema)
+    except IaIndisponivel as erro:
+        print(f"Falhou: {erro}")
+        sys.exit(1)
+    print(f"Provedor: {provedor.nome} | modelo: {provedor.modelo}")
+    print(f"Resposta: {resposta.strip()[:200]}")
+
+
 def main_provisionar_empresa():
     parser = argparse.ArgumentParser(
         prog="provisionar-empresa",
@@ -190,6 +209,7 @@ if __name__ == "__main__":
         "provisionar-empresa": main_provisionar_empresa,
         "provisionar-demo": main_provisionar_demo,
         "resetar-demo": main_resetar_demo,
+        "testar-ia": main_testar_ia,
     }
     if len(sys.argv) > 1 and sys.argv[1] in _SUBCOMANDOS:
         comando = _SUBCOMANDOS[sys.argv[1]]

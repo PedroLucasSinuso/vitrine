@@ -72,7 +72,12 @@ class Settings(BaseSettings):
 
     anthropic_api_key: str = ""
     ia_importacao_habilitada: bool = True
-    ia_modelo: str = "claude-opus-5"
+    ia_provedor: str = "anthropic"
+    ia_modelo: str = ""
+    ia_api_key: str = ""
+    ia_base_url: str = ""
+    ia_modo_json: str = "auto"
+    ia_timeout_segundos: int = 90
     ia_cota_mensal: int = 50
 
     demo_reset_cooldown_minutes: int = 10

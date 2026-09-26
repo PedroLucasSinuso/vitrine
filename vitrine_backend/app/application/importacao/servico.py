@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from pydantic import ValidationError
 
 from app.application.importacao import ia
+from app.application.importacao.llm import fabrica
 from app.application.importacao.aplicacao import ResultadoAplicacao, aplicar
 from app.application.importacao.extracao import Grade, extrair
 from app.application.importacao.mapeamento import Mapeamento
@@ -100,7 +101,11 @@ def _problema(resultado: ResultadoAplicacao) -> str | None:
 def _mapear_com_ia(grade: Grade) -> tuple[Mapeamento | None, ResultadoAplicacao | None, ia.SugestaoIa | None]:
     erro, melhor = None, (None, None, None)
     for _ in range(TENTATIVAS_IA):
-        sugestao = ia.sugerir_mapeamento(grade, erro)
+        try:
+            sugestao = ia.sugerir_mapeamento(grade, erro)
+        except ia.RespostaInvalida as falha:
+            erro = str(falha)
+            continue
         try:
             mapeamento = Mapeamento(**sugestao.mapeamento)
         except ValidationError as falha:
@@ -165,10 +170,11 @@ def receber(db: Session, empresa_id: int, usuario_id: int | None, nome: str, con
             if mapeamento is not None:
                 arquivo.mapeamento = mapeamento.model_dump(mode="json")
                 arquivo.status = _status(resultado)
-            arquivo.sugestao_ia = {
+            arquivo.sugestao_ia = {"erro": "A IA não conseguiu sugerir um mapeamento válido."} if mapeamento is None else {
                 "confianca": sugestao.confianca if sugestao else None,
                 "duvidas": sugestao.duvidas if sugestao else [],
-                "modelo": settings.ia_modelo,
+                "modelo": fabrica.modelo_efetivo(),
+                "provedor": settings.ia_provedor,
             }
     db.add(arquivo)
     db.commit()
