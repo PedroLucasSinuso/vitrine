@@ -241,3 +241,9 @@ def require_modulo(modulo: str):
         return empresa
 
     return _verificar
+
+
+def get_fonte_equipe(source: TransactionSource = Depends(get_transaction_source)):
+    from app.application.equipe.fonte import FonteEquipeErp
+
+    return FonteEquipeErp(source)
