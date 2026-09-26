@@ -59,3 +59,6 @@ CLAUDE.md
 CONTEXTO.md
 .claude
 .opencode
+
+# Documentação de desenvolvimento local (specs, planos) — não versionada
+/docs/
