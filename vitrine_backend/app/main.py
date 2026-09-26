@@ -19,6 +19,7 @@ from app.api.routes import whatsapp
 from app.api.routes import email as email_routes
 from app.api.routes import empresa
 from app.api.routes import equipe
+from app.api.routes import importacao
 from app.core.logging_config import setup_logging
 from app.core.config import settings
 from app.application.scheduler import iniciar_scheduler, parar_scheduler
@@ -110,6 +111,7 @@ app.include_router(whatsapp.router)
 app.include_router(email_routes.router)
 app.include_router(empresa.router)
 app.include_router(equipe.router)
+app.include_router(importacao.router)
 
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 os.makedirs(static_dir, exist_ok=True)

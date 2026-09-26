@@ -1,4 +1,6 @@
+import importlib
 import os
+import pkgutil
 
 import pytest
 from sqlalchemy import create_engine, event, text
@@ -6,8 +8,12 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+import app.domain.models as _pacote_models
 from app.domain.models.empresa import Empresa
 from app.infrastructure.db.database import Base
+
+for _modulo in pkgutil.iter_modules(_pacote_models.__path__):
+    importlib.import_module(f"app.domain.models.{_modulo.name}")
 
 
 def _engine_sqlite_com_fk():

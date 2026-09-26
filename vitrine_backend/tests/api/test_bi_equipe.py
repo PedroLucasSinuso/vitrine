@@ -2,7 +2,10 @@ from datetime import date
 
 import pytest
 
+from app.api.deps import get_fonte_equipe
+from app.application.equipe.fonte import FonteEquipeErp
 from app.application.utils.security import hash_password
+from app.main import app
 from app.domain.models.empresa import Empresa
 from app.domain.models.usuario import Usuario
 from tests.api.conftest import get_token
@@ -32,6 +35,7 @@ def cabecalho_moda(client, db_session):
 
 @pytest.fixture
 def com_vendas(transaction_source, criar_item):
+    app.dependency_overrides[get_fonte_equipe] = lambda: FonteEquipeErp(transaction_source)
     transaction_source.items_por_data = {
         SET1: [criar_item("V1", SET1, 10, 100.0, qtd=2), criar_item("V2", SET1, 11, 50.0)],
         SET2: [

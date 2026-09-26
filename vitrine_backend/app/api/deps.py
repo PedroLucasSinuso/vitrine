@@ -243,7 +243,14 @@ def require_modulo(modulo: str):
     return _verificar
 
 
-def get_fonte_equipe(source: TransactionSource = Depends(get_transaction_source)):
-    from app.application.equipe.fonte import FonteEquipeErp
+def get_fonte_equipe(
+    empresa: Empresa = Depends(get_empresa_do_usuario),
+    usuario: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from app.application.equipe.fonte import FonteEquipeDatasets, FonteEquipeErp
 
-    return FonteEquipeErp(source)
+    fonte = FonteEquipeDatasets(db, empresa.id)
+    if empresa.modo == ModoOperacao.UPLOAD.value or fonte.tipos:
+        return fonte
+    return FonteEquipeErp(lambda: get_transaction_source(db, usuario))

@@ -1,11 +1,13 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.domain.models.cache_status import CacheStatus
+from app.domain.models.importacao import ArquivoImportado
 from app.domain.models.sync_job import SyncJob
 from app.domain.models.tentativa_login import TentativaLogin
 from app.domain.models.token_blacklist import TokenBlacklist
@@ -24,6 +26,7 @@ class ResultadoLimpeza:
     tentativas_login: int
     sync_jobs: int
     cache_status: int
+    arquivos_importados: int = 0
 
 
 def limpar_registros_antigos(session: Session, agora: datetime | None = None) -> ResultadoLimpeza:
@@ -47,10 +50,24 @@ def limpar_registros_antigos(session: Session, agora: datetime | None = None) ->
         )
     ).rowcount
 
+    arquivos = _apagar_arquivos_vencidos(session, agora)
+
     session.commit()
-    resultado = ResultadoLimpeza(tokens, tentativas, jobs, cache)
+    resultado = ResultadoLimpeza(tokens, tentativas, jobs, cache, arquivos)
     logger.info("Limpeza de registros antigos | %s", resultado)
     return resultado
+
+
+def _apagar_arquivos_vencidos(session: Session, agora: datetime) -> int:
+    vencidos = session.scalars(
+        select(ArquivoImportado).where(
+            ArquivoImportado.expira_em < agora, ArquivoImportado.caminho.is_not(None)
+        )
+    ).all()
+    for arquivo in vencidos:
+        Path(arquivo.caminho).unlink(missing_ok=True)
+        arquivo.caminho = None
+    return len(vencidos)
 
 
 def _executar_limpeza() -> None:

@@ -23,11 +23,11 @@ PERFIS: dict[Segmento, PerfilSegmento] = {
         rotulos=_rotulos("Grupo", "Grupos", "Família", "Famílias", "Cupom"),
     ),
     Segmento.MODA: PerfilSegmento(
-        modulos=MODULOS_BI_BASE | {"equipe", "metas", "grade"} | MODULOS_CATALOGO,
+        modulos=MODULOS_BI_BASE | {"equipe", "metas", "grade", "importacao"} | MODULOS_CATALOGO,
         rotulos=_rotulos("Departamento", "Departamentos", "Categoria", "Categorias", "Atendimento"),
     ),
     Segmento.VAREJO: PerfilSegmento(
-        modulos=MODULOS_BI_BASE | {"equipe", "metas"} | MODULOS_CATALOGO,
+        modulos=MODULOS_BI_BASE | {"equipe", "metas", "importacao"} | MODULOS_CATALOGO,
         rotulos=_rotulos("Departamento", "Departamentos", "Categoria", "Categorias", "Venda"),
     ),
 }
@@ -36,7 +36,7 @@ PERFIS: dict[Segmento, PerfilSegmento] = {
 def modulos_da_empresa(segmento: Segmento, modo: ModoOperacao) -> frozenset[str]:
     modulos = PERFIS[segmento].modulos
     if modo == ModoOperacao.UPLOAD:
-        return modulos - MODULOS_QUE_EXIGEM_ERP
+        return (modulos - MODULOS_QUE_EXIGEM_ERP) | {"importacao"}
     return modulos
 
 

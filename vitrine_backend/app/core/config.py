@@ -67,6 +67,9 @@ class Settings(BaseSettings):
     # tenant é resetado sozinho (ver app/application/demo_guard.py).
     # Cooldown: janela mínima entre dois resets disparados por entrada.
     # Intervalo: limpeza periódica; 0 desliga só essa camada.
+    importacao_dir: str = "data/importacoes"
+    importacao_retencao_dias: int = 30
+
     demo_reset_cooldown_minutes: int = 10
     demo_reset_interval_minutes: int = 180
 
