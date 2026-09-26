@@ -1,4 +1,5 @@
 import io
+import random
 from collections import defaultdict
 from datetime import date
 from decimal import Decimal
@@ -7,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.adapters.demo import moda
+from app.adapters.demo.rng import semente
 from app.application.equipe.metas import salvar_metas
 from app.application.importacao.extracao import extrair
 from app.application.importacao.mapeamento import ColunaMapeada, Mapeamento
@@ -29,6 +31,23 @@ def _liquido_por_vendedor(itens: list[dict]) -> dict[str, Decimal]:
             sinal = -1 if item["operacao"] == Operacao.TROCA else 1
             liquido[item["vendedor"]] += sinal * item["valor"]
     return liquido
+
+
+def _contatos(itens: list[dict], inicio: date) -> list[dict]:
+    rng = random.Random(semente("moda", "contatos", inicio.isoformat()))
+    atendimentos: dict[str, set] = defaultdict(set)
+    for item in itens:
+        if item["vendedor"] and item["operacao"] == Operacao.VENDA:
+            atendimentos[item["vendedor"]].add(item["documento"])
+    return [
+        {
+            "vendedor": vendedor,
+            "contatos": round(len(documentos) * rng.uniform(1.6, 3.4)),
+            "respostas": round(len(documentos) * rng.uniform(0.6, 1.2)),
+            "conversoes": None,
+        }
+        for vendedor, documentos in sorted(atendimentos.items())
+    ]
 
 
 def _competencia(dia: date) -> str:
@@ -134,6 +153,10 @@ def popular_moda(session: Session, empresa_id: int, hoje: date | None = None) ->
         gravar_dataset(
             session, empresa_id, TipoDataset.ITENS_VENDA, (inicio, fim), itens,
             nome_origem=f"vendas-itens-{NOMES_DOS_MESES[inicio.month - 1]}.xlsx",
+        )
+        gravar_dataset(
+            session, empresa_id, TipoDataset.CONTATOS_VENDEDOR, (inicio, fim), _contatos(itens, inicio),
+            nome_origem=f"contatos-dito-{NOMES_DOS_MESES[inicio.month - 1]}.csv",
         )
         if (inicio, fim) == meses[-2]:
             liquido_mes_passado = _liquido_por_vendedor(itens)

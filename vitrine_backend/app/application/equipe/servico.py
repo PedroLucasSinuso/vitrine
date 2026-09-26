@@ -14,6 +14,7 @@ from vitrine_core.bi.equipe import (
 )
 
 from app.application.equipe.fonte import FonteEquipe
+from vitrine_core.bi.grade import ResultadoGrade, calcular_grade
 
 
 class IndicadorIndisponivel(Exception):
@@ -38,6 +39,7 @@ def resultado_equipe(
         atendimentos_loja=fonte.atendimentos_loja(inicio, fim),
         tipos_disponiveis=fonte.tipos,
         metas=metas,
+        contatos=aplicar_aliases(fonte.contatos(inicio, fim) or [], aliases),
     )
 
 
@@ -57,3 +59,10 @@ def mix(
     if itens is None:
         raise IndicadorIndisponivel("mix_categoria")
     return mix_do_vendedor(aplicar_aliases(itens, aliases or {}), vendedor)
+
+
+def grade(fonte: FonteEquipe, inicio: date, fim: date, grupo: str | None, familia: str | None) -> ResultadoGrade:
+    itens = fonte.itens(inicio, fim)
+    if itens is None:
+        raise IndicadorIndisponivel("mix_categoria")
+    return calcular_grade(itens, grupo, familia)

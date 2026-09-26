@@ -23,6 +23,7 @@ const BiPerdasConsumo = React.lazy(() => import('./pages/bi/PerdasConsumo'))
 const BiTemporal = React.lazy(() => import('./pages/bi/Temporal'))
 const BiSku = React.lazy(() => import('./pages/bi/Sku'))
 const BiEquipe = React.lazy(() => import('./pages/bi/Equipe'))
+const BiGrade = React.lazy(() => import('./pages/bi/Grade'))
 const Importar = React.lazy(() => import('./pages/Importar'))
 const Datasets = React.lazy(() => import('./pages/Datasets'))
 const Metas = React.lazy(() => import('./pages/Metas'))
@@ -97,6 +98,7 @@ function App() {
                 <Route path="/bi/temporal" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="temporal"><BiTemporal /></RequireModulo></ProtectedRoute>} />
                 <Route path="/bi/sku" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="sku"><BiSku /></RequireModulo></ProtectedRoute>} />
                 <Route path="/bi/equipe" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="equipe"><BiEquipe /></RequireModulo></ProtectedRoute>} />
+                <Route path="/bi/grade" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="grade"><BiGrade /></RequireModulo></ProtectedRoute>} />
                 <Route path="/importar" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="importacao"><Importar /></RequireModulo></ProtectedRoute>} />
                 <Route path="/datasets" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="importacao"><Datasets /></RequireModulo></ProtectedRoute>} />
                 <Route path="/metas" element={<ProtectedRoute allowedRoles={['supervisor', 'admin']}><RequireModulo modulo="metas"><Metas /></RequireModulo></ProtectedRoute>} />

@@ -8,9 +8,10 @@ from app.application.equipe.fonte import FonteEquipe
 from app.application.equipe.metas import aliases_da_empresa, metas_para_calculo
 from app.domain.models.empresa import Empresa
 from vitrine_core.bi.equipe import competencia_do_periodo
-from app.application.equipe.servico import IndicadorIndisponivel, mix, resultado_equipe, serie
+from app.application.equipe.servico import IndicadorIndisponivel, grade, mix, resultado_equipe, serie
 from app.limiter import limiter
 from vitrine_core.bi.equipe import ItemMixVendedor, PontoSerieVendedor, ResultadoEquipe
+from vitrine_core.bi.grade import ResultadoGrade
 
 router = APIRouter(
     prefix="/bi/equipe",
@@ -77,5 +78,28 @@ def mix_vendedor(
 ):
     try:
         return mix(fonte, *_periodo(data_inicio, data_fim), vendedor, aliases_da_empresa(db, empresa.id))
+    except IndicadorIndisponivel as erro:
+        raise HTTPException(status_code=409, detail=str(erro))
+
+
+router_grade = APIRouter(
+    prefix="/bi/grade",
+    tags=["BI - Grade"],
+    dependencies=[Depends(require_supervisor), Depends(require_modulo("grade"))],
+)
+
+
+@router_grade.get("", response_model=ResultadoGrade)
+@limiter.limit("20/minute")
+def grade_de_vendas(
+    request: Request,
+    data_inicio: date = Query(...),
+    data_fim: date = Query(...),
+    grupo: str | None = Query(None),
+    familia: str | None = Query(None),
+    fonte: FonteEquipe = Depends(get_fonte_equipe),
+):
+    try:
+        return grade(fonte, *_periodo(data_inicio, data_fim), grupo, familia)
     except IndicadorIndisponivel as erro:
         raise HTTPException(status_code=409, detail=str(erro))

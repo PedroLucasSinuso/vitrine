@@ -9,7 +9,7 @@ from vitrine_core.datasets.agregacao import (
     vendedor_periodo_de_diarias,
 )
 from vitrine_core.datasets.conversao import itens_de_transacoes
-from vitrine_core.datasets.tipos import ItemVenda, TipoDataset, VendaDiaria, VendaVendedorPeriodo
+from vitrine_core.datasets.tipos import ContatoVendedor, ItemVenda, TipoDataset, VendaDiaria, VendaVendedorPeriodo
 from vitrine_core.interfaces.source import TransactionSource
 
 
@@ -26,6 +26,9 @@ class FonteEquipe(ABC):
         return None
 
     def itens(self, inicio: date, fim: date) -> list[ItemVenda] | None:
+        return None
+
+    def contatos(self, inicio: date, fim: date) -> list[ContatoVendedor] | None:
         return None
 
 
@@ -109,3 +112,8 @@ class FonteEquipeDatasets(FonteEquipe):
     def atendimentos_loja(self, inicio: date, fim: date) -> int | None:
         itens = self.itens(inicio, fim)
         return atendimentos_da_loja(itens) if itens is not None else None
+
+    def contatos(self, inicio: date, fim: date) -> list[ContatoVendedor] | None:
+        if TipoDataset.CONTATOS_VENDEDOR not in self.tipos:
+            return None
+        return self._linhas(TipoDataset.CONTATOS_VENDEDOR, inicio, fim, contidos=True)

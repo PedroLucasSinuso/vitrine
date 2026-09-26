@@ -90,3 +90,18 @@ def test_serie_soma_o_mesmo_dia_quando_dois_nomes_viram_um():
     serie = serie_do_vendedor(diarias, "Mariana Souza")
 
     assert [(p.faturamento_bruto, p.atendimentos, p.pa) for p in serie] == [(150.0, 3, 2.0)]
+
+
+def test_conversao_de_contatos_por_vendedor():
+    from vitrine_core.datasets.tipos import ContatoVendedor
+
+    contatos = [
+        ContatoVendedor(inicio=SET_INI, fim=SET_FIM, vendedor="ana", contatos=40),
+        ContatoVendedor(inicio=SET_INI, fim=SET_FIM, vendedor="Ana", contatos=10),
+    ]
+
+    resultado = calcular_equipe([_linha("Ana", "1000"), _linha("Bruno", "500")], SET_INI, SET_FIM, contatos=contatos)
+
+    assert _por_nome(resultado)["Ana"].contatos == 50
+    assert _por_nome(resultado)["Ana"].conversao == 0.2
+    assert _por_nome(resultado)["Bruno"].conversao is None

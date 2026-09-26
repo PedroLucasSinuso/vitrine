@@ -22,6 +22,8 @@ export interface IndicadoresVendedor {
   atingimento: number | null
   projecao: number | null
   comissao_estimada: number | null
+  contatos?: number | null
+  conversao?: number | null
 }
 
 export interface IndicadoresLoja {
@@ -80,4 +82,22 @@ export interface MetasDaCompetencia {
 export interface AliasVendedor {
   nome_origem: string
   vendedor: string
+}
+
+export interface ItemGrade {
+  rotulo: string
+  quantidade: number
+  receita: number
+  participacao: number
+}
+
+export interface ResultadoGrade {
+  por_tamanho: ItemGrade[]
+  por_cor: ItemGrade[]
+  matriz: { tamanho: string; cor: string; quantidade: number }[]
+  tamanhos: string[]
+  cores: string[]
+  grupos: string[]
+  familias: string[]
+  total_pecas: number
 }

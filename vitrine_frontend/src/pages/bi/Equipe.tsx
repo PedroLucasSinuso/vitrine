@@ -212,6 +212,14 @@ export default function Equipe() {
     { key: 'trocas', label: 'Trocas', align: 'right', hide: 'md', render: (v) => formatarPercentual(taxaDeTroca(v)) },
     { key: 'participacao', label: 'Participação', align: 'right', hide: 'sm', render: (v) => formatarPercentual(v.participacao) },
   ]
+  if (dados?.vendedores.some((v) => v.conversao != null)) {
+    colunasBase.push({
+      key: 'conversao', label: 'Conversão', align: 'right', hide: 'md',
+      render: (v) => v.conversao == null ? '—' : (
+        <span title={`${v.atendimentos} atendimentos de ${v.contatos} contatos`}>{formatarPercentual(v.conversao)}</span>
+      ),
+    })
+  }
   const temMetas = Boolean(dados?.vendedores.some((v) => v.meta !== null))
   const colunas = temMetas
     ? colunasBase.filter((c) => c.key !== 'preco_medio_peca' && c.key !== 'participacao')

@@ -31,12 +31,12 @@ def db(request):
 
 
 def test_seis_meses_de_itens_metas_e_template(db):
-    datasets = db.scalars(select(Dataset).order_by(Dataset.inicio)).all()
+    datasets = db.scalars(select(Dataset).where(Dataset.tipo == "itens_venda").order_by(Dataset.inicio)).all()
 
     assert [(d.inicio, d.fim) for d in datasets][0] == (date(2026, 4, 1), date(2026, 4, 30))
     assert datasets[-1].fim == HOJE
     assert len(datasets) == 6
-    assert {d.tipo for d in datasets} == {"itens_venda"}
+    assert db.scalar(select(func.count()).select_from(Dataset).where(Dataset.tipo == "contatos_vendedor")) == 6
     assert set(db.scalars(select(MetaVendedor.competencia).distinct())) == {"2026-08", "2026-09"}
     assert db.scalar(select(func.count()).select_from(TemplateImportacao)) == 1
 
@@ -66,7 +66,8 @@ def test_equipe_da_demo_conta_a_historia_dos_vendedores(db):
     assert nomes[-1] == "Diego Alves"
     assert por_nome["Rafael Mendes"].pa == max(v.pa for v in resultado.vendedores if not v.sem_vendedor)
     assert por_nome["Mariana Souza"].atingimento is not None
-    assert resultado.indisponivel[0].indicador == "conversao_contatos"
+    assert resultado.indisponivel == []
+    assert 0 < por_nome["Mariana Souza"].conversao < 1
 
 
 def test_relatorio_de_exemplo_confere_com_os_itens_do_mes():
@@ -77,3 +78,13 @@ def test_relatorio_de_exemplo_confere_com_os_itens_do_mes():
     assert nome == "vendas-por-vendedor-agosto.xlsx"
     assert resultado.validacao.status == "conferido"
     assert resultado.periodo == AGOSTO
+
+
+def test_grade_da_demo_tem_tamanhos_e_cores(db):
+    from app.application.equipe.servico import grade
+
+    resultado = grade(FonteEquipeDatasets(db, LOJA), *AGOSTO, "FEMININO", None)
+
+    assert resultado.tamanhos == ["PP", "P", "M", "G", "GG"]
+    assert len(resultado.cores) == 7
+    assert sum(c.quantidade for c in resultado.matriz) == resultado.total_pecas

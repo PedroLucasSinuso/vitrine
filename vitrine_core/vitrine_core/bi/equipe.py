@@ -7,7 +7,14 @@ from decimal import Decimal
 from pydantic import BaseModel
 
 from vitrine_core.datasets.capacidades import tipos_derivaveis
-from vitrine_core.datasets.tipos import ItemVenda, Operacao, TipoDataset, VendaDiaria, VendaVendedorPeriodo
+from vitrine_core.datasets.tipos import (
+    ContatoVendedor,
+    ItemVenda,
+    Operacao,
+    TipoDataset,
+    VendaDiaria,
+    VendaVendedorPeriodo,
+)
 
 SEM_VENDEDOR = "Sem vendedor"
 ZERO = Decimal("0")
@@ -48,6 +55,8 @@ class IndicadoresVendedor(BaseModel):
     atingimento: float | None = None
     projecao: float | None = None
     comissao_estimada: float | None = None
+    contatos: int | None = None
+    conversao: float | None = None
 
 
 class IndicadoresLoja(BaseModel):
@@ -156,6 +165,12 @@ def _indicadores_de_meta(liquido: Decimal, meta: Meta | None, fator: Decimal | N
     }
 
 
+def _indicadores_de_contato(atendimentos: int, contatos: int | None) -> dict:
+    if not contatos:
+        return {"contatos": None, "conversao": None}
+    return {"contatos": contatos, "conversao": round(atendimentos / contatos, 4)}
+
+
 def _indisponiveis(tipos_disponiveis: set[TipoDataset] | None) -> list[Indisponivel]:
     if tipos_disponiveis is None:
         return []
@@ -176,7 +191,13 @@ def calcular_equipe(
     tipos_disponiveis: set[TipoDataset] | None = None,
     metas: dict[str, Meta] | None = None,
     hoje: date | None = None,
+    contatos: list[ContatoVendedor] | None = None,
 ) -> ResultadoEquipe:
+    contatos_por_vendedor: dict[str, int] = defaultdict(int)
+    for contato in contatos or []:
+        chave_contato = _chave(contato.vendedor)
+        if chave_contato:
+            contatos_por_vendedor[chave_contato.upper()] += contato.contatos
     competencia = competencia_do_periodo(inicio, fim)
     metas = {k.strip().upper(): v for k, v in (metas or {}).items()} if competencia else {}
     fator = _fator_de_projecao(competencia, hoje or date.today()) if competencia else None
@@ -212,6 +233,7 @@ def calcular_equipe(
             variacao_ticket_medio=_variacao(ticket, _razao(ant["bruto"], ant["atendimentos"]) if ant else None),
             variacao_pa=_variacao(pa, _razao(ant["pecas"], ant["atendimentos"]) if ant else None),
             **_indicadores_de_meta(v["liquido"], meta, fator),
+            **_indicadores_de_contato(v["atendimentos"], contatos_por_vendedor.get(chave.upper()) if chave else None),
         ))
     vendedores.sort(key=lambda i: (i.sem_vendedor, -i.faturamento_liquido))
 

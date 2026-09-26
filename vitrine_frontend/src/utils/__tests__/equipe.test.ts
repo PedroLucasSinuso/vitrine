@@ -51,3 +51,14 @@ describe('periodosImportados', () => {
     ])
   })
 })
+
+describe('intensidade do mapa de calor', () => {
+  it('vai de clara a escura conforme o valor, e zero fica sem cor', async () => {
+    const { intensidade } = await import('../equipe')
+
+    expect(intensidade(0, 10)).toBe(0)
+    expect(intensidade(10, 10)).toBe(90)
+    expect(intensidade(1, 10)).toBeLessThan(intensidade(5, 10))
+    expect(intensidade(3, 0)).toBe(0)
+  })
+})

@@ -1,6 +1,6 @@
 import api from './client'
 import type {
-  AliasVendedor, ItemMixVendedor, MetaVendedor, MetasDaCompetencia, PeriodoBi, PontoSerieVendedor, ResultadoEquipe,
+  AliasVendedor, ItemMixVendedor, ResultadoGrade, MetaVendedor, MetasDaCompetencia, PeriodoBi, PontoSerieVendedor, ResultadoEquipe,
 } from '../types'
 
 export async function fetchEquipe(periodo: PeriodoBi): Promise<ResultadoEquipe> {
@@ -49,5 +49,10 @@ export async function listarAliases(): Promise<AliasVendedor[]> {
 
 export async function salvarAliases(aliases: AliasVendedor[]): Promise<AliasVendedor[]> {
   const r = await api.put('/vendedores/alias', aliases)
+  return r.data
+}
+
+export async function fetchGrade(periodo: PeriodoBi, grupo: string, familia: string): Promise<ResultadoGrade> {
+  const r = await api.get('/bi/grade', { params: { ...periodo, grupo: grupo || undefined, familia: familia || undefined } })
   return r.data
 }

@@ -68,3 +68,26 @@ def test_bi_do_modo_upload_le_os_itens_importados_e_nao_o_erp(client, db_session
     produtos_de_moda = {nome for modelos in __import__("app.adapters.demo.moda", fromlist=["CATALOGO"]).CATALOGO.values() for nome, _ in modelos}
     assert ranking
     assert {item["produto"] for item in ranking} <= produtos_de_moda
+
+
+def test_grade_so_para_moda_e_indisponivel_sem_itens(client, db_session, demo_moda):
+    from app.application.utils.security import hash_password as _hash
+    from app.domain.models.empresa import Empresa as _Empresa
+    from app.domain.models.usuario import Usuario as _Usuario
+
+    token = client.post("/auth/demo", json={"perfil": "moda"}).json()["access_token"]
+    semestre = {"data_inicio": "2026-08-01", "data_fim": "2026-08-31"}
+
+    sem_itens = client.get("/bi/grade", headers={"Authorization": f"Bearer {token}"}, params=semestre)
+
+    mercado = _Empresa(nome="m", slug="mercado-grade", status="ativa")
+    db_session.add(mercado)
+    db_session.flush()
+    db_session.add(_Usuario(username="sup.mercado-grade", nome_exibicao="s", role="supervisor",
+                            hashed_password=_hash("senha123"), empresa_id=mercado.id))
+    db_session.commit()
+    from tests.api.conftest import get_token
+    token_mercado = get_token(client, "sup.mercado-grade")
+
+    assert sem_itens.status_code == 409
+    assert client.get("/bi/grade", headers={"Authorization": f"Bearer {token_mercado}"}, params=semestre).status_code == 404

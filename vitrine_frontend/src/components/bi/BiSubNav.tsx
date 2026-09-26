@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, TrendingUp, BarChart3, PieChart, RefreshCw, Percent, Clock, Search, Users } from 'lucide-react'
+import { LayoutDashboard, TrendingUp, BarChart3, PieChart, RefreshCw, Percent, Clock, Search, Users, Grid3x3 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Modulo } from '../../types'
 import { usePerfilEmpresa } from '../../stores/perfilEmpresaContexto'
@@ -22,6 +22,7 @@ const TABS: Tab[] = [
   { label: 'Temporal', icon: Clock, path: '/bi/temporal', modulo: 'temporal' },
   { label: 'SKU', icon: Search, path: '/bi/sku', modulo: 'sku' },
   { label: 'Equipe', icon: Users, path: '/bi/equipe', modulo: 'equipe' },
+  { label: 'Grade', icon: Grid3x3, path: '/bi/grade', modulo: 'grade' },
 ]
 
 export default function BiSubNav() {

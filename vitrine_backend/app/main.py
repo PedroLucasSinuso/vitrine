@@ -115,6 +115,7 @@ app.include_router(whatsapp.router)
 app.include_router(email_routes.router)
 app.include_router(empresa.router)
 app.include_router(equipe.router)
+app.include_router(equipe.router_grade)
 app.include_router(importacao.router)
 app.include_router(metas.router)
 

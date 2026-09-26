@@ -55,3 +55,8 @@ export function periodosImportados(datasets: DatasetResumo[]): PeriodoBi[] {
       return true
     })
 }
+
+export function intensidade(valor: number, maximo: number): number {
+  if (maximo <= 0 || valor <= 0) return 0
+  return Math.round(12 + (valor / maximo) * 78)
+}
