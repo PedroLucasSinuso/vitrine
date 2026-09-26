@@ -1,7 +1,8 @@
 import os
 
 import pytest
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -21,6 +22,28 @@ def _engine_sqlite_com_fk():
         conexao.execute("PRAGMA foreign_keys=ON")
 
     return engine
+
+
+def engine_de_teste(nome: str):
+    url = os.environ.get("TEST_DATABASE_URL")
+    if not url:
+        return create_engine(
+            "sqlite:///:memory:",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+    return create_engine(_banco_isolado(url, nome))
+
+
+def _banco_isolado(url: str, nome: str) -> str:
+    base = make_url(url)
+    banco = f"{base.database}_{nome}"
+    admin = create_engine(base, isolation_level="AUTOCOMMIT")
+    with admin.connect() as conexao:
+        conexao.execute(text(f'DROP DATABASE IF EXISTS "{banco}" WITH (FORCE)'))
+        conexao.execute(text(f'CREATE DATABASE "{banco}"'))
+    admin.dispose()
+    return base.set(database=banco).render_as_string(hide_password=False)
 
 
 def _engine_postgres():

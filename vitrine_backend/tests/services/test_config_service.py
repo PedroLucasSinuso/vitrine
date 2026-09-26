@@ -2,9 +2,8 @@
 
 from unittest.mock import patch
 import pytest
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.domain.models.configuracao import Configuracao
 from app.domain.models.empresa import Empresa
@@ -21,16 +20,13 @@ from app.application.config_service import (
     _CHAVES_SOMENTE_ENV,
 )
 from app.core.config import settings
+from tests.bancos import engine_de_teste
 from cryptography.fernet import Fernet
 
 
 # ── Engine e sessão compartilhados ─────────────────────────────────────────
 
-engine = create_engine(
-    "sqlite:///:memory:",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
+engine = engine_de_teste("config_service")
 Base.metadata.create_all(bind=engine)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

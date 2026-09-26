@@ -75,6 +75,18 @@ services:
       - "80:80"
     restart: unless-stopped
 
+  db-test:
+    image: postgres:17-alpine
+    profiles: ["test"]
+    environment:
+      POSTGRES_USER: vitrine
+      POSTGRES_PASSWORD: vitrine
+      POSTGRES_DB: vitrine_test
+    ports:
+      - "55432:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+
 volumes:
   vitrine_backend_data:
   vitrine_db_data:

@@ -2,9 +2,7 @@
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.api.deps import get_db, get_current_user, require_supervisor
 from app.api.routes.inventario import router
@@ -12,13 +10,9 @@ from app.infrastructure.db.database import Base
 from app.application.utils.security import hash_password
 from app.domain.models.usuario import Usuario
 from app.domain.models.empresa import Empresa
+from tests.bancos import engine_de_teste
 
-SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"
-engine = create_engine(
-    SQLALCHEMY_TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
+engine = engine_de_teste("inventario")
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

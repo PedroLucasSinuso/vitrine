@@ -3,9 +3,7 @@ os.environ["RATE_LIMIT_ENABLED"] = "0"
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from datetime import date, time
 from decimal import Decimal
@@ -17,15 +15,11 @@ from app.application.utils.security import hash_password
 from app.core.models.transaction import TransactionItem, OperationType
 from app.domain.models.usuario import Usuario
 from app.domain.models.empresa import Empresa
+from tests.bancos import engine_de_teste
 
 
-SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"
 
-engine = create_engine(
-    SQLALCHEMY_TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
+engine = engine_de_teste("api")
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

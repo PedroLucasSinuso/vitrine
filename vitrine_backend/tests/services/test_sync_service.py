@@ -2,9 +2,7 @@
 from decimal import Decimal
 import pytest
 from unittest.mock import Mock
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.application.sync_service import SyncService
 from app.domain.models.cache_status import CacheStatus
@@ -13,15 +11,12 @@ from app.domain.models.produto import Produto, ProdutoCodigo
 from app.domain.models.sync_job import SyncJob
 from app.infrastructure.db.database import Base
 from app.domain.models.empresa import Empresa
+from tests.bancos import engine_de_teste
 
 
 # ── Engine e sessão compartilhados ─────────────────────────────────────────
 
-engine = create_engine(
-    "sqlite:///:memory:",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
+engine = engine_de_teste("sync_service")
 Base.metadata.create_all(bind=engine)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
